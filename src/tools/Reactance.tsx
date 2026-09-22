@@ -108,7 +108,7 @@ function SiBig({ label, v, unit }: { label: string; v: number; unit: string }) {
   return <Big label={label} value={num} unit={u} />;
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Reactance</h2>

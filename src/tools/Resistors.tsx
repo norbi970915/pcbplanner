@@ -211,7 +211,7 @@ export default function Resistors() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Voltage divider</h2>

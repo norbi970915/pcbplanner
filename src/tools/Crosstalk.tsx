@@ -153,7 +153,7 @@ export default function Crosstalk() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Even and odd modes</h2>

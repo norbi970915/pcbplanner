@@ -144,7 +144,7 @@ export default function Crystal() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Load capacitors</h2>

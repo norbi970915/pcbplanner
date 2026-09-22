@@ -114,7 +114,7 @@ export default function FeedbackDivider() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Equations</h2>

@@ -3,7 +3,6 @@ import { Cite, Guide, TryIt } from './Guide';
 export default function ControlledImpedance() {
   return (
     <Guide
-      tools={['/impedance', '/timing', '/crosstalk', '/trace-loss']}
       sources={[
         { text: 'H. Johnson, M. Graham, High-Speed Digital Design: A Handbook of Black Magic, Prentice Hall, 1993.' },
         { text: 'E. Bogatin, Signal and Power Integrity – Simplified, 3rd ed., Prentice Hall, 2018.' },

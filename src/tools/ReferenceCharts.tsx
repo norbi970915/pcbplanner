@@ -208,3 +208,17 @@ export default function ReferenceCharts() {
     </ToolPage>
   );
 }
+
+/** All three source lists (rendered into the static page; the tool itself shows the one for the open chart). */
+export function Method() {
+  return (
+    <>
+      <h2>Drill sizes</h2>
+      <Sources items={DRILL_SOURCES} />
+      <h2>Screw threads</h2>
+      <Sources items={THREAD_SOURCES} />
+      <h2>AWG wire</h2>
+      <Sources items={AWG_SOURCES} />
+    </>
+  );
+}

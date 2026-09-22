@@ -181,7 +181,7 @@ export default function Attenuator() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Design equations</h2>

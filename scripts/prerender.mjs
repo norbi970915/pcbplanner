@@ -12,10 +12,9 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 const { TOOLS, GROUPS } = await vite.ssrLoadModule('/src/tools/registry.ts');
 const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
-const { renderGuide } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
+const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 // full article HTML, rendered with React on the server side
 const guideHtml = Object.fromEntries(['/guides', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
-await vite.close();
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -104,8 +103,13 @@ for (const tool of TOOLS) {
   const description = toolDescription(tool);
   const url = SITE + tool.path;
   const related = TOOLS.filter((t) => t.group === tool.group && t !== tool);
+  // the tool's own method section (formulas, explanation, references), rendered on the server side
+  const method = fileByPath[tool.path] ? renderToolMethod(fileByPath[tool.path]) : '';
+  const guides = GUIDES.filter((g) => g.tools.includes(tool.path));
   const body =
     `<p>${esc(description)}</p>` +
+    (method ? `<section><h2>Method, formulas and references</h2>${method}</section>` : '') +
+    (guides.length ? `<h2>Related guides</h2><ul>${guides.map((g) => `<li><a href="${g.path}">${esc(g.title)}</a></li>`).join('')}</ul>` : '') +
     (related.length
       ? `<h2>Related ${esc(tool.group.toLowerCase())} tools</h2><ul>${related
           .map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`)
@@ -162,7 +166,7 @@ for (const g of GUIDES) {
     `dist${g.path}.html`,
     page({
       path: g.path,
-      title: `${g.title} – ${APP}`,
+      title: `${g.seoTitle} – ${APP}`,
       description: g.description,
       raw: guideHtml[g.path],
       jsonLd: {
@@ -193,4 +197,5 @@ for (const g of GUIDES) {
     }),
   );
 }
+await vite.close();
 console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages`);

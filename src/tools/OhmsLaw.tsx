@@ -92,7 +92,7 @@ export default function OhmsLaw() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Formulas</h2>

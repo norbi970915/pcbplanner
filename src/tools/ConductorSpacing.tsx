@@ -116,7 +116,7 @@ export default function ConductorSpacing() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>How to use it</h2>

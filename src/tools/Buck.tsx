@@ -135,7 +135,7 @@ export default function Buck() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Equations</h2>

@@ -237,7 +237,7 @@ function SweepPlot({ pts, tjMax, mark }: { pts: { s: number; theta: number; tj: 
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Model</h2>

@@ -81,7 +81,7 @@ export default function Via() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Formulas</h2>

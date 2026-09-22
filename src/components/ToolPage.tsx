@@ -1,6 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { APP_NAME, SITE_URL } from '../config';
+import { Link, useLocation } from 'react-router-dom';
+import { guidesForTool } from '../guides/registry';
 import { useShell } from '../state/shell';
 
 export function useDocumentMeta(title: string, description: string) {
@@ -54,6 +56,7 @@ export function ToolPage({
 }) {
   useDocumentMeta(title, description);
   const { propsEl, statusEl, headEl, setActions } = useShell();
+  const related = guidesForTool(useLocation().pathname);
   useEffect(() => {
     setActions({ reset: onReset });
     return () => setActions(null);
@@ -92,6 +95,18 @@ export function ToolPage({
       </div>
 
       <div className="space-y-3">{children}</div>
+
+      {related.length > 0 && (
+        <div className="mt-4 border border-line bg-sheet px-3 py-2">
+          <span className="font-semibold">Related {related.length > 1 ? 'guides' : 'guide'}: </span>
+          {related.map((g, i) => (
+            <span key={g.path}>
+              {i > 0 && ' · '}
+              <Link to={g.path}>{g.title}</Link>
+            </span>
+          ))}
+        </div>
+      )}
 
       {method && (
         <details id="method" className="mt-4 border border-line bg-sheet" open>

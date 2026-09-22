@@ -358,7 +358,7 @@ export default function StackupAdvisor() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>How the advisor works</h2>

@@ -202,7 +202,7 @@ export default function TraceWidth() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>IPC-2221 conductor sizing</h2>

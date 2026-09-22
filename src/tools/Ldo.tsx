@@ -75,7 +75,7 @@ export default function Ldo() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Equations</h2>

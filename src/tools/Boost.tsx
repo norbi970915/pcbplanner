@@ -112,7 +112,7 @@ export default function Boost() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Equations</h2>

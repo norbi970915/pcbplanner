@@ -124,7 +124,7 @@ export default function ThermalJunction() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Thermal resistance model</h2>

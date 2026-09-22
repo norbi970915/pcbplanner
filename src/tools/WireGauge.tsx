@@ -79,7 +79,7 @@ export default function WireGauge() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Formulas</h2>

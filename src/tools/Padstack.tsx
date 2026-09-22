@@ -283,7 +283,7 @@ function PadstackDrawing({ r, spokes, fmtLen }: { r: PadResult; spokes: number; 
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Hole</h2>

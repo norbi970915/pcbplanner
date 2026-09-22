@@ -112,7 +112,7 @@ export default function Timing() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Relations used</h2>

@@ -180,7 +180,7 @@ function ViaDrawing({ pitch, d, hole, antipad, shape }: { pitch: number; d: numb
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Model</h2>

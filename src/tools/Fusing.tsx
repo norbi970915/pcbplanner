@@ -59,7 +59,7 @@ export default function Fusing() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Onderdonk's equation</h2>

@@ -102,7 +102,7 @@ export default function ThermalVias() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Model</h2>

@@ -3,7 +3,6 @@ import { Cite, Guide, TryIt } from './Guide';
 export default function PcieRouting() {
   return (
     <Guide
-      tools={['/impedance', '/trace-loss', '/timing', '/differential-via', '/stackup']}
       sources={[
         { text: 'PCI-SIG, PCI Express Base Specification, Revision 3.0, 2010 (§4.2.2 encoding; §4.2.4.4 polarity inversion; §4.2.4.10.1 lane reversal; Table 4-18).' },
         { text: 'PCI-SIG, PCI Express Card Electromechanical (CEM) Specification, Revision 3.0, 2013 (§2.1 reference clock; §4.7 routing requirements; §6.1).' },

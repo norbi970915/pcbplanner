@@ -497,6 +497,15 @@ export default function StackupTool() {
         </div>
       </Panel>
       <Notes items={draft.layers.some((l) => l.kind === 'copper' && l.role === 'plane') ? [] : ['Mark at least one copper layer as a plane so signal layers have a reference.']} />
+      <Method />
+    </ToolPage>
+  );
+}
+
+/** Naming and import help: shown below the stack, and rendered into the static page for search engines. */
+export function Method() {
+  return (
+    <>
       <Panel title="Reading the Stackup Names">
         <div className="prose-doc px-4 pt-3">
           <p>
@@ -562,6 +571,6 @@ export default function StackupTool() {
           </p>
         </div>
       </Panel>
-    </ToolPage>
+    </>
   );
 }

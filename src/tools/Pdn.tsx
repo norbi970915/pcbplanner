@@ -273,7 +273,7 @@ function PdnPlot({ cap, n, planeC, zt, fMark }: { cap: CapModel; n: number; plan
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Model</h2>

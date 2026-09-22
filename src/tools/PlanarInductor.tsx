@@ -171,7 +171,7 @@ function SpiralDrawing({ shape, n, w, s, dOut }: { shape: SpiralShape; n: number
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Inductance</h2>

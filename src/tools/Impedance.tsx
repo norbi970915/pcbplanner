@@ -352,7 +352,7 @@ export default function Impedance() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>How the impedance is calculated</h2>

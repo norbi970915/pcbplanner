@@ -76,7 +76,7 @@ export default function SkinEffect() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Skin depth</h2>

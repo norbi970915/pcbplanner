@@ -12,10 +12,10 @@ export interface Source {
 }
 
 /** Article frame: title, date, body, the tools used, and numbered sources. */
-export function Guide({ children, tools, sources }: { children: ReactNode; tools: string[]; sources: Source[] }) {
+export function Guide({ children, sources }: { children: ReactNode; sources: Source[] }) {
   const { pathname } = useLocation();
   const g = guideByPath(pathname)!;
-  useDocumentMeta(g.title, g.description);
+  useDocumentMeta(g.seoTitle, g.description);
   const { statusEl } = useShell();
   // start each article at the top (the document area scrolls on desktop, the window on phones).
   // Block body on purpose: scrollTo returns a Promise in current browsers, and an effect must not return one.
@@ -40,7 +40,7 @@ export function Guide({ children, tools, sources }: { children: ReactNode; tools
           {children}
           <h2>Tools used in this guide</h2>
           <ul>
-            {tools.map((p) => {
+            {g.tools.map((p) => {
               const t = toolByPath(p);
               return t ? (
                 <li key={p}>

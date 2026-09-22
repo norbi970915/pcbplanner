@@ -547,7 +547,7 @@ function niceCeil(v: number): number {
   return 10 * e;
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>How the loss is calculated</h2>

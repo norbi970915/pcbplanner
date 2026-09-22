@@ -212,7 +212,7 @@ export default function CreepageClearance() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>How the distances are found</h2>

@@ -132,7 +132,7 @@ export default function ViaStitching() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>Why the spacing matters</h2>

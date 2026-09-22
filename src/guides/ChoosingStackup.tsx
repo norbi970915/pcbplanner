@@ -3,7 +3,6 @@ import { Cite, Guide, TryIt } from './Guide';
 export default function ChoosingStackup() {
   return (
     <Guide
-      tools={['/stackup-advisor', '/stackup', '/impedance', '/pcb-materials']}
       sources={[
         { text: 'IPC-4412, Specification for Finished Fabric Woven from “E” Glass for Printed Boards, IPC.' },
         { text: 'IPC-4101, Specification for Base Materials for Rigid and Multilayer Printed Boards, IPC.' },

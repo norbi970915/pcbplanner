@@ -126,7 +126,7 @@ export default function BgaLand() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>IPC-7351 land approximation</h2>

@@ -3,7 +3,6 @@ import { Cite, Guide, TryIt } from './Guide';
 export default function CopperCooling() {
   return (
     <Guide
-      tools={['/copper-heat-spreading', '/ldo', '/thermal-vias', '/junction-temperature']}
       sources={[
         { text: 'T. L. Bergman, A. S. Lavine, F. P. Incropera, D. P. DeWitt, Fundamentals of Heat and Mass Transfer, 7th ed., Wiley, 2011 (§3.6 extended surfaces, §9.6 natural convection on plates).' },
         { text: 'JEDEC JESD51-7, High Effective Thermal Conductivity Test Board for Leaded Surface Mount Packages.' },

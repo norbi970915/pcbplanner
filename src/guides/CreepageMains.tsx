@@ -3,7 +3,6 @@ import { Cite, Guide, TryIt } from './Guide';
 export default function CreepageMains() {
   return (
     <Guide
-      tools={['/creepage-clearance', '/conductor-spacing']}
       sources={[
         { text: 'IEC 60664-1:2007 (Ed. 2), Insulation coordination for equipment within low-voltage systems – Part 1: Principles, requirements and tests. Tables F.1, F.2, F.4, A.2; clauses 5.1.6, 5.2.2.6, 6.2. Ed. 3 (2020) keeps the same table values.', url: 'https://webstore.iec.ch/en/publication/2522' },
         { text: 'IEC 62368-1, Audio/video, information and communication technology equipment – Part 1: Safety requirements.' },

@@ -107,7 +107,7 @@ export default function Materials() {
   );
 }
 
-function Method() {
+export function Method() {
   return (
     <>
       <h2>About the data</h2>
