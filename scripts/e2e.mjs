@@ -559,8 +559,9 @@ async function flowAdvisor(page) {
   const etch = await page.evaluate(() => new URL(location.href).searchParams.get('etch'));
   await btns.first().click();
   await page.waitForURL(/\/impedance\?/);
-  await settle(page, route, 'advisor -> impedance', 60000);
+  // read the query as navigated; useUrlState later drops values equal to its defaults
   const q = new URL(page.url()).searchParams;
+  await settle(page, route, 'advisor -> impedance', 60000);
   const num = (k) => Number(q.get(k));
   const problems = [];
   if (!['microstrip', 'embedded', 'stripline'].includes(q.get('type'))) problems.push(`type=${q.get('type')}`);
@@ -727,9 +728,7 @@ async function flowStackupEdit(page) {
   await checkPage(page, route, 'lsm after delete');
 }
 
-async function flowTabsMenus(browser) {
-  const ctx = await newCtx(browser);
-  const page = track(await ctx.newPage());
+async function flowTabsMenus(page) {
   const route = 'tabs/menus';
   await gotoFresh(page, '/');
   page.drain();
@@ -739,9 +738,15 @@ async function flowTabsMenus(browser) {
     await clickMenu(page, 'Tools', t.nav);
     await page.waitForURL((u) => u.pathname === t.path).catch(() => {});
     await check(page, new URL(page.url()).pathname === t.path, route, `Tools menu "${t.nav}"`, `landed on ${page.url()}`);
+    // router navigations render in a transition (the page may still be lazy-loading); wait for the active tab
+    await page
+      .waitForFunction((nav) => document.querySelector('[role=tab][aria-selected=true]')?.innerText.replace('✕', '').trim() === nav, t.nav, { timeout: 10000 })
+      .catch(() => {});
+    await page.waitForSelector('main h1');
     const active = await page.locator('[role=tab][aria-selected=true]').innerText().catch(() => '');
     await check(page, active.replace('✕', '').trim() === t.nav, route, `tab for "${t.nav}" active`, `active tab "${active}"`);
-    await check(page, (await page.locator('h1').first().innerText()) === t.title, route, `"${t.nav}" page title`, await page.locator('h1').first().innerText());
+    const h1 = await page.locator('main h1').first().innerText();
+    await check(page, h1 === t.title, route, `"${t.nav}" page heading matches the menu/registry title`, `registry title "${t.title}", page <h1> "${h1}"`);
     await waitIdle(page, 30000);
     await checkPage(page, route, `Tools menu -> ${t.path}`);
   }
@@ -797,13 +802,21 @@ async function flowTabsMenus(browser) {
   await page.goto(`${BASE}/no-such-tool`, { waitUntil: 'networkidle' });
   await checkPage(page, '/no-such-tool', 'unknown route');
   await check(page, (await page.locator('main').innerText()).trim().length > 0, '/no-such-tool', 'unknown route shows something', 'empty document area');
-  await ctx.close();
 }
 
-async function flowMobile(browser) {
-  const ctx = await newCtx(browser, { width: 390, height: 844 });
-  const page = track(await ctx.newPage());
+async function flowMobile(page) {
+  await page.setViewportSize({ width: 390, height: 844 });
   for (const route of ROUTES) {
+    try {
+      await mobileRoute(page, route);
+    } catch (e) {
+      await fail(page, route, '10 mobile (exception)', e.message.split('\n')[0]);
+    }
+  }
+}
+
+async function mobileRoute(page, route) {
+  {
     await gotoFresh(page, route);
     const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, bw: document.body.scrollWidth }));
     await check(page, m.sw <= m.iw + 1 && m.bw <= m.iw + 1, route, '10 mobile no horizontal overflow', JSON.stringify(m));
@@ -811,19 +824,18 @@ async function flowMobile(browser) {
     const vis = (await aside.count()) && (await aside.isVisible());
     await check(page, !!vis, route, '10 mobile properties panel visible', 'panel not visible');
     if (vis && !NO_PROPS.has(route)) {
-      const c = aside.locator('input, select').first();
+      const c = aside.locator('input:visible, select:visible').first();
       await c.scrollIntoViewIfNeeded();
       const bb = await c.boundingBox();
       await check(page, !!bb && bb.x >= 0 && bb.x + bb.width <= 391 && bb.y >= 0 && bb.y < 844, route, '10 mobile first property control reachable', JSON.stringify(bb));
       // last control too
-      const cl = aside.locator('input, select').last();
+      const cl = aside.locator('input:visible, select:visible').last();
       await cl.scrollIntoViewIfNeeded();
       const bl = await cl.boundingBox();
       await check(page, !!bl && bl.x >= 0 && bl.x + bl.width <= 391 && bl.y >= 0 && bl.y < 844, route, '10 mobile last property control reachable', JSON.stringify(bl));
     }
     await checkPage(page, route, '10 mobile');
   }
-  await ctx.close();
 }
 
 function withTimeout(p, ms, what) {
@@ -905,11 +917,11 @@ async function main() {
   }
   if (!SKIP.has('tabs')) {
     log('flow tabs/menus');
-    await withTimeout(flowTabsMenus(browser), 10 * 60000, 'tabs').catch((e) => fail(null, 'tabs/menus', 'exception', e.message.split('\n')[0]));
+    await runIsolated(browser, 'tabs/menus', 'flow tabs/menus', flowTabsMenus, 10 * 60000);
   }
   if (!SKIP.has('mobile')) {
     log('flow mobile');
-    await withTimeout(flowMobile(browser), 10 * 60000, 'mobile').catch((e) => fail(null, 'mobile', 'exception', e.message.split('\n')[0]));
+    await runIsolated(browser, 'mobile', 'flow mobile', flowMobile, 15 * 60000);
   }
   await browser.close();
 

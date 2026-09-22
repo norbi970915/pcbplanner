@@ -5,7 +5,7 @@ import { ToolPage } from '../components/ToolPage';
 import { Notes, NumField, Panel, Section, Segmented } from '../components/ui';
 import type { DesignResult } from '../lib/design';
 import { runPooled } from '../lib/solverClient';
-import { boardThickness, copperCount, geometryForLayer, newId, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
+import { boardThickness, copperCount, geometryForLayer, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
 import { fmt, fromMm, MM_PER_OZ, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { stackupStore, useStackups } from '../state/stackupStore';
@@ -21,9 +21,12 @@ const layerSwatch = (l: Layer, i: number, all: Layer[]) => {
   return i % 2 ? '#bcbc4e' : '#6e9a3c';
 };
 
-function Num({ value, onChange, width = 70, disabled }: { value: number; onChange: (v: number) => void; width?: number; disabled?: boolean }) {
+/** Numeric cell; only values above `min` (or at least `min` when `inclusive`) are accepted. */
+function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false }: { value: number; onChange: (v: number) => void; width?: number; disabled?: boolean; min?: number; inclusive?: boolean }) {
   const [text, setText] = useState(plain(value, 5));
   useEffect(() => setText(plain(value, 5)), [value]);
+  const n = Number.parseFloat(text);
+  const valid = (v: number) => Number.isFinite(v) && (inclusive ? v >= min : v > min) && v < 1000;
   return (
     <input
       className="fld text-right"
@@ -31,15 +34,15 @@ function Num({ value, onChange, width = 70, disabled }: { value: number; onChang
       inputMode="decimal"
       value={text}
       disabled={disabled}
+      aria-invalid={!valid(n)}
       onChange={(e) => {
         setText(e.target.value);
         const v = Number.parseFloat(e.target.value);
-        if (Number.isFinite(v)) onChange(v);
+        if (valid(v)) onChange(v);
       }}
     />
   );
 }
-
 export default function StackupTool() {
   const stackups = useStackups();
   const navigate = useNavigate();
@@ -78,7 +81,10 @@ export default function StackupTool() {
       layers.splice(i + 1, 0, l);
       return { ...d, layers };
     });
-  const remove = () => setDraft((d) => ({ ...d, layers: d.layers.filter((l) => l.id !== sel) }));
+  const remove = () => {
+    setDraft((d) => ({ ...d, layers: d.layers.filter((l) => l.id !== sel) }));
+    setSel(null);
+  };
 
   const saveCopy = () => {
     const copy: Stackup = { ...draft, id: `custom-${Date.now().toString(36)}`, name: `${draft.name.replace(/ · .*$/, '')} (copy)`, builtin: false };
@@ -173,7 +179,13 @@ export default function StackupTool() {
               <button className="btn btn-primary" disabled={!dirty} onClick={() => stackupStore.save(draft)}>
                 Save
               </button>
-              <button className="btn" onClick={() => stackupStore.remove(draft.id)}>
+              <button
+                className="btn"
+                onClick={() => {
+                  stackupStore.remove(draft.id);
+                  setId(PRESETS[0].id);
+                }}
+              >
                 Delete
               </button>
             </>
@@ -220,7 +232,7 @@ export default function StackupTool() {
   return (
     <ToolPage
       title="Layer Stack Manager"
-      description="178 fabricator stackups (JLCPCB, 2 to 12 layers, 0.8–2.0 mm) plus your own. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer."
+      description={`${PRESETS.length} fabricator stackups (JLCPCB, 2 to 12 layers, 0.8–2.0 mm) plus your own. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
       properties={properties}
       status={`${draft.name.replace(/ · .*$/, '')} · ${copperCount(draft)} layers · ${L(board)} ${unit}${dirty ? ' · modified' : ''}`}
     >
@@ -295,7 +307,7 @@ export default function StackupTool() {
                           <Num value={fromMm(l.t, unit)} onChange={(v) => update(i, { t: toMm(v, unit) })} />
                         </td>
                         <td className="v text-muted">{l.kind === 'copper' ? `${fmt(l.t / MM_PER_OZ, 2)} oz` : ''}</td>
-                        <td className="v">{l.kind === 'copper' ? <span className="text-faint">—</span> : <Num value={l.er ?? 4} onChange={(v) => update(i, { er: v })} width={52} />}</td>
+                        <td className="v">{l.kind === 'copper' ? <span className="text-faint">—</span> : <Num value={l.er ?? 4} onChange={(v) => update(i, { er: v })} width={52} min={1} inclusive />}</td>
                         <td>
                           {l.kind === 'copper' && (
                             <select className="fld" aria-label="Copper role" value={l.role ?? 'signal'} onChange={(e) => update(i, { role: e.target.value as 'signal' | 'plane' })}>

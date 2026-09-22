@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { fromMm, LEN_UNITS, plain, toMm, type LenUnit } from '../lib/units';
 import { useSettings } from '../state/settings';
+import { RESET_EVENT } from '../state/useUrlState';
 
 /** Collapsible section of the Properties panel (▾ Title). */
 export function Section({ title, children, defaultOpen = true, right }: { title: string; children: ReactNode; defaultOpen?: boolean; right?: ReactNode }) {
@@ -59,6 +60,8 @@ function Row({ label, symbol, hint, htmlFor, children }: { label: ReactNode; sym
 function useSyncedText(value: number, toText: (v: number) => string) {
   const [text, setText] = useState(() => toText(value));
   const emitted = useRef(value);
+  const latest = useRef({ value, toText });
+  latest.current = { value, toText };
   useEffect(() => {
     if (value !== emitted.current) {
       emitted.current = value;
@@ -66,6 +69,15 @@ function useSyncedText(value: number, toText: (v: number) => string) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+  // Reset must also clear text the user typed that never parsed (the value did not change).
+  useEffect(() => {
+    const onReset = () => {
+      emitted.current = latest.current.value;
+      setText(latest.current.toText(latest.current.value));
+    };
+    window.addEventListener(RESET_EVENT, onReset);
+    return () => window.removeEventListener(RESET_EVENT, onReset);
+  }, []);
   return { text, setText, emitted };
 }
 
@@ -93,11 +105,15 @@ export function LenField({
   // copper-thickness fields list 'oz' first and keep it regardless of the global unit
   const followsPref = units[0] !== 'oz' && units.includes(pref);
   const [unit, setUnit] = useState<LenUnit>(followsPref ? pref : units[0]);
+  const { text, setText, emitted } = useSyncedText(value, (v) => plain(fromMm(v, unit), 5));
+  // global unit switch: change the unit AND convert the displayed number
   useEffect(() => {
-    if (followsPref) setUnit(pref);
+    if (followsPref && pref !== unit) {
+      setUnit(pref);
+      setText(plain(fromMm(value, pref), 5));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pref]);
-  const { text, setText, emitted } = useSyncedText(value, (v) => plain(fromMm(v, unit), 5));
   const id = useId();
   const n = Number.parseFloat(text);
   const bad = !Number.isFinite(n) || (allowZero ? n < min : n <= min);

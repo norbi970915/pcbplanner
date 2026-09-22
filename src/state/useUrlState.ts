@@ -35,6 +35,9 @@ function encode<T extends Record<string, Primitive>>(state: T, defaults: T): str
  * Tool state mirrored into the URL query string, so every result has a
  * shareable link. Only values that differ from the defaults are written.
  */
+/** Event fired after a reset so input fields re-display their values. */
+export const RESET_EVENT = 'pcbplanner:reset';
+
 export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
   const defaultsRef = useRef(defaults);
   const [state, setState] = useState<T>(() => parse(window.location.search, defaults));
@@ -49,6 +52,10 @@ export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
   }, [state]);
 
   const set = useCallback((patch: Partial<T>) => setState((s) => ({ ...s, ...patch })), []);
-  const reset = useCallback(() => setState(defaultsRef.current), []);
+  const reset = useCallback(() => {
+    setState(defaultsRef.current);
+    // after the re-render, tell every field to re-display its value (clears unparsable text)
+    setTimeout(() => window.dispatchEvent(new Event(RESET_EVENT)), 0);
+  }, []);
   return [state, set, reset] as const;
 }

@@ -68,6 +68,11 @@ const ACC = {
 
 type Key = [pos: number, fine: number];
 
+/** Mesh limits: keep every solve interactive and never let absurd inputs freeze the page. */
+const MAX_LINES = 4000;
+const MAX_NODES = 400_000;
+const TOO_LARGE = 'The geometry spans too large a range of sizes to mesh (e.g. a spacing or height thousands of times the trace thickness). Check the inputs.';
+
 /** Build a graded 1-D mesh that contains every key position. */
 export function gradedMesh(keys: Key[], growth: number, maxCell: number): number[] {
   const sorted = [...keys].sort((a, b) => a[0] - b[0]);
@@ -88,6 +93,7 @@ export function gradedMesh(keys: Key[], growth: number, maxCell: number): number
     let sl = Math.min(fa, maxCell);
     let sr = Math.min(fb, maxCell);
     while (xr - xl > sl + sr) {
+      if (left.length + right.length + out.length > MAX_LINES) throw new GeometryError(TOO_LARGE);
       if (sl <= sr) {
         xl += sl;
         left.push(xl);
@@ -177,6 +183,7 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
   const y = gradedMesh(yKeys.filter((k) => k[0] >= 0 && k[0] <= Y), growth, maxCellY);
   const nx = x.length;
   const ny = y.length;
+  if (nx * ny > MAX_NODES) throw new GeometryError(TOO_LARGE);
 
   const eps = 1e-9;
   const xg = g.coplanarGap ? x1 + g.coplanarGap : Infinity;
@@ -469,5 +476,10 @@ function validate(g: Geometry) {
   if (g.diff && !(g.s !== undefined && g.s > 0)) bad('Spacing must be greater than 0.');
   if (g.topPlane !== undefined && !(g.topPlane > g.yTrace + g.t)) bad('The top plane must be above the trace.');
   if (g.coplanarGap !== undefined && !(g.coplanarGap > 0)) bad('Coplanar gap must be greater than 0.');
-  for (const s of g.slabs) if (!(s.er >= 1)) bad('Dielectric constant must be at least 1.');
+  for (const s of g.slabs) if (!(s.er >= 1 && s.er <= 1000)) bad('Dielectric constant must be between 1 and 1000.');
+  const dims = [g.w, g.t, g.yTrace, g.s, g.coplanarGap, g.topPlane, g.mask?.overSubstrate || undefined, g.mask?.overTrace || undefined].filter(
+    (v): v is number => v !== undefined,
+  );
+  if (dims.some((v) => !Number.isFinite(v) || v > 1000)) bad('Dimensions must be finite and below 1000 mm.');
+  if (Math.max(...dims) / Math.min(...dims) > 2e4) bad(TOO_LARGE);
 }

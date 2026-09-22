@@ -68,7 +68,7 @@ describe('field solver vs commercial solver (coated microstrip)', () => {
 
 describe('field solver sanity', () => {
   it('parallel-plate limit: very wide stripline approaches η·h/W', () => {
-    const w = 40, b = 0.2, t = 0.001;
+    const w = 40, b = 0.2, t = 0.01; // 4000:1 aspect, within the solver's 2e4 feature-ratio limit
     const fs = solve({ w, t, yTrace: (b - t) / 2, diff: false, slabs: [{ y0: 0, y1: b, er: 1 }], topPlane: b }, { accuracy: 'fast' }).se!;
     // two plates in parallel (above and below): Z ≈ η0·(b/2)/(2W)
     const ideal = (376.73 * ((b - t) / 2)) / (2 * w);

@@ -1,4 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
+import { PRESETS } from '../lib/stackups';
 
 export interface ToolDef {
   path: string;
@@ -32,7 +33,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/timing',
-    title: 'Propagation Delay & Timing',
+    title: 'Propagation Delay, εeff & Timing',
     nav: 'Delay & timing',
     group: 'Signal integrity',
     summary: 'Propagation delay, length matching from skew, rise time to bandwidth, critical length and wavelength.',
@@ -67,7 +68,7 @@ export const TOOLS: ToolDef[] = [
     title: 'Layer Stack Manager',
     nav: 'Layer stack manager',
     group: 'Stackup',
-    summary: '176 fab stackups from 2 to 12 layers, editable, with any signal layer sent to the impedance calculator.',
+    summary: `${PRESETS.length} fab stackups from 2 to 12 layers, editable, with any signal layer sent to the impedance calculator.`,
     component: lazy(() => import('./StackupTool')),
   },
   {

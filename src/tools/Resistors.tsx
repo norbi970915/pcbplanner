@@ -194,6 +194,7 @@ export default function Resistors() {
 
       <Panel title={`Series / parallel ${kind === 'R' ? 'resistance' : kind === 'C' ? 'capacitance' : 'inductance'}`}>
         <Notes kind="error" items={bad.length ? [`Cannot read: ${bad.join(', ')}. Use numbers with an optional prefix, e.g. 4.7k, 4k7, 100n, 2.2u.`] : []} />
+        {!items.length && <Notes items={['Enter two or more values in the Properties panel, separated by commas or spaces (e.g. 10k, 4k7, 2.2k).']} />}
         {comb && (
           <table className="tbl">
             <tbody>
