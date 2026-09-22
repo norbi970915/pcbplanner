@@ -10,6 +10,8 @@ import { delayPsPerMm, lineLC, nextCoefficient } from '../lib/signal';
 import { runSolver, useFieldSolve } from '../lib/solverClient';
 import { geometryForLayer, type Stackup } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
+import { LAMINATES, laminateById } from '../data/laminates';
+import { djordjevicSarkar } from '../lib/dielectric';
 import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
 
@@ -34,7 +36,18 @@ const DEFAULTS = {
   gap: 0.2,
   acc: 'normal',
   target: 50,
+  mat: 'custom',
+  mat2: 'custom',
+  fq: 1,
 };
+
+/** εr from the material library at the design frequency, or the entered value. */
+function erOf(mat: string, er: number, fGHz: number): number {
+  const l = mat !== 'custom' ? laminateById(mat) : undefined;
+  return l ? +djordjevicSarkar({ dk: l.dk, df: l.df, f0: l.fGHz * 1e9 }).dk(fGHz * 1e9).toFixed(4) : er;
+}
+
+const MAT_OPTIONS = [{ value: 'custom', label: 'Custom εr', group: 'Custom' }, ...LAMINATES.map((l) => ({ value: l.id, label: `${l.vendor} ${l.name}`, group: l.cls }))];
 
 function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: string[] } {
   const errors: string[] = [];
@@ -80,7 +93,10 @@ function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: str
 }
 
 export default function Impedance() {
-  const [p, set, reset] = useUrlState(DEFAULTS);
+  const [raw, set, reset] = useUrlState(DEFAULTS);
+  // library materials replace the εr fields at the design frequency
+  const p = useMemo(() => ({ ...raw, er: erOf(raw.mat, raw.er, raw.fq), er2: erOf(raw.mat2, raw.er2, raw.fq) }), [raw]);
+  const usesLib = raw.mat !== 'custom' || (raw.type !== 'microstrip' && raw.mat2 !== 'custom');
   const { unit } = useSettings();
   const [stackNote, setStackNote] = useState<string | null>(null);
   const [solving, setSolving] = useState<null | 'w' | 's'>(null);
@@ -122,8 +138,9 @@ export default function Impedance() {
       type: g.type,
       h: g.h,
       er: g.er,
+      mat: 'custom',
       t: g.t,
-      ...(g.h2 !== undefined ? { h2: g.h2, er2: g.er2 ?? g.er } : {}),
+      ...(g.h2 !== undefined ? { h2: g.h2, er2: g.er2 ?? g.er, mat2: 'custom' } : {}),
       ...(g.type === 'microstrip' ? { mask: !!g.mask, ...(g.mask ? { c1: g.mask.c1, c2: g.mask.c2, erm: g.mask.er } : {}) } : {}),
     });
     setStackNote(g.note);
@@ -193,12 +210,28 @@ export default function Impedance() {
       </Section>
       <Section title={type === 'stripline' ? 'Dielectric Below' : 'Dielectric'}>
         <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
-        <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+        <SelectField label="Material" value={raw.mat} onChange={(v) => set({ mat: v })} options={MAT_OPTIONS} width={176} />
+        {raw.mat === 'custom' ? (
+          <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+        ) : (
+          <p className="text-faint">εr = {fmt(p.er, 4)} at {fmt(raw.fq, 4)} GHz</p>
+        )}
       </Section>
       {type !== 'microstrip' && (
         <Section title={type === 'stripline' ? 'Dielectric Above' : 'Cover Dielectric'}>
           <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
-          <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+          <SelectField label="Material" value={raw.mat2} onChange={(v) => set({ mat2: v })} options={MAT_OPTIONS} width={176} />
+          {raw.mat2 === 'custom' ? (
+            <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+          ) : (
+            <p className="text-faint">εr = {fmt(p.er2, 4)} at {fmt(raw.fq, 4)} GHz</p>
+          )}
+        </Section>
+      )}
+      {usesLib && (
+        <Section title="Material Library">
+          <NumField label="Design frequency" value={raw.fq} onChange={(v) => set({ fq: v })} unit="GHz" hint="Laminate Dk falls slowly with frequency; use the frequency of your signal (Nyquist for digital links)." />
+          <p className="text-faint">Datasheet Dk/Df, extended across frequency with the Djordjevic–Sarkar model. See the Trace Loss tool for the loss.</p>
         </Section>
       )}
       {type === 'microstrip' && p.mask && (

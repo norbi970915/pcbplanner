@@ -6,14 +6,15 @@ Browser-based calculators for PCB design with an Altium Designer–style interfa
 
 | Group | Tools |
 |---|---|
-| Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential, solve W or S), Delay & timing (εeff, delay, skew → length, bandwidth, wavelength), Crosstalk (NEXT/FEXT from even/odd modes, spacing sweep) |
-| Stackup | Stackup advisor (requirements → ranked fab stackups with trace widths), Layer stack manager (178 JLCPCB stackups, 2–12 layers, editable, per-layer impedance table) |
-| Thermal | Junction temperature (θJA or θJC+θCS+θSA), Thermal via array |
-| Power & conductors | Trace width / current / temperature rise (IPC-2221), Via, Skin effect, Fusing current |
+| Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential, solve W or S, laminate library), Delay & timing, Trace loss (conductor loss by incremental inductance with Hammerstad / Groiss / Huray roughness, dielectric loss from the field-energy split, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing |
+| Stackup | Stackup advisor, Layer stack manager (178 JLCPCB stackups, 2–12 layers), Laminate materials library (datasheet Dk/Df, solder masks, copper foil roughness) |
+| Thermal | Junction temperature, Thermal via array |
+| Power & conductors | Trace width / current (IPC-2221, IPC-2152), Via, Skin effect, Fusing current, Wire gauge, Conductor spacing (IPC-2221), Creepage & clearance (IEC 60664-1) |
 | Power integrity | PDN target impedance, plane capacitance, decoupling |
-| Components | Planar spiral inductor, Padstack |
+| Power supply | Buck converter (TI SLVA477B), Boost converter (TI SLVA372D), LDO dissipation, Feedback divider |
+| Components | Planar spiral inductor, Padstack, BGA land |
 | Electronics | Ohm's law, Reactance & resonance, Crystal & ppm, Resistor tools (E-series), Attenuator pads |
-| Utilities | Unit converter |
+| Utilities | Unit converter, Reference charts |
 
 Every tool keeps its inputs in the URL, so any result can be shared as a link.
 

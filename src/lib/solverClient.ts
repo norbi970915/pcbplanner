@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Geometry, SolveOptions, SolveResult } from './fieldsolver';
-import type { SolverRequest, SolverResponse } from './solver.worker';
+import type { LossResult } from './loss';
+import type { LossRequest, SolverRequest, SolverResponse } from './solver.worker';
 
 type Req = SolverRequest extends infer R ? (R extends SolverRequest ? Omit<R, 'id'> : never) : never;
 
@@ -56,6 +57,33 @@ export interface SolveState {
   result: SolveResult | null;
   error: string | null;
   busy: boolean;
+}
+
+export interface LossState {
+  result: LossResult | null;
+  error: string | null;
+  busy: boolean;
+}
+
+/** Re-run the loss analysis whenever the request changes (debounced); stale answers are dropped. */
+export function useLossSolve(req: LossRequest | null): LossState {
+  const [state, setState] = useState<LossState>({ result: null, error: null, busy: false });
+  const seq = useRef(0);
+  const key = JSON.stringify(req);
+  useEffect(() => {
+    if (!req) return;
+    const mySeq = ++seq.current;
+    setState((s) => ({ ...s, busy: true }));
+    const t = setTimeout(() => {
+      runSolver({ type: 'loss', req }).then((r) => {
+        if (mySeq !== seq.current) return;
+        setState(r.ok && r.loss ? { result: r.loss, error: null, busy: false } : { result: null, error: r.ok ? 'No result' : r.error, busy: false });
+      });
+    }, 150);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return state;
 }
 
 /** Re-solve whenever the geometry changes (debounced); stale answers are dropped. */

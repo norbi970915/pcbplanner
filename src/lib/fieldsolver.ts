@@ -34,9 +34,22 @@ export interface Geometry {
 
 export type Accuracy = 'fast' | 'normal' | 'high';
 
+/**
+ * Share of the stored field energy per dielectric region, normalised to the air-filled
+ * line: εeff = air + Σ slabs[i]·εr,i + mask·εr,mask (an exact identity of the solution).
+ * Gives the effective loss tangent Σ εr,i·tanδi·p_i / εeff and, to first order, how εeff
+ * moves when the εr of a region changes with frequency.
+ */
+export interface EnergyParts {
+  air: number;
+  slabs: number[];
+  mask: number;
+}
+
 export interface ModeResult {
   z: number;
   eeff: number;
+  parts?: EnergyParts;
 }
 
 export interface FieldMap {
@@ -121,6 +134,7 @@ interface Mesh {
   nx: number;
   ny: number;
   cellEr: Float64Array; // (nx-1)*(ny-1)
+  cellRegion: Int16Array; // per cell: -1 air, slab index, or slabs.length for the solder mask
   cond: Int8Array; // per node: 0 free, 1 trace (V), 2 grounded conductor
 }
 
@@ -205,6 +219,7 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
 
   // cell permittivities
   const cellEr = new Float64Array((nx - 1) * (ny - 1));
+  const cellRegion = new Int16Array((nx - 1) * (ny - 1));
   const mask = g.mask;
   const inCopperBox = (xc: number, yc: number, pad: number) =>
     (yc >= yb - pad && yc <= ytop + pad && xc >= (g.diff ? x0 : -Infinity) - pad && xc <= x1 + pad) ||
@@ -212,22 +227,30 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
   for (let j = 0; j < ny - 1; j++) {
     const yc = (y[j] + y[j + 1]) / 2;
     let slabEr = 1;
-    for (const sl of g.slabs) {
+    let slabIdx = -1;
+    for (let s = 0; s < g.slabs.length; s++) {
+      const sl = g.slabs[s];
       if (yc >= sl.y0 && yc < sl.y1) {
         slabEr = sl.er;
+        slabIdx = s;
         break;
       }
     }
     for (let i = 0; i < nx - 1; i++) {
       const xc = (x[i] + x[i + 1]) / 2;
       let er = slabEr;
-      if (mask && er === 1 && yc >= mask.surfaceY) {
-        if (yc <= mask.surfaceY + mask.overSubstrate || inCopperBox(xc, yc, mask.overTrace)) er = mask.er;
+      let region = slabIdx;
+      if (mask && slabIdx < 0 && yc >= mask.surfaceY) {
+        if (yc <= mask.surfaceY + mask.overSubstrate || inCopperBox(xc, yc, mask.overTrace)) {
+          er = mask.er;
+          region = g.slabs.length;
+        }
       }
       cellEr[j * (nx - 1) + i] = er;
+      cellRegion[j * (nx - 1) + i] = region;
     }
   }
-  return { x, y, nx, ny, cellEr, cond };
+  return { x, y, nx, ny, cellEr, cellRegion, cond };
 }
 
 interface Coeffs {
@@ -382,6 +405,33 @@ function energySum(m: Mesh, c: Coeffs, phi: Float64Array): number {
   return s;
 }
 
+/**
+ * Split the dielectric energy sum by region. Each edge coefficient is the sum of the
+ * halves of its neighbouring cells (see `coefficients`), so every cell owns an exact share:
+ * Σ over regions of er·parts = energySum(cDiel).
+ */
+function regionSums(m: Mesh, phi: Float64Array, regions: number): { air: number; region: Float64Array } {
+  const { x, y, nx, ny, cellRegion } = m;
+  const region = new Float64Array(regions);
+  let air = 0;
+  for (let j = 0; j < ny - 1; j++) {
+    const dy = y[j + 1] - y[j];
+    for (let i = 0; i < nx - 1; i++) {
+      const dx = x[i + 1] - x[i];
+      const k = j * nx + i;
+      const dS = phi[k] - phi[k + 1]; // bottom edge
+      const dN = phi[k + nx] - phi[k + nx + 1]; // top edge
+      const dW = phi[k] - phi[k + nx]; // left edge
+      const dE = phi[k + 1] - phi[k + nx + 1]; // right edge
+      const g = ((dy / 2 / dx) * (dS * dS + dN * dN) + (dx / 2 / dy) * (dW * dW + dE * dE));
+      const r = cellRegion[j * (nx - 1) + i];
+      if (r < 0) air += g;
+      else region[r] += g;
+    }
+  }
+  return { air, region };
+}
+
 function boundary(m: Mesh, odd: boolean) {
   const { nx, ny, cond } = m;
   const fixed = new Uint8Array(nx * ny);
@@ -422,6 +472,7 @@ export interface SolveOptions {
   accuracy?: Accuracy;
   field?: boolean;
   even?: boolean; // for differential pairs: also solve the even mode (Zcomm)
+  parts?: boolean; // energy share per dielectric region (for dielectric loss and dispersion)
 }
 
 export function solve(g: Geometry, opts: SolveOptions = {}): SolveResult {
@@ -439,23 +490,33 @@ export function solve(g: Geometry, opts: SolveOptions = {}): SolveResult {
     mode,
     xHalf: true,
   });
+  const nReg = g.slabs.length + (g.mask ? 1 : 0);
+  const parts = (r: ModeRun): EnergyParts | undefined => {
+    if (!opts.parts) return undefined;
+    const s = regionSums(m, r.phi, nReg);
+    return {
+      air: s.air / r.sAir,
+      slabs: g.slabs.map((_, i) => s.region[i] / r.sAir),
+      mask: g.mask ? s.region[g.slabs.length] / r.sAir : 0,
+    };
+  };
 
   if (!g.diff) {
     const r = runMode(m, cDiel, cAir, false);
     res.iterations += r.iterations;
     // half domain: S_full = 2·S_half, C = ε0·S_full  →  Z = η0 / (2·√(Sd·Sa))
-    res.se = { z: ETA0 / (2 * Math.sqrt(r.sDiel * r.sAir)), eeff: r.sDiel / r.sAir };
+    res.se = { z: ETA0 / (2 * Math.sqrt(r.sDiel * r.sAir)), eeff: r.sDiel / r.sAir, parts: parts(r) };
     if (opts.field) res.field = field(r.phi, 'se');
   } else {
     const o = runMode(m, cDiel, cAir, true);
     res.iterations += o.iterations;
     // per-line mode capacitance C = ε0·S_full/2 = ε0·S_half  →  Z = η0 / √(Sd·Sa)
-    res.odd = { z: ETA0 / Math.sqrt(o.sDiel * o.sAir), eeff: o.sDiel / o.sAir };
+    res.odd = { z: ETA0 / Math.sqrt(o.sDiel * o.sAir), eeff: o.sDiel / o.sAir, parts: parts(o) };
     res.zdiff = 2 * res.odd.z;
     if (opts.even !== false) {
       const e = runMode(m, cDiel, cAir, false);
       res.iterations += e.iterations;
-      res.even = { z: ETA0 / Math.sqrt(e.sDiel * e.sAir), eeff: e.sDiel / e.sAir };
+      res.even = { z: ETA0 / Math.sqrt(e.sDiel * e.sAir), eeff: e.sDiel / e.sAir, parts: parts(e) };
       res.zcomm = res.even.z / 2;
     }
     if (opts.field) res.field = field(o.phi, 'odd');
