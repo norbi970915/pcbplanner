@@ -113,6 +113,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./ThermalVias')),
   },
   {
+    path: '/copper-heat-spreading',
+    title: 'Copper Area for Heat Spreading',
+    nav: 'Copper heat spreading',
+    group: 'Thermal',
+    summary: 'How much copper a hot part needs: copper-pour thermal resistance by convection and radiation, junction temperature and the smallest pour for a Tj limit.',
+    component: lazy(() => import('./CopperSpreading')),
+  },
+  {
     path: '/trace-width',
     title: 'Trace Width, Current & Temperature Rise',
     nav: 'Trace width / current',
