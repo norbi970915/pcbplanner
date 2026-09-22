@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { planAdvice, rankAdvice, type Constraints, type Requirement } from './advisor';
-import { designLine } from './design';
+import { designLine, toSolverGeometry } from './design';
 import { copperCount, geometryForLayer, PRESETS, type StackupGeometry } from './stackups';
 
 const mil = 0.0254;
@@ -27,6 +27,24 @@ describe('line design', () => {
     expect(Math.abs(r.z - 50)).toBeLessThan(0.2);
     expect(r.w).toBeGreaterThan(0.05);
     expect(r.w).toBeLessThan(0.3);
+  });
+});
+
+describe('solver geometry from a stackup layer', () => {
+  it('per-ply slabs are contiguous, start at the plane and end at the trace / top plane', () => {
+    for (const s of PRESETS.slice(0, 60)) {
+      for (const l of s.layers) {
+        if (l.kind !== 'copper' || l.role === 'plane') continue;
+        const sg = geometryForLayer(s, l.id)!;
+        const g = toSolverGeometry(sg, 0.1, false, undefined, 0);
+        expect(g.slabs[0].y0).toBe(0);
+        for (let i = 1; i < g.slabs.length; i++) expect(g.slabs[i].y0).toBeCloseTo(g.slabs[i - 1].y1, 9);
+        const traceSlab = g.slabs.find((x) => x.y1 > g.yTrace + 1e-9);
+        if (sg.type === 'microstrip') expect(g.slabs[g.slabs.length - 1].y1).toBeCloseTo(sg.h, 9);
+        if (sg.type === 'stripline') expect(g.topPlane).toBeCloseTo(sg.h + sg.t + sg.h2!, 9);
+        if (traceSlab) expect(traceSlab.y0).toBeLessThanOrEqual(g.yTrace + 1e-9);
+      }
+    }
   });
 });
 

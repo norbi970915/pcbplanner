@@ -45,7 +45,8 @@ const PREFIXES: [number, string][] = [
 export function si(v: number, unit: string, sig = 4): string {
   if (!Number.isFinite(v)) return '—';
   if (v === 0) return `0 ${unit}`;
-  const a = Math.abs(v);
+  // round first so 999.96 becomes 1000 and gets the next prefix ("1 kΩ", not "1,000 Ω")
+  const a = Math.abs(Number(v.toPrecision(sig)));
   for (const [m, p] of PREFIXES) {
     if (a >= m * 0.9999999) return `${fmt(v / m, sig)} ${p}${unit}`;
   }

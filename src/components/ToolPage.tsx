@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { APP_NAME } from '../config';
+import { APP_NAME, SITE_URL } from '../config';
 import { useShell } from '../state/shell';
 import { AdSlot, PartnerBox } from './Ads';
 
@@ -14,6 +14,18 @@ export function useDocumentMeta(title: string, description: string) {
       document.head.appendChild(meta);
     }
     meta.setAttribute('content', description);
+    // canonical and social URLs follow the current tool
+    let canon = document.querySelector('link[rel="canonical"]');
+    if (!canon) {
+      canon = document.createElement('link');
+      canon.setAttribute('rel', 'canonical');
+      document.head.appendChild(canon);
+    }
+    const url = SITE_URL + window.location.pathname;
+    canon.setAttribute('href', url);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${title} – ${APP_NAME}`);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
   }, [title, description]);
 }
 

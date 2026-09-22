@@ -33,6 +33,15 @@ export function spacingFor(w: number, rule?: SpacingRule): number {
 }
 
 export function toSolverGeometry(sg: StackupGeometry, w: number, diff: boolean, s: number | undefined, etch: number): Geometry {
+  // each ply is its own slab, so stacked prepregs with different εr are modelled exactly
+  const slabs: Geometry['slabs'] = [];
+  if (sg.below?.length) {
+    let y = 0;
+    for (const p of sg.below) {
+      slabs.push({ y0: y, y1: y + p.t, er: p.er });
+      y += p.t;
+    }
+  } else slabs.push({ y0: 0, y1: sg.h, er: sg.er });
   const g: Geometry = {
     w,
     wTop: etch > 0 ? Math.max(w - etch, w * 0.2) : undefined,
@@ -40,13 +49,22 @@ export function toSolverGeometry(sg: StackupGeometry, w: number, diff: boolean, 
     yTrace: sg.h,
     diff,
     s: diff ? s : undefined,
-    slabs: [{ y0: 0, y1: sg.h, er: sg.er }],
+    slabs,
   };
   if (sg.type === 'microstrip') {
     if (sg.mask) g.mask = { surfaceY: sg.h, overSubstrate: sg.mask.c1, overTrace: sg.mask.c2, er: sg.mask.er };
   } else {
-    const top = sg.h + sg.t + (sg.h2 ?? 0);
-    g.slabs.push({ y0: sg.h, y1: top, er: sg.er2 ?? sg.er });
+    let top = sg.h + sg.t + (sg.h2 ?? 0);
+    if (sg.above?.length) {
+      // the first ply above also fills the space beside the trace
+      let y = sg.h;
+      sg.above.forEach((p, i) => {
+        const t = p.t + (i === 0 ? sg.t : 0);
+        slabs.push({ y0: y, y1: y + t, er: p.er });
+        y += t;
+      });
+      top = y;
+    } else slabs.push({ y0: sg.h, y1: top, er: sg.er2 ?? sg.er });
     if (sg.type === 'stripline') g.topPlane = top;
   }
   return g;

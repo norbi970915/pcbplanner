@@ -75,10 +75,27 @@ export const totalThickness = (s: Stackup) => s.layers.reduce((a, l) => a + l.t,
 /** Thickness without solder mask (what the fab quotes as board thickness). */
 export const boardThickness = (s: Stackup) => s.layers.filter((l) => l.kind !== 'mask').reduce((a, l) => a + l.t, 0);
 
-/** Thickness-weighted average εr of a run of dielectric layers. */
-function combine(layers: Layer[]) {
-  const t = layers.reduce((a, l) => a + l.t, 0);
-  const er = t > 0 ? layers.reduce((a, l) => a + l.t * (l.er ?? 4), 0) / t : 4;
+export interface Ply {
+  t: number;
+  er: number;
+}
+
+/**
+ * Plies of a run of layers, in order. Copper of an intermediate (unreferenced)
+ * signal layer is kept as a ply with the εr of the surrounding dielectric,
+ * because the resin fills around it.
+ */
+function plies(layers: Layer[]): Ply[] {
+  const known = layers.filter((l) => l.kind === 'dielectric');
+  const tk = known.reduce((a, l) => a + l.t, 0);
+  const avg = tk > 0 ? known.reduce((a, l) => a + l.t * (l.er ?? 4), 0) / tk : 4;
+  return layers.map((l) => ({ t: l.t, er: l.kind === 'dielectric' ? (l.er ?? 4) : avg }));
+}
+
+/** Total thickness and thickness-weighted average εr of a list of plies. */
+function combine(p: Ply[]) {
+  const t = p.reduce((a, l) => a + l.t, 0);
+  const er = t > 0 ? p.reduce((a, l) => a + l.t * l.er, 0) / t : 4;
   return { t, er };
 }
 
@@ -90,6 +107,10 @@ export interface StackupGeometry {
   h2?: number;
   er2?: number;
   mask?: { c1: number; c2: number; er: number };
+  /** plies from the reference plane up to the trace (sum = h) */
+  below?: Ply[];
+  /** plies from the trace upward to the other plane or the surface (sum = h2) */
+  above?: Ply[];
   outer: boolean;
   note: string;
 }
@@ -114,12 +135,14 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
           plane = l;
           break;
         }
-        continue; // an intermediate signal layer: its dielectrics still count
+        dielectrics.push(l); // an intermediate signal layer: its thickness is part of the spacing
+        continue;
       }
       if (l.kind === 'mask') masks.push(l);
       else dielectrics.push(l);
     }
-    return { dielectrics, masks, plane };
+    // plies ordered outward from the trace
+    return { run: plies(dielectrics), masks, plane };
   };
   const up = scan(-1);
   const down = scan(1);
@@ -127,8 +150,8 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
 
   if (planes === 0) return null;
   if (planes === 2) {
-    const a = combine(down.dielectrics);
-    const b = combine(up.dielectrics);
+    const a = combine(down.run);
+    const b = combine(up.run);
     return {
       type: 'stripline',
       h: a.t,
@@ -136,14 +159,16 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
       h2: b.t,
       er2: b.er,
       t: trace.t,
+      below: [...down.run].reverse(),
+      above: up.run,
       outer: false,
       note: `${trace.name}: stripline between ${down.plane!.name} and ${up.plane!.name}.`,
     };
   }
   const ref = up.plane ? up : down;
   const open = up.plane ? down : up;
-  const below = combine(ref.dielectrics);
-  const cover = combine(open.dielectrics);
+  const below = combine(ref.run);
+  const cover = combine(open.run);
   if (cover.t === 0) {
     const m = open.masks[0];
     return {
@@ -152,6 +177,7 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
       er: below.er,
       t: trace.t,
       mask: m ? { c1: m.t, c2: m.t / 2, er: m.er ?? MASK_ER } : undefined,
+      below: [...ref.run].reverse(),
       outer: true,
       note: `${trace.name}: surface microstrip over ${ref.plane!.name}${m ? ', solder-mask coated' : ''}.`,
     };
@@ -163,6 +189,8 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
     h2: cover.t,
     er2: cover.er,
     t: trace.t,
+    below: [...ref.run].reverse(),
+    above: open.run,
     outer: false,
     note: `${trace.name}: embedded microstrip over ${ref.plane!.name}.`,
   };

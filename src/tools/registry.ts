@@ -47,6 +47,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./Crosstalk')),
   },
   {
+    path: '/differential-via',
+    title: 'Differential Via',
+    nav: 'Differential via',
+    group: 'Signal integrity',
+    summary: 'Via-pair differential impedance through the plane clearance from a 2D field solution, antipad sizing for a target, stub resonance and delay.',
+    component: lazy(() => import('./DiffVia')),
+  },
+  {
     path: '/stackup-advisor',
     title: 'Stackup Advisor',
     nav: 'Stackup advisor',
@@ -111,6 +119,22 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./Fusing')),
   },
   {
+    path: '/wire-gauge',
+    title: 'Wire Gauge & Voltage Drop',
+    nav: 'Wire gauge / drop',
+    group: 'Power & conductors',
+    summary: 'AWG diameter, area and resistance, cable voltage drop and loss, the smallest gauge for a drop limit, and Preece fusing current.',
+    component: lazy(() => import('./WireGauge')),
+  },
+  {
+    path: '/conductor-spacing',
+    title: 'Conductor Spacing (IPC-2221)',
+    nav: 'Conductor spacing',
+    group: 'Power & conductors',
+    summary: 'Minimum electrical clearance between conductors from IPC-2221 Table 6-1: internal, external, coated, high altitude, assemblies.',
+    component: lazy(() => import('./ConductorSpacing')),
+  },
+  {
     path: '/pdn',
     title: 'PDN Impedance Calculator',
     nav: 'PDN',
@@ -133,6 +157,14 @@ export const TOOLS: ToolDef[] = [
     group: 'Components',
     summary: 'Plated through-hole sizing per IPC-7251 / IPC-2221 / IPC-2222: hole, outer and inner pads, antipad, thermal relief and annular ring for levels A/B/C.',
     component: lazy(() => import('./Padstack')),
+  },
+  {
+    path: '/bga-land',
+    title: 'BGA Land Pattern',
+    nav: 'BGA land',
+    group: 'Components',
+    summary: 'IPC-7351 land diameter for collapsing and non-collapsing BGA balls, with tolerance and courtyard, and escape-routing capacity between lands.',
+    component: lazy(() => import('./BgaLand')),
   },
   {
     path: '/ohms-law',
@@ -181,6 +213,14 @@ export const TOOLS: ToolDef[] = [
     group: 'Utilities',
     summary: 'Length, copper weight, temperature, power (dBm/W/V) and frequency/wavelength.',
     component: lazy(() => import('./Units')),
+  },
+  {
+    path: '/reference-charts',
+    title: 'Reference Charts',
+    nav: 'Reference charts',
+    group: 'Utilities',
+    summary: 'Drill sizes (number, letter, fractional, metric), ISO metric and Unified threads with tap and clearance drills, and the AWG wire table.',
+    component: lazy(() => import('./ReferenceCharts')),
   },
 ];
 

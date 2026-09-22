@@ -212,7 +212,8 @@ const PREFIX: Record<string, number> = { f: 1e-15, p: 1e-12, n: 1e-9, u: 1e-6, �
  * code as printed on parts ("4k7", "4R7", "2n2"). Returns NaN if unreadable.
  */
 export function parseValue(text: string): number {
-  const t = text.trim().replace(/\s+/g, '').replace(/(Ω|ohms?|F|H)$/i, '');
+  // strip a unit: Ω/ohm in any case; F and H only as capitals (lower-case f is the femto prefix)
+  const t = text.trim().replace(/\s+/g, '').replace(/(Ω|ohms?)$/i, '').replace(/(?<=.)(F|H)$/, '');
   let m = /^(\d+)([fpnuµμmRrkKMG])(\d+)$/.exec(t);
   if (m) return Number(`${m[1]}.${m[3]}`) * PREFIX[m[2]];
   m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)([fpnuµμmRrkKMG]?)$/i.exec(t);

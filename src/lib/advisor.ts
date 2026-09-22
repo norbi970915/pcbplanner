@@ -91,7 +91,7 @@ export function planAdvice(stackups: Stackup[], reqs: Requirement[], c: Constrai
           note: '',
         };
         const dreq: DesignRequest = { sg, kind: req.kind, target: req.z, etch: c.etch, rule: ruleFor(req, c), accuracy };
-        const key = JSON.stringify([sg.type, sg.h, sg.er, sg.h2, sg.er2, sg.t, sg.mask, req.kind, req.z, dreq.rule, c.etch, accuracy]);
+        const key = JSON.stringify([sg.type, sg.h, sg.er, sg.h2, sg.er2, sg.t, sg.mask, sg.below, sg.above, req.kind, req.z, dreq.rule, c.etch, accuracy]);
         jobs.set(key, dreq);
         plan.jobs.push({ reqId: req.id, layerId: l.layerId, key });
       }

@@ -118,14 +118,11 @@ export function Layout() {
       <div className="flex h-full flex-col">
         {/* menu bar */}
         <div ref={barRef} className="flex h-[26px] shrink-0 items-center border-b border-line bg-chrome">
-          <Link to="/" className="flex h-full items-center gap-1.5 px-2.5 font-semibold text-ink no-underline">
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <rect x="0.5" y="0.5" width="13" height="13" fill="none" stroke="var(--copper)" />
-              <path d="M3 10 L6 7 L11 7" stroke="var(--copper)" strokeWidth="1.6" fill="none" />
-              <circle cx="3" cy="10" r="1.6" fill="var(--copper)" />
-              <circle cx="11" cy="7" r="1.6" fill="var(--copper)" />
-            </svg>
-            {APP_NAME}
+          <Link to="/" className="flex h-full items-center gap-1.5 px-2.5 text-ink no-underline" title={`${APP_NAME} – pcbplanner.com`}>
+            <img src="/favicon.svg" width="16" height="16" alt="" />
+            <span className="font-semibold">
+              <span className="text-[var(--copper)]">PCB</span> Planner
+            </span>
           </Link>
           <Menu {...menuProps('File')}>
             <Item onClick={run(() => navigator.clipboard?.writeText(window.location.href))} hint="Ctrl+L">
