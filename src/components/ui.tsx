@@ -40,7 +40,8 @@ export function Panel({ title, right, children, className = '' }: { title?: Reac
           {right}
         </div>
       )}
-      {children}
+      {/* wide tables scroll sideways inside the panel on narrow screens */}
+      <div className="overflow-x-auto">{children}</div>
     </section>
   );
 }
@@ -136,7 +137,7 @@ export function LenField({
         }}
       />
       <select
-        className="fld w-[48px]"
+        className="fld w-[64px] lg:w-[48px]"
         aria-label="unit"
         value={unit}
         onChange={(e) => {
@@ -201,7 +202,7 @@ export function NumField({
           }
         }}
       />
-      <span className="w-[48px] text-muted">{unit}</span>
+      <span className="w-[64px] text-muted lg:w-[48px]">{unit}</span>
     </Row>
   );
 }

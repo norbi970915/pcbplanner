@@ -251,6 +251,32 @@ input[type='radio'] {
 .menu-item:hover {
   background: var(--sel);
 }
+.menu {
+  max-height: calc(100dvh - 60px);
+  overflow-y: auto;
+}
+
+/* ---------- phones and tablets: touch-sized controls ---------- */
+@media (max-width: 1023.98px) {
+  /* 16 px stops iOS from zooming into a field on focus */
+  .fld {
+    font-size: 16px;
+    height: 32px;
+  }
+  .btn {
+    height: 32px;
+    font-size: 14px;
+    padding: 0 12px;
+  }
+  .menu-item {
+    padding: 8px 22px;
+  }
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 18px;
+    height: 18px;
+  }
+}
 .menu-sep {
   height: 1px;
   background: var(--line);

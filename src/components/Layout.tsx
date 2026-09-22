@@ -62,6 +62,8 @@ export function Layout() {
   const [tabs, setTabs] = useState<string[]>(() => readJson(TABS_KEY, ['/', '/impedance']));
   const [propsEl, setPropsEl] = useState<HTMLElement | null>(null);
   const [statusEl, setStatusEl] = useState<HTMLElement | null>(null);
+  const [headEl, setHeadEl] = useState<HTMLElement | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const actions = useRef<ToolActions | null>(null);
   const setActions = useCallback((a: ToolActions | null) => {
     actions.current = a;
@@ -103,7 +105,7 @@ export function Layout() {
     setTabs(next);
     if (p === path) navigate(next[Math.max(0, i - 1)] ?? '/');
   };
-  const shell = useMemo(() => ({ propsEl, statusEl, setActions }), [propsEl, statusEl, setActions]);
+  const shell = useMemo(() => ({ propsEl, statusEl, headEl, setActions }), [propsEl, statusEl, headEl, setActions]);
   const tabTitle = (p: string) => (p === '/' ? 'Home' : toolByPath(p)?.nav ?? p);
   const tabColor = (p: string) => (p === '/' ? '#8a8a8a' : GROUP_COLORS[toolByPath(p)?.group ?? ''] ?? '#8a8a8a');
 
@@ -213,8 +215,8 @@ export function Layout() {
           })}
         </div>
 
-        {/* workspace */}
-        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        {/* workspace: on narrow screens one scrolling column (title, inputs, results); from lg up, docked panels */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
           {panels.tools && (
             <aside className="hidden w-[200px] shrink-0 flex-col border-r border-line bg-panel lg:flex">
               <div className="flex h-[24px] items-center border-b border-line bg-panel-head px-2 font-semibold">Tools</div>
@@ -241,18 +243,30 @@ export function Layout() {
             </aside>
           )}
 
-          {/* on narrow screens the properties panel sits above the document */}
+          {/* narrow screens: the tool's title goes above its inputs */}
+          <div ref={setHeadEl} className="order-first shrink-0 bg-doc lg:hidden" />
+
+          {/* on narrow screens the properties panel sits above the document (not on Home, which has no inputs) */}
           {panels.props && (
-            <aside className="order-first flex max-h-[45vh] shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:max-h-none lg:w-[300px] lg:border-b-0 lg:border-l">
-              <div className="flex h-[24px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold">
-                Properties
-                <span className="font-normal text-faint">{path === '/' ? '' : toolByPath(path)?.nav}</span>
+            <aside
+              className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:flex lg:w-[300px] lg:border-b-0 lg:border-l ${path === '/' ? 'hidden' : 'flex'}`}
+            >
+              <div className="flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
+                <span>
+                  Properties <span className="hidden font-normal text-faint lg:inline">{toolByPath(path)?.nav}</span>
+                </span>
+                {/* wrapper carries lg:hidden: the unlayered .btn display rule would override it on the button */}
+                <span className="lg:hidden">
+                  <button type="button" className="btn" onClick={() => mainRef.current?.scrollIntoView({ behavior: 'smooth' })}>
+                    Results ↓
+                  </button>
+                </span>
               </div>
-              <div ref={setPropsEl} className="min-h-0 flex-1 overflow-y-auto" />
+              <div ref={setPropsEl} className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto" />
             </aside>
           )}
 
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-doc">
+          <main ref={mainRef} className="min-w-0 shrink-0 bg-doc lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <ErrorBoundary key={path}>
               <Suspense fallback={<div className="p-4 text-muted">Loading…</div>}>
                 <Outlet />

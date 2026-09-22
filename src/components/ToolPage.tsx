@@ -53,15 +53,33 @@ export function ToolPage({
   method?: ReactNode;
 }) {
   useDocumentMeta(title, description);
-  const { propsEl, statusEl, setActions } = useShell();
+  const { propsEl, statusEl, headEl, setActions } = useShell();
   useEffect(() => {
     setActions({ reset: onReset });
     return () => setActions(null);
   }, [onReset, setActions]);
 
+  // narrow screens: the header is shown above the inputs (Layout slot), so it is hidden here
+  const mobileHead = (
+    <div className="flex items-start justify-between gap-2 px-3 pb-2 pt-3">
+      <div className="min-w-0">
+        <div className="text-[16px] font-semibold" role="heading" aria-level={1}>
+          {title}
+        </div>
+        <p className="text-muted">{description}</p>
+      </div>
+      {onReset && (
+        <button className="btn" onClick={onReset}>
+          Reset
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-3">
-      <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
+      {headEl && createPortal(mobileHead, headEl)}
+      <div className="mb-2.5 hidden flex-wrap items-end justify-between gap-2 lg:flex">
         <div className="min-w-0">
           <h1 className="text-[15px] font-semibold">{title}</h1>
           <p className="max-w-[95ch] text-muted">{description}</p>
