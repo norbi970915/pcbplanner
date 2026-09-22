@@ -2,7 +2,7 @@
 // link previews get the right title, description, canonical URL, Open Graph tags, JSON-LD and
 // readable content without running JavaScript. React replaces the static content on load.
 // Netlify, Cloudflare Pages, GitHub Pages and `vite preview` all serve /impedance from impedance.html.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 
 const SITE = 'https://www.pcbplanner.com';
@@ -11,6 +11,10 @@ const APP = 'pcbplanner';
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { TOOLS, GROUPS } = await vite.ssrLoadModule('/src/tools/registry.ts');
 const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
+const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
+const { renderGuide } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
+// full article HTML, rendered with React on the server side
+const guideHtml = Object.fromEntries(['/guides', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
 await vite.close();
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -33,7 +37,7 @@ function toolDescription(tool) {
 
 const template = readFileSync('dist/index.html', 'utf8');
 
-function page({ path, title, description, h1, body, jsonLd }) {
+function page({ path, title, description, h1, body, jsonLd, raw }) {
   const url = SITE + path;
   const set = (html, re, value) => {
     if (!re.test(html)) throw new Error(`prerender: ${re} not found in dist/index.html`);
@@ -53,7 +57,7 @@ function page({ path, title, description, h1, body, jsonLd }) {
     /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
     `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`,
   );
-  html = set(html, /<div id="root"><\/div>/, `<div id="root"><main class="prerender"><h1>${esc(h1)}</h1>${body}</main></div>`);
+  html = set(html, /<div id="root"><\/div>/, `<div id="root">${raw ?? `<main class="prerender"><h1>${esc(h1)}</h1>${body}</main>`}</div>`);
   return html;
 }
 
@@ -85,7 +89,7 @@ writeFileSync(
     title: homeTitle,
     description: homeDescription,
     h1: `${APP} – PCB design calculators`,
-    body: `<p>${esc(homeDescription)}</p>${toolNav}`,
+    body: `<p>${esc(homeDescription)}</p><h2>Guides</h2><ul>${GUIDES.map((g) => `<li><a href="${g.path}">${esc(g.title)}</a> – ${esc(g.description)}</li>`).join('')}</ul>${toolNav}`,
     jsonLd: {
       '@context': 'https://schema.org',
       '@graph': [
@@ -132,4 +136,61 @@ for (const tool of TOOLS) {
     }),
   );
 }
-console.log(`prerender: ${TOOLS.length + 1} pages`);
+// Guides: index and articles, with the full article text rendered into the page
+mkdirSync('dist/guides', { recursive: true });
+const guidesDescription = 'Practical PCB design guides with real numbers: controlled impedance, choosing a stackup, PCIe Gen3 routing, copper area for cooling, and creepage and clearance for mains.';
+writeFileSync(
+  'dist/guides.html',
+  page({
+    path: '/guides',
+    title: `PCB Design Guides – ${APP}`,
+    description: guidesDescription,
+    raw: guideHtml['/guides'],
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'PCB Design Guides',
+      url: `${SITE}/guides`,
+      description: guidesDescription,
+      hasPart: GUIDES.map((g) => ({ '@type': 'Article', headline: g.title, url: SITE + g.path })),
+    },
+  }),
+);
+for (const g of GUIDES) {
+  const url = SITE + g.path;
+  writeFileSync(
+    `dist${g.path}.html`,
+    page({
+      path: g.path,
+      title: `${g.title} – ${APP}`,
+      description: g.description,
+      raw: guideHtml[g.path],
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'TechArticle',
+            headline: g.title,
+            description: g.description,
+            datePublished: g.date,
+            dateModified: g.date,
+            url,
+            mainEntityOfPage: url,
+            image: `${SITE}/og-image.png`,
+            author: { '@type': 'Organization', name: APP, url: `${SITE}/` },
+            publisher: { '@type': 'Organization', name: APP, url: `${SITE}/`, logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png` } },
+          },
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: APP, item: `${SITE}/` },
+              { '@type': 'ListItem', position: 2, name: 'Guides', item: `${SITE}/guides` },
+              { '@type': 'ListItem', position: 3, name: g.title, item: url },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+}
+console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages`);

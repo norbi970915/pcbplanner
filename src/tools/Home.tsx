@@ -4,6 +4,7 @@ import { useDocumentMeta } from '../components/ToolPage';
 import { APP_NAME } from '../config';
 import { PRESETS } from '../lib/stackups';
 import { useShell } from '../state/shell';
+import { GUIDES } from '../guides/registry';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
 
 export default function Home() {
@@ -25,6 +26,25 @@ export default function Home() {
           </p>
         </div>
       </div>
+      <section className="mt-3 border border-line bg-sheet">
+        <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold">
+          <span>Guides</span>
+          <Link to="/guides" className="font-normal">
+            All guides →
+          </Link>
+        </h2>
+        <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
+          {GUIDES.map((g) => (
+            <li key={g.path} className="border-t border-line md:border-r">
+              <Link to={g.path} className="block h-full px-2.5 py-2 no-underline hover:bg-hover">
+                <div className="font-semibold text-accent-ink">{g.title}</div>
+                <div className="mt-0.5 line-clamp-2 text-muted">{g.description}</div>
+                <div className="mt-0.5 text-faint">{g.minutes} min read</div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
       <div className="mt-3 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
         {GROUPS.map((g) => (
           <section key={g} className="border border-line bg-sheet">

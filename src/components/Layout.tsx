@@ -73,6 +73,8 @@ export function Layout() {
   // keep a tab for every visited tool
   const path = loc.pathname;
   const known = path === '/' || !!toolByPath(path);
+  // article pages (guides) have no inputs: no Properties panel
+  const isDoc = path === '/guides' || path.startsWith('/guides/');
   useEffect(() => {
     if (!known) return;
     setTabs((t) => (t.includes(path) ? t : [...t, path]));
@@ -177,8 +179,12 @@ export function Layout() {
           </Menu>
           <Menu {...menuProps('Help')}>
             <Item onClick={run(() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' }))}>Method &amp; References</Item>
+            <Item onClick={run(() => navigate('/guides'))}>Guides</Item>
             <Item onClick={run(() => navigate('/'))}>About {APP_NAME}</Item>
           </Menu>
+          <Link to="/guides" className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}>
+            Guides
+          </Link>
         </div>
 
         {/* document tabs */}
@@ -239,6 +245,16 @@ export function Layout() {
                     ))}
                   </div>
                 ))}
+                <div className="mb-1">
+                  <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
+                    <span className="text-[9px] text-muted">▼</span>
+                    <Swatch color="#8a8a8a" />
+                    Guides
+                  </div>
+                  <Link to="/guides" className={`block py-[3px] pl-[34px] pr-2 no-underline ${isDoc ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>
+                    All guides
+                  </Link>
+                </div>
               </nav>
             </aside>
           )}
@@ -249,7 +265,7 @@ export function Layout() {
           {/* on narrow screens the properties panel sits above the document (not on Home, which has no inputs) */}
           {panels.props && (
             <aside
-              className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:flex lg:w-[300px] lg:border-b-0 lg:border-l ${path === '/' ? 'hidden' : 'flex'}`}
+              className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : path === '/' ? 'hidden lg:flex' : 'flex lg:flex'}`}
             >
               <div className="flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
                 <span>
