@@ -23,7 +23,8 @@ export default function PlanarInductor() {
   const dIn = fromOuter ? innerFromOuter(p.dOut, p.n, p.w, p.s) : p.dIn;
 
   const errors: string[] = [];
-  if (!(p.n >= 1)) errors.push('Number of turns must be at least 1.');
+  if (!(p.n >= 1 && p.n <= 200)) errors.push('Number of turns must be between 1 and 200.');
+  if ([p.w, p.s, p.t, p.dOut, p.dIn].some((v) => v > 10000)) errors.push('Dimensions must be below 10 m.');
   if (!(p.w > 0)) errors.push('Trace width must be greater than 0.');
   if (!(p.s > 0)) errors.push('Spacing must be greater than 0.');
   if (!(p.t > 0)) errors.push('Copper thickness must be greater than 0.');

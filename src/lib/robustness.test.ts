@@ -26,6 +26,14 @@ describe('solver robustness', () => {
     ).toThrow();
     expect(performance.now() - t0).toBeLessThan(1000);
   });
+  it('via pair: an absurd pitch is rejected by validation and never allocates a huge grid', async () => {
+    const { validateViaPair, viaPairImpedance } = await import('./via2d');
+    const g = { d: 0.25, pitch: 1e9, antipad: 0.7, shape: 'oblong' as const, er: 4 };
+    expect(validateViaPair(g).length).toBeGreaterThan(0);
+    const t0 = performance.now();
+    expect(() => viaPairImpedance(g)).toThrow();
+    expect(performance.now() - t0).toBeLessThan(200);
+  });
   it('normal geometries still solve', () => {
     expect(solve({ w: 0.15, t: 0.035, yTrace: 0.1, diff: false, slabs: [{ y0: 0, y1: 0.1, er: 4.1 }] }).se!.z).toBeGreaterThan(40);
   });

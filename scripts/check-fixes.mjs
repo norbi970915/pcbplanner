@@ -32,5 +32,13 @@ await p.getByLabel('Pair spacing').fill('1e9');
 await p.waitForTimeout(1500);
 const alive = await p.evaluate(() => 1 + 1).catch(() => 0);
 console.log(`1e9 spacing: page responsive=${alive === 2} in ${Date.now() - t0} ms`);
+// absurd values that used to crash or hang: the page must stay alive and show a note
+for (const url of ['/differential-via?pitch=1000000000', '/planar-inductor?mode=in&n=1000000000', '/thermal-vias?n=1000000000', '/padstack?spokes=1000000000']) {
+  const t1 = Date.now();
+  await p.goto(`${base}${url}`, { waitUntil: 'networkidle' });
+  await p.waitForTimeout(300);
+  const txt = await p.locator('main').innerText().catch(() => '');
+  console.log(`${url}: ${txt.length > 50 ? 'page alive' : 'BLANK'}, error note shown: ${/must|too large|between/i.test(txt)} (${Date.now() - t1} ms)`);
+}
 console.log('page errors:', errs.length ? errs : 'none');
 await b.close();

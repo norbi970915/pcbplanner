@@ -39,6 +39,7 @@ interface Problem {
 function solve(pr: Problem): number {
   const { n, m, h, classify, oddWall } = pr;
   const N = n * m;
+  if (!(N > 0 && N <= MAX_VIA_NODES)) throw new Error('Via geometry too large to solve; check the pitch, antipad and barrel dimensions.');
   const kind = new Uint8Array(N);
   const val = new Float64Array(N);
   for (let j = 0; j < m; j++)
@@ -192,13 +193,24 @@ function pairProblem(g: ViaPairGeom, odd: boolean, cellsPerD: number): Problem {
   return { n: Math.ceil((cx + ra) / h) + 3, m: Math.ceil(ra / h) + 3, h, classify, oddWall: odd };
 }
 
-export function validateViaPair(g: ViaPairGeom): string[] {
+/** Largest grid the solver accepts (nodes in the quadrant); keeps every solve fast and memory-safe. */
+export const MAX_VIA_NODES = 250_000;
+
+export function validateViaPair(g: ViaPairGeom, cellsPerD = 20): string[] {
   const e: string[] = [];
+  const finite = [g.d, g.pitch, g.antipad, g.er].every((v) => Number.isFinite(v));
+  if (!finite) return ['Enter finite numbers for every dimension.'];
   if (!(g.d > 0)) e.push('Barrel diameter must be greater than 0.');
   if (!(g.pitch > g.d)) e.push('Pitch must be larger than the barrel diameter (the vias would touch).');
   if (!(g.antipad > g.d)) e.push('Antipad must be larger than the barrel.');
-  if (!(g.er >= 1)) e.push('εr must be at least 1.');
-  if (g.antipad > 40 * Math.min(g.d, g.pitch - g.d)) e.push('Antipad is very large compared with the barrel and gap; reduce it (the mesh would be too large).');
+  if (!(g.er >= 1 && g.er <= 1000)) e.push('εr must be between 1 and 1000.');
+  if (g.d > 100 || g.pitch > 100 || g.antipad > 100) e.push('Via dimensions must be below 100 mm.');
+  if (e.length) return e;
+  // same grid as pairProblem(): reject anything that would need an oversized mesh
+  const h = Math.min(g.d, g.antipad - g.d, g.pitch - g.d) / cellsPerD;
+  const n = Math.ceil((g.pitch / 2 + g.antipad / 2) / h) + 3;
+  const m = Math.ceil(g.antipad / 2 / h) + 3;
+  if (!(n * m <= MAX_VIA_NODES)) e.push('The pitch or antipad is too large compared with the barrel and gaps to solve accurately. Check the inputs.');
   return e;
 }
 

@@ -48,7 +48,7 @@ export default function Padstack() {
   if (!(p.drill >= 0)) errors.push('Drill oversize cannot be negative.');
   if (!(p.oz > 0)) errors.push('Copper weight must be greater than 0.');
   if (!(p.layers >= 1)) errors.push('Layer count must be at least 1.');
-  if (!(p.spokes >= 1 && Number.isInteger(p.spokes))) errors.push('Spoke count must be a whole number ≥ 1.');
+  if (!(p.spokes >= 1 && p.spokes <= 8 && Number.isInteger(p.spokes))) errors.push('Spoke count must be a whole number from 1 to 8.');
   if (!(p.planes >= 0 && Number.isInteger(p.planes))) errors.push('Number of connected planes must be a whole number.');
   if (p.ovAr && !(p.arExt > 0 && p.arInt > 0)) errors.push('Annular rings must be greater than 0.');
   if (p.ovFa && !(p.fa >= 0)) errors.push('Fabrication allowance cannot be negative.');

@@ -79,7 +79,8 @@ function track(page) {
 }
 
 const PROPS = 'aside.order-first';
-const BAD_RE = /\bNaN\b|Infinity|\bundefined\b|\bnull\b|\[object|∞/;
+// "∞ (ideal)" is a deliberate label for lossless LC results; any other ∞ is a failure
+const BAD_RE = /\bNaN\b|Infinity|\bundefined\b|\bnull\b|\[object|∞(?! \(ideal\))/;
 
 /** Text of the document area + status bar (+ properties panel labels and input values). */
 const scanText = (page) =>
@@ -362,7 +363,7 @@ async function stepUnitSwitch(page, route, container) {
 
 async function clickMenu(page, menu, item) {
   await page.getByRole('button', { name: menu, exact: true }).first().click();
-  await page.getByRole('menuitem', { name: item }).first().click();
+  await page.getByRole('menuitem', typeof item === 'string' ? { name: item, exact: true } : { name: item }).first().click();
 }
 
 async function stepGlobalUnit(page, route, container) {
@@ -407,16 +408,7 @@ async function stepUrlState(page, route, container) {
   const n = await all.count();
   const init = [];
   for (let i = 0; i < n; i++) init.push(await all.nth(i).inputValue());
-  const picks = [];
-  for (let i = 0; i < n && picks.length < 2; i++) if ((await all.nth(i).isVisible()) && (await all.nth(i).getAttribute('inputmode')) === 'decimal') picks.push(i);
-  if (!picks.length) return;
-  const typed = {};
-  for (const i of picks) {
-    typed[i] = newValid(init[i]);
-    await all.nth(i).fill(typed[i]);
-    await settle(page, route, '8 url edit');
-  }
-  // also a select (not a unit select), if any
+  // a select first (not a unit select), because it may change which fields are shown
   const sel = page.locator(`${container} select:not([aria-label="unit"])`).first();
   let selWant = null;
   if ((await sel.count()) && (await sel.isVisible())) {
@@ -427,6 +419,15 @@ async function stepUrlState(page, route, container) {
       await sel.selectOption(selWant);
       await settle(page, route, '8 url select');
     }
+  }
+  const picks = [];
+  for (let i = 0; i < (await all.count()) && picks.length < 2; i++) if ((await all.nth(i).isVisible()) && (await all.nth(i).getAttribute('inputmode')) === 'decimal') picks.push(i);
+  if (!picks.length) return;
+  const typed = {};
+  for (const i of picks) {
+    typed[i] = newValid(await all.nth(i).inputValue());
+    await all.nth(i).fill(typed[i]);
+    await settle(page, route, '8 url edit');
   }
   await page.waitForTimeout(400);
   const url = page.url();
@@ -532,6 +533,24 @@ async function flowImpedance(page) {
     await check(page, st.w > 0 && st.h > 0 && st.colors > 10, route, 'impedance field canvas non-blank', JSON.stringify(st));
   }
   await checkPage(page, route, 'impedance field view');
+
+  // regression: absurd geometry must fail fast with a message, not freeze the tab
+  for (const [type, label, val] of [
+    ['stripline', 'Spacing', '1e9'],
+    ['stripline', 'Width (bottom)', '1e9'],
+    ['microstrip', 'Spacing', '1e9'],
+  ]) {
+    await gotoFresh(page, route, `?type=${type}&mode=diff`);
+    page.drain();
+    const inp = page.locator(PROPS).getByLabel(label, { exact: false }).first();
+    await inp.fill(val);
+    const t0 = Date.now();
+    await settle(page, route, `impedance ${type} ${label}=${val}`, 30000);
+    const secs = (Date.now() - t0) / 1000;
+    const notes = await noteText(page);
+    await check(page, notes.length > 0 || (await inp.getAttribute('aria-invalid')) === 'true', route, `impedance ${type} ${label}=${val} reports an error`, `no error note after ${secs.toFixed(1)} s; status "${await statusText(page)}"`);
+    await checkPage(page, route, `impedance ${type} ${label}=${val}`);
+  }
 }
 
 async function flowAdvisor(page) {
@@ -770,7 +789,7 @@ async function flowTabsMenus(page) {
   await check(page, new URL(page.url()).pathname === '/', route, 'click Home tab', page.url());
   // Tools panel links
   for (const t of TOOLS.slice(0, 5)) {
-    await page.locator('nav[aria-label=Tools] a', { hasText: t.nav }).first().click();
+    await page.locator('nav[aria-label=Tools]').getByRole('link', { name: t.nav, exact: true }).click();
     await check(page, new URL(page.url()).pathname === t.path, route, `Tools panel link "${t.nav}"`, page.url());
   }
   // tabs persist across reload

@@ -11,7 +11,7 @@ export default function ThermalVias() {
   const fill = p.fill as Fill | 'custom';
   const fillK = fill === 'custom' ? p.fillK : FILLS[fill].k;
   const errors: string[] = [];
-  if (!(p.n >= 1 && Number.isInteger(p.n))) errors.push('Via count must be a whole number of at least 1.');
+  if (!(p.n >= 1 && p.n <= 10000 && Number.isInteger(p.n))) errors.push('Via count must be a whole number from 1 to 10 000.');
   if (!(p.hole > 0 && p.plating > 0 && p.len > 0)) errors.push('Hole, plating and length must be greater than 0.');
   if (!(p.padW >= 0 && p.padH >= 0)) errors.push('Pad size cannot be negative.');
   const r = errors.length ? null : viaArray({ count: p.n, holeMm: p.hole, platingMm: p.plating, lengthMm: p.len, fillK, padAreaMm2: p.padW * p.padH, kLaminate: p.kLam, powerW: p.p });
@@ -19,8 +19,10 @@ export default function ThermalVias() {
   if (r && r.viaAreaFraction > 0.6) notes.push(`The vias cover ${fmt(100 * r.viaAreaFraction, 3)} % of the pad. Check the via pitch and the solder-wicking risk (plug or tent open vias).`);
 
   // grid drawing
-  const cols = Math.ceil(Math.sqrt(p.n));
-  const rows = Math.ceil(p.n / cols);
+  // the drawing shows at most 20 × 20 vias; the numbers always use the real count
+  const shown = Math.min(p.n, 400);
+  const cols = Math.ceil(Math.sqrt(shown));
+  const rows = Math.ceil(shown / cols);
 
   const properties = (
     <>
@@ -80,7 +82,7 @@ export default function ThermalVias() {
             <div className="p-3">
               <svg viewBox="0 0 200 200" className="h-auto w-full">
                 <rect x="20" y="20" width="160" height="160" fill="var(--copper)" opacity="0.85" />
-                {Array.from({ length: p.n }, (_, k) => {
+                {Array.from({ length: shown }, (_, k) => {
                   const cx = 20 + (160 / cols) * ((k % cols) + 0.5);
                   const cy = 20 + (160 / rows) * (Math.floor(k / cols) + 0.5);
                   const rr = Math.min(160 / cols, 160 / rows) * 0.22;

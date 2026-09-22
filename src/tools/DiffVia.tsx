@@ -16,7 +16,18 @@ export default function DiffVia() {
   const errors = [...validateViaPair(geom)];
   if (!(p.len > 0)) errors.push('Via length must be greater than 0.');
   if (p.stub < 0) errors.push('Stub length cannot be negative.');
-  const r = useMemo(() => (errors.length ? null : viaPairImpedance(geom)), [JSON.stringify(geom), errors.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!(p.len > 0 && p.len < 1000 && Number.isFinite(p.stub) && p.stub < 1000)) errors.push('Via and stub lengths must be below 1000 mm.');
+  // solver errors become a note instead of breaking the page
+  const solved = useMemo(() => {
+    if (errors.length) return { r: null, err: null };
+    try {
+      return { r: viaPairImpedance(geom), err: null };
+    } catch (e) {
+      return { r: null, err: e instanceof Error ? e.message : String(e) };
+    }
+  }, [JSON.stringify(geom), errors.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const r = solved.r;
+  if (solved.err) errors.push(solved.err);
   const delayPs = ((p.len * 1e-3 * Math.sqrt(p.er)) / C0) * 1e12;
   const stubF = p.stub > 0 ? C0 / (4 * p.stub * 1e-3 * Math.sqrt(p.er)) : Infinity;
   const [solving, setSolving] = useState(false);
@@ -27,23 +38,30 @@ export default function DiffVia() {
     setSolving(true);
     setSolveMsg(null);
     setTimeout(() => {
-      let lo = d * 1.02;
-      let hi = Math.min(Math.max(d * 8, p.pitch * 3), 38 * Math.min(d, p.pitch - d));
-      const z = (ap: number) => viaPairImpedance({ ...geom, antipad: ap }).zDiff;
-      const zLo = z(lo);
-      const zHi = z(hi);
-      if (p.target < zLo || p.target > zHi) {
-        setSolveMsg(`${fmt(p.target, 4)} Ω is outside the reachable range (${fmt(zLo, 3)}–${fmt(zHi, 3)} Ω) for this barrel and pitch. Change the pitch or the hole size.`);
+      try {
+        const lo0 = d * 1.02;
+        // upper bound: never beyond what validateViaPair accepts
+        let hi = Math.max(d * 8, p.pitch * 3);
+        while (hi > lo0 * 1.01 && validateViaPair({ ...geom, antipad: hi }).length) hi *= 0.9;
+        let lo = lo0;
+        const z = (ap: number) => viaPairImpedance({ ...geom, antipad: ap }).zDiff;
+        const zLo = z(lo);
+        const zHi = z(hi);
+        if (p.target < zLo || p.target > zHi) {
+          setSolveMsg(`${fmt(p.target, 4)} Ω is outside the reachable range (${fmt(zLo, 3)}–${fmt(zHi, 3)} Ω) for this barrel and pitch. Change the pitch or the hole size.`);
+          return;
+        }
+        for (let i = 0; i < 22; i++) {
+          const mid = (lo + hi) / 2;
+          if (z(mid) < p.target) lo = mid;
+          else hi = mid;
+        }
+        set({ antipad: (lo + hi) / 2 });
+      } catch (e) {
+        setSolveMsg(e instanceof Error ? e.message : String(e));
+      } finally {
         setSolving(false);
-        return;
       }
-      for (let i = 0; i < 22; i++) {
-        const mid = (lo + hi) / 2;
-        if (z(mid) < p.target) lo = mid;
-        else hi = mid;
-      }
-      set({ antipad: (lo + hi) / 2 });
-      setSolving(false);
     }, 10);
   };
 

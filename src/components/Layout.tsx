@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
+import { ErrorBoundary } from './ErrorBoundary';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
 import { GROUP_COLORS, GROUPS, TOOLS, toolByPath } from '../tools/registry';
@@ -252,9 +253,11 @@ export function Layout() {
           )}
 
           <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-doc">
-            <Suspense fallback={<div className="p-4 text-muted">Loading…</div>}>
-              <Outlet />
-            </Suspense>
+            <ErrorBoundary key={path}>
+              <Suspense fallback={<div className="p-4 text-muted">Loading…</div>}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
           </main>
         </div>
 
