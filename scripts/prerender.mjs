@@ -1,0 +1,135 @@
+// Writes a static HTML page per tool (dist/<route>.html) after `vite build`, so crawlers and
+// link previews get the right title, description, canonical URL, Open Graph tags, JSON-LD and
+// readable content without running JavaScript. React replaces the static content on load.
+// Netlify, Cloudflare Pages, GitHub Pages and `vite preview` all serve /impedance from impedance.html.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'vite';
+
+const SITE = 'https://pcbplanner.com';
+const APP = 'pcbplanner';
+
+const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
+const { TOOLS, GROUPS } = await vite.ssrLoadModule('/src/tools/registry.ts');
+const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
+await vite.close();
+
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// route -> component file, from the lazy imports in the registry
+const registrySrc = readFileSync('src/tools/registry.ts', 'utf8');
+const fileByPath = Object.fromEntries(
+  [...registrySrc.matchAll(/path:\s*'([^']+)'[\s\S]*?import\('\.\/(\w+)'\)/g)].map((m) => [m[1], m[2]]),
+);
+
+/** The description the tool passes to ToolPage, so the static and live pages say the same. */
+function toolDescription(tool) {
+  const file = fileByPath[tool.path];
+  const src = file ? readFileSync(`src/tools/${file}.tsx`, 'utf8') : '';
+  const m = src.match(/description=(?:"([^"]*)"|\{`([^`]*)`\})/);
+  if (!m) console.warn(`prerender: no description in ${file ?? tool.path}, using the summary`);
+  const text = m ? (m[1] ?? m[2]) : tool.summary;
+  return text.replace(/\$\{PRESETS\.length\}/g, String(PRESETS.length));
+}
+
+const template = readFileSync('dist/index.html', 'utf8');
+
+function page({ path, title, description, h1, body, jsonLd }) {
+  const url = SITE + path;
+  const set = (html, re, value) => {
+    if (!re.test(html)) throw new Error(`prerender: ${re} not found in dist/index.html`);
+    return html.replace(re, value);
+  };
+  let html = template;
+  html = set(html, /<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
+  html = set(html, /(<meta name="description" content=")[^"]*/, `$1${esc(description)}`);
+  html = set(html, /(<link rel="canonical" href=")[^"]*/, `$1${url}`);
+  html = set(html, /(<meta property="og:url" content=")[^"]*/, `$1${url}`);
+  html = set(html, /(<meta property="og:title" content=")[^"]*/, `$1${esc(title)}`);
+  html = set(html, /(<meta property="og:description" content=")[^"]*/, `$1${esc(description)}`);
+  html = set(html, /(<meta name="twitter:title" content=")[^"]*/, `$1${esc(title)}`);
+  html = set(html, /(<meta name="twitter:description" content=")[^"]*/, `$1${esc(description)}`);
+  html = set(
+    html,
+    /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
+    `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`,
+  );
+  html = set(html, /<div id="root"><\/div>/, `<div id="root"><main class="prerender"><h1>${esc(h1)}</h1>${body}</main></div>`);
+  return html;
+}
+
+const toolNav = GROUPS.map(
+  (g) =>
+    `<h2>${esc(g)}</h2><ul>${TOOLS.filter((t) => t.group === g)
+      .map((t) => `<li><a href="${t.path}">${esc(t.title)}</a> – ${esc(t.summary)}</li>`)
+      .join('')}</ul>`,
+).join('');
+
+const app = (name, url, description) => ({
+  '@type': 'WebApplication',
+  name,
+  url,
+  description,
+  applicationCategory: 'EngineeringApplication',
+  operatingSystem: 'Any',
+  isAccessibleForFree: true,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+});
+
+// Home: rewrite dist/index.html itself with the tool index as content
+const homeDescription = readFileSync('src/tools/Home.tsx', 'utf8').match(/useDocumentMeta\(\s*'[^']*',\s*'([^']*)'/)[1];
+const homeTitle = `PCB impedance, stackup and design calculators – ${APP}`;
+writeFileSync(
+  'dist/index.html',
+  page({
+    path: '/',
+    title: homeTitle,
+    description: homeDescription,
+    h1: `${APP} – PCB design calculators`,
+    body: `<p>${esc(homeDescription)}</p>${toolNav}`,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@graph': [
+        { '@type': 'WebSite', name: APP, url: `${SITE}/` },
+        app(APP, `${SITE}/`, homeDescription),
+      ],
+    },
+  }),
+);
+
+for (const tool of TOOLS) {
+  const description = toolDescription(tool);
+  const url = SITE + tool.path;
+  const related = TOOLS.filter((t) => t.group === tool.group && t !== tool);
+  const body =
+    `<p>${esc(description)}</p>` +
+    (related.length
+      ? `<h2>Related ${esc(tool.group.toLowerCase())} tools</h2><ul>${related
+          .map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`)
+          .join('')}</ul>`
+      : '') +
+    `<nav><h2>All calculators</h2>${toolNav}</nav>`;
+  writeFileSync(
+    `dist${tool.path}.html`,
+    page({
+      path: tool.path,
+      title: `${tool.title} – ${APP}`,
+      description,
+      h1: tool.title,
+      body,
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          app(`${tool.title} – ${APP}`, url, description),
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: APP, item: `${SITE}/` },
+              { '@type': 'ListItem', position: 2, name: tool.title, item: url },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+}
+console.log(`prerender: ${TOOLS.length + 1} pages`);

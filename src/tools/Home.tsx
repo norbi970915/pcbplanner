@@ -8,7 +8,7 @@ import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
 
 export default function Home() {
   useDocumentMeta(
-    'PCB design calculators with a field solver',
+    'PCB impedance, stackup and design calculators',
     'Impedance field solver, stackup advisor, layer stack manager, trace width, via, thermal, crosstalk, PDN and electronics calculators for PCB design. Runs in the browser.',
   );
   const { propsEl, statusEl } = useShell();

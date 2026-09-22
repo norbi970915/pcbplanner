@@ -25,6 +25,8 @@ export function useDocumentMeta(title: string, description: string) {
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${title} – ${APP_NAME}`);
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', `${title} – ${APP_NAME}`);
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', description);
   }, [title, description]);
 }
 
