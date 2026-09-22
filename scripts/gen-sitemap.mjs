@@ -2,7 +2,7 @@
 // Runs automatically before every build (see package.json "build").
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const SITE = 'https://pcbplanner.com';
+const SITE = 'https://www.pcbplanner.com';
 const registry = readFileSync('src/tools/registry.ts', 'utf8');
 const paths = ['/', ...[...registry.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1])];
 const today = new Date().toISOString().slice(0, 10);

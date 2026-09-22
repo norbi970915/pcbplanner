@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 
-const SITE = 'https://pcbplanner.com';
+const SITE = 'https://www.pcbplanner.com';
 const APP = 'pcbplanner';
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
