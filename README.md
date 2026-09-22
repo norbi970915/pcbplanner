@@ -1,4 +1,4 @@
-# PCB Toolkit
+# pcbplanner
 
 Browser-based calculators for PCB design with an Altium Designer–style interface: menu bar, document tabs, a Tools panel, a Properties panel for the inputs, and a status bar. Built with Vite, React, TypeScript and Tailwind CSS.
 
@@ -52,5 +52,5 @@ node scripts/shots.mjs <outDir>   # browser smoke test + screenshots (needs Edge
 
 ## Monetisation hooks
 
-- `src/components/Ads.tsx`: `AdSlot` placeholders and `PartnerBox` (JLCPCB / PCBWay links). Replace the `href`s with referral URLs.
+- No advertising or affiliate links for now. Add them in `src/components/ToolPage.tsx` when needed.
 - The app name is set in `src/config.ts`.

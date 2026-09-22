@@ -27,7 +27,7 @@ await page.setContent(`<html><body style="margin:0;width:1200px;height:630px;bac
   <div style="position:relative;display:flex;align-items:center;gap:56px;padding:0 90px">
     <img src="${dataUrl}" width="260" height="260">
     <div>
-      <div style="font-size:84px;font-weight:700;letter-spacing:-1px"><span style="color:#e0953f">PCB</span> Planner</div>
+      <div style="font-size:84px;font-weight:700;letter-spacing:-1px"><span style="color:#e0953f">pcb</span>planner</div>
       <div style="font-size:30px;color:#a3a3a3;margin-top:12px">Impedance · Stackups · Thermal · PDN</div>
       <div style="font-size:26px;color:#6aaef0;margin-top:28px">pcbplanner.com</div>
     </div>

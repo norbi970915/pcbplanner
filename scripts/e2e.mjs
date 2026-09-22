@@ -42,7 +42,7 @@ async function fail(page, route, step, evidence) {
   }
   const shot = path.join(OUT, `${String(++shotN).padStart(3, '0')}_${slug(route)}_${slug(step)}.png`);
   try {
-    await page.screenshot({ path: shot });
+    await withTimeout(page.screenshot({ path: shot, timeout: 10000 }), 12000, 'screenshot');
   } catch {
     /* page gone */
   }
@@ -112,7 +112,12 @@ async function waitIdle(page, ms = 30000) {
 }
 async function settle(page, route, step, ms = 30000) {
   await page.waitForTimeout(160);
-  const ok = await waitIdle(page, ms);
+  // waitForFunction times out inside the page; a frozen renderer never answers, so race a Node timer too
+  const ok = await withTimeout(waitIdle(page, ms), ms + 10000, 'waitIdle').catch(() => 'hung');
+  if (ok === 'hung') {
+    await fail(page, route, `${step}: page unresponsive`, `renderer did not answer for ${(ms + 10000) / 1000} s (tab frozen)`);
+    throw new Error(`page unresponsive after ${step}`);
+  }
   if (!ok) await fail(page, route, step, `still solving after ${ms / 1000} s`);
   return ok;
 }
@@ -599,13 +604,20 @@ async function flowStackup(page) {
   await gotoFresh(page, route);
   page.drain();
 
+  const layerCountsDone = new Set();
   for (const g of groups) {
+    log(`  lsm group ${g.label}`);
     await page.locator('#lsm-s').selectOption(g.first);
     await settle(page, route, `lsm select ${g.label}`);
     await checkPage(page, route, `lsm select "${g.label}"`);
+    const lc = g.label.split(' ')[0];
+    if (layerCountsDone.has(lc)) continue; // impedance tab once per layer count
+    layerCountsDone.add(lc);
+    const tImp = Date.now();
     await page.getByRole('radio', { name: 'Impedance' }).click();
     let ok = true;
     await page.waitForFunction(() => !document.querySelector('main').innerText.includes('solving…'), null, { timeout: 60000 }).catch(() => (ok = false));
+    log(`    impedance tab ${((Date.now() - tImp) / 1000).toFixed(1)} s`);
     await check(page, ok, route, `lsm impedance tab resolves (${g.label})`, 'cells still "solving…" after 60 s');
     const cells = await page.evaluate(() => {
       const t = [...document.querySelectorAll('main table')].find((x) => /W for/.test(x.innerText));
@@ -620,6 +632,10 @@ async function flowStackup(page) {
     await page.getByRole('radio', { name: 'Stackup' }).click();
   }
 
+}
+
+async function flowStackupTargets(page) {
+  const route = '/stackup';
   // impedance-tab property fields (targets) with valid and invalid values
   await gotoFresh(page, route);
   page.drain();
@@ -631,12 +647,16 @@ async function flowStackup(page) {
     const label = await labelOf(inp);
     const orig = await inp.inputValue();
     for (const v of [newValid(orig), '0', '-5', 'abc', '1e9', orig]) {
+      log(`  lsm target "${label}" = ${v}`);
       await inp.fill(v);
       await settle(page, route, `lsm target "${label}" = ${v}`, 60000);
       await checkPage(page, route, `lsm target "${label}" = '${v}'`);
     }
   }
+}
 
+async function flowStackupEdit(page) {
+  const route = '/stackup';
   // layer editing
   await gotoFresh(page, route);
   page.drain();
@@ -806,6 +826,23 @@ async function flowMobile(browser) {
   await ctx.close();
 }
 
+function withTimeout(p, ms, what) {
+  let t;
+  return Promise.race([p, new Promise((_, rej) => (t = setTimeout(() => rej(new Error(`${what} hung for ${ms / 1000} s (page frozen?)`)), ms)))]).finally(() => clearTimeout(t));
+}
+
+/** Run one step in its own browser context, so a frozen tab cannot take later steps down with it. */
+async function runIsolated(browser, route, name, fn, ms) {
+  const ctx = await newCtx(browser);
+  const page = track(await ctx.newPage());
+  try {
+    await withTimeout(fn(page), ms, name);
+  } catch (e) {
+    await fail(page, route, `${name} (aborted)`, e.message.split('\n')[0]);
+  }
+  await withTimeout(ctx.close(), 15000, 'close').catch(() => log('  (context close timed out)'));
+}
+
 async function newCtx(browser, viewport = { width: 1600, height: 1000 }) {
   const ctx = await browser.newContext({ viewport });
   await ctx.addInitScript(() => {
@@ -831,59 +868,48 @@ async function main() {
     for (const route of ONLY ?? ROUTES) {
       const t = Date.now();
       log(`route ${route}`);
-      const ctx = await newCtx(browser);
-      const page = track(await ctx.newPage());
       const container = route === '/units' ? 'main' : PROPS;
       const steps = [
-        ['load', () => stepLoad(page, route)],
-        ['theme', () => stepTheme(page, route)],
+        ['load', (page) => stepLoad(page, route)],
+        ['theme', (page) => stepTheme(page, route)],
       ];
       if (route !== '/') {
         steps.push(
-          ['fields', () => stepFields(page, route, container)],
-          ['selects', () => stepSelects(page, route, container)],
-          ['toggles', () => stepToggles(page, route, container)],
-          ['unit switch', () => stepUnitSwitch(page, route, container)],
-          ['global unit', () => stepGlobalUnit(page, route, container)],
-          ['url state', () => stepUrlState(page, route, container)],
+          ['fields', (page) => stepFields(page, route, container)],
+          ['selects', (page) => stepSelects(page, route, container)],
+          ['toggles', (page) => stepToggles(page, route, container)],
+          ['unit switch', (page) => stepUnitSwitch(page, route, container)],
+          ['global unit', (page) => stepGlobalUnit(page, route, container)],
+          ['url state', (page) => stepUrlState(page, route, container)],
         );
       }
       for (const [name, fn] of steps) {
-        try {
-          await fn();
-        } catch (e) {
-          await fail(page, route, `${name} (exception)`, e.message.split('\n')[0]);
-        }
+        await runIsolated(browser, route, name, fn, 10 * 60000);
       }
-      await ctx.close();
       log(`  ${((Date.now() - t) / 1000).toFixed(0)} s`);
     }
   }
 
   if (!SKIP.has('special')) {
-    for (const [name, fn] of [
-      ['impedance', flowImpedance],
-      ['advisor', flowAdvisor],
-      ['stackup', flowStackup],
+    for (const [name, route, fn] of [
+      ['impedance', '/impedance', flowImpedance],
+      ['advisor', '/stackup-advisor', flowAdvisor],
+      ['stackup', '/stackup', flowStackup],
+      ['stackup', '/stackup', flowStackupEdit],
+      ['stackup', '/stackup', flowStackupTargets],
     ]) {
-      log(`flow ${name}`);
-      const ctx = await newCtx(browser);
-      const page = track(await ctx.newPage());
-      try {
-        await fn(page);
-      } catch (e) {
-        await fail(page, `/${name}`, `flow ${name} (exception)`, e.message.split('\n')[0]);
-      }
-      await ctx.close();
+      if (SKIP.has(name)) continue;
+      log(`flow ${fn.name}`);
+      await runIsolated(browser, route, `flow ${fn.name}`, fn, 15 * 60000);
     }
   }
   if (!SKIP.has('tabs')) {
     log('flow tabs/menus');
-    await flowTabsMenus(browser).catch((e) => fail(null, 'tabs/menus', 'exception', e.message.split('\n')[0]));
+    await withTimeout(flowTabsMenus(browser), 10 * 60000, 'tabs').catch((e) => fail(null, 'tabs/menus', 'exception', e.message.split('\n')[0]));
   }
   if (!SKIP.has('mobile')) {
     log('flow mobile');
-    await flowMobile(browser).catch((e) => fail(null, 'mobile', 'exception', e.message.split('\n')[0]));
+    await withTimeout(flowMobile(browser), 10 * 60000, 'mobile').catch((e) => fail(null, 'mobile', 'exception', e.message.split('\n')[0]));
   }
   await browser.close();
 

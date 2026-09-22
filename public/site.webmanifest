@@ -1,6 +1,6 @@
 {
-  "name": "PCB Planner",
-  "short_name": "PCB Planner",
+  "name": "pcbplanner",
+  "short_name": "pcbplanner",
   "description": "PCB impedance field solver, stackup advisor, thermal, PDN and design calculators.",
   "start_url": "/",
   "display": "standalone",

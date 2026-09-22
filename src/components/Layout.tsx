@@ -121,7 +121,7 @@ export function Layout() {
           <Link to="/" className="flex h-full items-center gap-1.5 px-2.5 text-ink no-underline" title={`${APP_NAME} – pcbplanner.com`}>
             <img src="/favicon.svg" width="16" height="16" alt="" />
             <span className="font-semibold">
-              <span className="text-[var(--copper)]">PCB</span> Planner
+              <span className="text-[var(--copper)]">pcb</span>planner
             </span>
           </Link>
           <Menu {...menuProps('File')}>

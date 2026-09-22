@@ -2,7 +2,6 @@ import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { APP_NAME, SITE_URL } from '../config';
 import { useShell } from '../state/shell';
-import { AdSlot, PartnerBox } from './Ads';
 
 export function useDocumentMeta(title: string, description: string) {
   useEffect(() => {
@@ -73,11 +72,6 @@ export function ToolPage({
       </div>
 
       <div className="space-y-3">{children}</div>
-
-      <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_280px]">
-        <AdSlot slot="document-inline" minHeight={100} />
-        <PartnerBox />
-      </div>
 
       {method && (
         <details id="method" className="mt-4 border border-line bg-sheet" open>
