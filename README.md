@@ -7,7 +7,7 @@ Browser-based calculators for PCB design with an Altium Designer–style interfa
 | Group | Tools |
 |---|---|
 | Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential, solve W or S, laminate library), Delay & timing, Trace loss (conductor loss by incremental inductance with Hammerstad / Groiss / Huray roughness, dielectric loss from the field-energy split, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing |
-| Stackup | Stackup advisor, Layer stack manager (178 JLCPCB stackups, 2–12 layers), Laminate materials library (datasheet Dk/Df, solder masks, copper foil roughness) |
+| Stackup | Stackup advisor, Layer stack manager (178 standard FR-4 stackups, 2–12 layers), Laminate materials library (datasheet Dk/Df, solder masks, copper foil roughness) |
 | Thermal | Junction temperature, Thermal via array |
 | Power & conductors | Trace width / current (IPC-2221, IPC-2152), Via, Skin effect, Fusing current, Wire gauge, Conductor spacing (IPC-2221), Creepage & clearance (IEC 60664-1) |
 | Power integrity | PDN target impedance, plane capacitance, decoupling |
@@ -28,8 +28,7 @@ It has been checked against:
 
 ## Stackup data
 
-- `scripts/jlc/*.json` is the raw template data from JLCPCB's public impedance-calculator API, fetched 2026-09-22.
-- `node scripts/build-jlc-stackups.mjs` regenerates `src/data/jlcStackups.ts`.
+- `src/data/fabStackups.ts` holds 178 standard FR-4 stackups (2–12 layers, 0.8–2.0 mm), named by their outer prepreg glass style.
 - Default layer roles (signal / plane) are assigned by layer count in `src/lib/stackups.ts` (`ROLE_PATTERNS`).
 
 ## Development

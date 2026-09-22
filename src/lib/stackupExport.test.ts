@@ -5,7 +5,7 @@ import { PRESETS, type Stackup } from './stackups';
 import { crc32, eagleLayerNumbers, normalise, toAltium, toEagleDru, toKicad, zip } from './stackupExport';
 
 const byId = (id: string) => PRESETS.find((s) => s.id === id)!;
-const four = byId('jlc-jlc04081h-1080a'); // two prepreg plies per outer gap
+const four = byId('std-4l-8-1080-2'); // two prepreg plies per outer gap
 const six = PRESETS.find((s) => s.layers.filter((l) => l.kind === 'copper').length === 6)!;
 const twelve = PRESETS.find((s) => s.layers.filter((l) => l.kind === 'copper').length === 12)!;
 

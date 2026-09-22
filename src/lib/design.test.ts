@@ -6,7 +6,7 @@ import { copperCount, geometryForLayer, PRESETS, type StackupGeometry } from './
 const mil = 0.0254;
 
 describe('line design', () => {
-  it('finds the 85 Ω pair on JLC 1080 prepreg (reference W 0.113 mm @ S 0.114 mm)', () => {
+  it('finds the 85 Ω pair on 1080 prepreg (reference W 0.113 mm @ S 0.114 mm)', () => {
     const sg: StackupGeometry = {
       type: 'microstrip',
       h: 0.0764,
@@ -54,7 +54,7 @@ describe('stackup library', () => {
     for (const n of [2, 4, 6, 8, 10, 12]) expect(counts.has(n)).toBe(true);
     for (const s of PRESETS) {
       const t = s.layers.filter((l) => l.kind !== 'mask').reduce((a, l) => a + l.t, 0);
-      expect(Math.abs(t - (s.nominal ?? t)) / (s.nominal ?? t)).toBeLessThan(0.16); // JLC templates deviate up to ~15 % (2-layer 2.0 mm uses a 1.7 mm core)
+      expect(Math.abs(t - (s.nominal ?? t)) / (s.nominal ?? t)).toBeLessThan(0.16); // fab templates deviate up to ~15 % (2-layer 2.0 mm uses a 1.7 mm core)
     }
   });
   it('every signal layer of every preset has a reference plane', () => {

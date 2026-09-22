@@ -8,11 +8,11 @@ import { nominalThickness, rankAdvice } from './advisor';
 const mk = (layers: Omit<Layer, 'id'>[]): Stackup => ({ id: 's', name: 's', layers: layers.map((l, i) => ({ ...l, id: `x${i}` })) });
 
 describe('audit: geometryForLayer', () => {
-  it('JLC 4-layer 1080/7628 preset: L1 microstrip over L2 with both prepregs and the mask', () => {
-    const s = PRESETS.find((p) => p.id === 'jlc-jlc04081h-1080a')!;
+  it('4-layer 1080/7628 preset: L1 microstrip over L2 with both prepregs and the mask', () => {
+    const s = PRESETS.find((p) => p.id === 'std-4l-8-1080-2')!;
     const g = geometryForLayer(s, s.layers.find((l) => l.name === 'L1')!.id)!;
     expect(g.type).toBe('microstrip');
-    expect(g.h).toBeCloseTo(0.084 + 0.2104, 9); // prepreg 1080 + prepreg 7628 (jlcStackups.ts)
+    expect(g.h).toBeCloseTo(0.084 + 0.2104, 9); // prepreg 1080 + prepreg 7628 (fabStackups.ts)
     expect(g.mask).toEqual({ c1: 0.0305, c2: 0.01525, er: 3.8 });
     expect(nominalThickness(s)).toBe(0.8);
   });

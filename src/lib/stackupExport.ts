@@ -62,7 +62,7 @@ const isCore = (l: Layer) => /core/i.test(l.name);
 const dk = (l: Layer) => l.er ?? 4.2;
 const dfOf = (l: Layer) => l.df ?? (l.kind === 'mask' ? MASK_DF : DEFAULT_DF);
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-const safeName = (s: string) => s.replace(/ · .*$/, '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'stackup';
+const safeName = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'stackup';
 
 /* ------------------------------------------------------------------ KiCad */
 

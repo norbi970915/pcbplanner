@@ -61,7 +61,7 @@ export default function StackupTool() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { unit } = useSettings();
-  const id = params.get('id') ?? stackups.find((s) => s.id.includes('06161h-1080a'))?.id ?? stackups[0]?.id;
+  const id = params.get('id') ?? stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id;
   const current = stackups.find((s) => s.id === id) ?? stackups[0];
   const [draft, setDraft] = useState<Stackup>(current);
   useEffect(() => setDraft(current), [current]);
@@ -284,7 +284,7 @@ export default function StackupTool() {
   return (
     <ToolPage
       title="Layer Stack Manager"
-      description={`${PRESETS.length} fabricator stackups (JLCPCB, 2 to 12 layers, 0.8–2.0 mm) plus your own. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
+      description={`${PRESETS.length} standard FR-4 stackups (2 to 12 layers, 0.8–2.0 mm) plus your own. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
       properties={properties}
       status={`${draft.name.replace(/ · .*$/, '')} · ${copperCount(draft)} layers · ${L(board)} ${unit}${dirty ? ' · modified' : ''}`}
     >

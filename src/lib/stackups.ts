@@ -1,5 +1,5 @@
 // Stackup model, presets and conversion to an impedance geometry.
-import { JLC_STACKUPS, type RawStackup } from '../data/jlcStackups';
+import { FAB_STACKUPS, type RawStackup } from '../data/fabStackups';
 
 export type LayerKind = 'mask' | 'copper' | 'dielectric';
 export type CopperRole = 'signal' | 'plane';
@@ -40,13 +40,13 @@ export const ROLE_PATTERNS: Record<number, string> = {
   12: 'SPSPSPPSPSPS',
 };
 
-const MASK_T = 0.0305; // 1.2 mil, JLCPCB calculator default
+const MASK_T = 0.0305; // 1.2 mil, a common LPI mask thickness over laminate
 const MASK_ER = 3.8;
 /** Df of NP-155F (Nan Ya datasheet 0.014–0.016 at 1 GHz, middle) and a typical LPI mask (Taiyo PSR-4000 BN: 0.027 at 1 GHz). */
-export const JLC_DF = 0.015;
+export const FR4_DF = 0.015;
 export const MASK_DF = 0.027;
-/** Default Df for new dielectric layers (same FR-4 as the JLC templates). */
-export const DEFAULT_DF = JLC_DF;
+/** Default Df for new dielectric layers (same FR-4 as the library stackups). */
+export const DEFAULT_DF = FR4_DF;
 
 function fromRaw(r: RawStackup): Stackup {
   const pattern = ROLE_PATTERNS[r.n] ?? '';
@@ -58,7 +58,7 @@ function fromRaw(r: RawStackup): Stackup {
       ci++;
       layers.push({ id: `${r.id}-${i}`, kind: 'copper', name: l[1], t: l[2], role });
     } else {
-      layers.push({ id: `${r.id}-${i}`, kind: 'dielectric', name: l[1], t: l[2], er: l[3], df: JLC_DF });
+      layers.push({ id: `${r.id}-${i}`, kind: 'dielectric', name: l[1], t: l[2], er: l[3], df: FR4_DF });
     }
   });
   layers.push({ id: `${r.id}-mb`, kind: 'mask', name: 'Bottom Solder', t: MASK_T, er: MASK_ER, df: MASK_DF });
@@ -67,13 +67,12 @@ function fromRaw(r: RawStackup): Stackup {
     name: `${r.name} · ${r.n}L ${r.nominal} mm`,
     layers,
     builtin: true,
-    vendor: 'JLCPCB',
     nominal: r.nominal,
-    note: 'JLCPCB impedance template (NP-155F laminate), fetched 2026-09-22. Default layer roles assigned; edit as needed.',
+    note: 'Standard FR-4 construction (NP-155F-class laminate). Default layer roles assigned; edit as needed.',
   };
 }
 
-export const PRESETS: Stackup[] = JLC_STACKUPS.map(fromRaw);
+export const PRESETS: Stackup[] = FAB_STACKUPS.map(fromRaw);
 
 export const copperCount = (s: Stackup) => s.layers.filter((l) => l.kind === 'copper').length;
 export const signalLayers = (s: Stackup) => s.layers.filter((l) => l.kind === 'copper' && l.role !== 'plane');

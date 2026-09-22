@@ -11,7 +11,7 @@ export function stackupGroup(s: Stackup) {
 /** Stackup + signal-layer chooser with an Apply button (Properties-panel rows). */
 export function StackupPicker({ onApply, applyLabel = 'Apply' }: { onApply: (stack: Stackup, layerId: string) => void; applyLabel?: string }) {
   const stackups = useStackups();
-  const [stackId, setStackId] = useState(() => stackups.find((s) => s.id.includes('06161h-1080a'))?.id ?? stackups[0]?.id ?? '');
+  const [stackId, setStackId] = useState(() => stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id ?? '');
   const stack = stackups.find((s) => s.id === stackId) ?? stackups[0];
   const coppers = stack ? stack.layers.filter((l) => l.kind === 'copper') : [];
   const [layerId, setLayerId] = useState('');

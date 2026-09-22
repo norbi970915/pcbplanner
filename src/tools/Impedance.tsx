@@ -384,7 +384,7 @@ function Method() {
         <sub>even</sub> / 2
       </div>
       <h3>Validation</h3>
-      <p>These results were compared with a commercial 2D field solver (Polar SI9000, via the JLCPCB calculator) on solder-mask coated microstrip:</p>
+      <p>These results were compared with a commercial 2D field solver (Polar SI9000) on solder-mask coated microstrip:</p>
       <table className="tbl mb-4 font-sans text-[13px]">
         <thead>
           <tr>

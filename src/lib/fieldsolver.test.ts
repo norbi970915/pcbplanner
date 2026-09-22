@@ -34,7 +34,7 @@ describe('field solver vs closed-form', () => {
   });
 });
 
-// Reference values from JLCPCB's impedance calculator (Polar SI9000 engine),
+// Reference values from a Polar SI9000-based impedance calculator,
 // coated microstrip: T = 1.6 mil, top width = W − 0.5 mil, soldermask
 // 1.2 mil over laminate / 0.6 mil over copper, εr(mask) = 3.8.
 function coated(h: number, er: number, w: number, s?: number): Geometry {
