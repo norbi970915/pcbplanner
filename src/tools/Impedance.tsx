@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react';
 import { CrossSection } from '../components/CrossSection';
 import { FieldMap } from '../components/FieldMap';
 import { ToolPage } from '../components/ToolPage';
-import { Big, Check, Group, LenField, Notes, NumField, Panel, Result, Segmented, SelectField } from '../components/ui';
+import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, Segmented, SelectField } from '../components/ui';
+import { StackupPicker } from '../components/StackupPicker';
 import { microstripHJ, striplineAsym, striplineWheeler } from '../lib/closedform';
 import type { Accuracy, Geometry } from '../lib/fieldsolver';
 import { delayPsPerMm, lineLC, nextCoefficient } from '../lib/signal';
 import { runSolver, useFieldSolve } from '../lib/solverClient';
-import { geometryForLayer } from '../lib/stackups';
+import { geometryForLayer, type Stackup } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
-import { useStackups } from '../state/stackupStore';
 import { useUrlState } from '../state/useUrlState';
 
 type LineType = 'microstrip' | 'embedded' | 'stripline';
@@ -82,11 +82,6 @@ function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: str
 export default function Impedance() {
   const [p, set, reset] = useUrlState(DEFAULTS);
   const { unit } = useSettings();
-  const stackups = useStackups();
-  const [stackId, setStackId] = useState(stackups[0]?.id ?? '');
-  const stack = stackups.find((s) => s.id === stackId) ?? stackups[0];
-  const copperLayers = stack ? stack.layers.filter((l) => l.kind === 'copper') : [];
-  const [layerId, setLayerId] = useState('');
   const [stackNote, setStackNote] = useState<string | null>(null);
   const [solving, setSolving] = useState<null | 'w' | 's'>(null);
   const [solveErr, setSolveErr] = useState<string | null>(null);
@@ -117,10 +112,8 @@ export default function Impedance() {
     }
   }
 
-  const applyLayer = () => {
-    if (!stack) return;
-    const id = layerId || copperLayers[0]?.id;
-    const g = id ? geometryForLayer(stack, id) : null;
+  const applyLayer = (stack: Stackup, layerId: string) => {
+    const g = layerId ? geometryForLayer(stack, layerId) : null;
     if (!g) {
       setStackNote('That layer has no reference plane marked in the stackup.');
       return;
@@ -150,223 +143,177 @@ export default function Impedance() {
   const busy = solveState.busy || solving !== null;
   const dev = z && p.target > 0 ? (100 * (z - p.target)) / p.target : null;
 
+  const properties = (
+    <>
+      <Section title="Structure">
+        <SelectField
+          label="Line type"
+          value={type}
+          onChange={(v) => set({ type: v })}
+          options={[
+            { value: 'microstrip', label: 'Surface microstrip' },
+            { value: 'embedded', label: 'Embedded microstrip' },
+            { value: 'stripline', label: 'Stripline' },
+          ]}
+        />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <span className="text-muted">Signal</span>
+          <Segmented
+            label="Signal type"
+            value={p.mode as 'se' | 'diff'}
+            onChange={(v) => set({ mode: v, target: v === 'diff' ? (p.target === 50 ? 100 : p.target) : [85, 90, 100].includes(p.target) ? 50 : p.target })}
+            options={[
+              { value: 'se', label: 'Single-ended' },
+              { value: 'diff', label: 'Differential' },
+            ]}
+          />
+        </div>
+        <Check label="Coplanar ground on trace layer" checked={p.cpw} onChange={(v) => set({ cpw: v })} />
+        {type === 'microstrip' && <Check label="Solder mask coating" checked={p.mask} onChange={(v) => set({ mask: v })} />}
+      </Section>
+      <Section title="Target">
+        <NumField label={diff ? 'Target Zdiff' : 'Target Z0'} value={p.target} onChange={(v) => set({ target: v })} unit="Ω" />
+        <div className="flex justify-end gap-1 pt-0.5">
+          <button className="btn btn-primary" disabled={!geom || busy} onClick={() => solveFor('w')}>
+            {solving === 'w' ? 'Solving…' : 'Solve Width'}
+          </button>
+          {diff && (
+            <button className="btn" disabled={!geom || busy} onClick={() => solveFor('s')}>
+              {solving === 's' ? 'Solving…' : 'Solve Spacing'}
+            </button>
+          )}
+        </div>
+      </Section>
+      <Section title="Conductor">
+        <LenField label="Width (bottom)" symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
+        <LenField label="Etch (W − top)" value={p.etch} onChange={(v) => set({ etch: v })} allowZero hint="Trapezoidal etch: the top of the trace is narrower by this amount. 0.5 mil is typical for 1 oz." />
+        <LenField label="Thickness" symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
+        {diff && <LenField label="Spacing" symbol="S" value={p.s} onChange={(v) => set({ s: v })} />}
+        {p.cpw && <LenField label="Coplanar gap" symbol="G" value={p.gap} onChange={(v) => set({ gap: v })} />}
+      </Section>
+      <Section title={type === 'stripline' ? 'Dielectric Below' : 'Dielectric'}>
+        <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
+        <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+      </Section>
+      {type !== 'microstrip' && (
+        <Section title={type === 'stripline' ? 'Dielectric Above' : 'Cover Dielectric'}>
+          <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
+          <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+        </Section>
+      )}
+      {type === 'microstrip' && p.mask && (
+        <Section title="Solder Mask">
+          <LenField label="Over laminate" symbol="C1" value={p.c1} onChange={(v) => set({ c1: v })} allowZero />
+          <LenField label="Over trace" symbol="C2" value={p.c2} onChange={(v) => set({ c2: v })} allowZero />
+          <NumField label="Mask εr" value={p.erm} onChange={(v) => set({ erm: v })} min={1} allowZero />
+        </Section>
+      )}
+      <Section title="From Stackup">
+        <StackupPicker onApply={applyLayer} />
+        {stackNote && <p className="text-faint">{stackNote}</p>}
+      </Section>
+      <Section title="Solver" defaultOpen={false}>
+        <SelectField
+          label="Mesh accuracy"
+          value={acc}
+          onChange={(v) => set({ acc: v })}
+          options={[
+            { value: 'fast', label: 'Fast' },
+            { value: 'normal', label: 'Normal' },
+            { value: 'high', label: 'High' },
+          ]}
+        />
+        <p className="text-faint">Normal agrees with a commercial 2D solver to within about 1 % on typical stackups. Use High to confirm a final design.</p>
+      </Section>
+    </>
+  );
+
+  const status = busy
+    ? 'Solving…'
+    : r
+      ? `Field solver: ${r.nodes.toLocaleString()} nodes, ${acc} mesh · ${diff ? 'Zdiff' : 'Z0'} = ${z ? fmt(z, 4) : '—'} Ω`
+      : errors.length
+        ? 'Check the inputs'
+        : 'Ready';
+
   return (
     <ToolPage
       title="Impedance Calculator"
       description="Characteristic and differential impedance of PCB traces from a 2D field solver: microstrip, solder-mask coated and embedded microstrip, stripline, coplanar waveguide. Solve for width or spacing from a target impedance."
       onReset={reset}
+      properties={properties}
+      status={status}
       method={<Method />}
     >
-      <div className="grid gap-4 lg:grid-cols-[350px_minmax(0,1fr)]">
-        {/* ---------------- inputs ---------------- */}
-        <div className="space-y-4">
-          <Panel title="Structure">
-            <Group>
-              <SelectField
-                label="Line type"
-                value={type}
-                onChange={(v) => set({ type: v })}
-                options={[
-                  { value: 'microstrip', label: 'Surface microstrip' },
-                  { value: 'embedded', label: 'Embedded microstrip' },
-                  { value: 'stripline', label: 'Stripline' },
-                ]}
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-[13px]">Signal</span>
-                <Segmented
-                  label="Signal type"
-                  value={p.mode as 'se' | 'diff'}
-                  onChange={(v) => set({ mode: v, target: v === 'diff' ? (p.target === 50 ? 100 : p.target) : p.target === 100 || p.target === 90 || p.target === 85 ? 50 : p.target })}
-                  options={[
-                    { value: 'se', label: 'Single-ended' },
-                    { value: 'diff', label: 'Differential' },
-                  ]}
-                />
-              </div>
-              <Check label="Coplanar ground on trace layer" checked={p.cpw} onChange={(v) => set({ cpw: v })} />
-              {type === 'microstrip' && <Check label="Solder mask coating" checked={p.mask} onChange={(v) => set({ mask: v })} />}
-            </Group>
-          </Panel>
-
-          <Panel title="Geometry">
-            <Group title="Conductor">
-              <LenField label="Trace width (bottom)" symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
-              <LenField label="Etch (bottom − top width)" value={p.etch} onChange={(v) => set({ etch: v })} allowZero hint="Trapezoidal etch: the top of the trace is narrower by this amount. 0.5 mil is typical for 1 oz." />
-              <LenField label="Copper thickness" symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
-              {diff && <LenField label="Spacing (edge to edge)" symbol="S" value={p.s} onChange={(v) => set({ s: v })} />}
-              {p.cpw && <LenField label="Gap to coplanar ground" symbol="G" value={p.gap} onChange={(v) => set({ gap: v })} />}
-            </Group>
-            <Group title={type === 'stripline' ? 'Dielectric below trace' : 'Dielectric'}>
-              <LenField label={type === 'stripline' ? 'Plane to trace bottom' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
-              <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
-            </Group>
-            {type !== 'microstrip' && (
-              <Group title={type === 'stripline' ? 'Dielectric above trace' : 'Cover dielectric'}>
-                <LenField label={type === 'stripline' ? 'Trace top to plane' : 'Cover above trace'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
-                <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
-              </Group>
+      <Notes kind="error" items={[...errors, ...(solveState.error && geom ? [solveState.error] : []), ...(solveErr ? [solveErr] : [])]} />
+      <div className="grid gap-3 2xl:grid-cols-2">
+        <Panel title="Results">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-2 px-2.5 pb-1 pt-2">
+            <Big label={diff ? 'Differential impedance Zdiff' : 'Characteristic impedance Z0'} value={z ? fmt(z, 4) : '—'} unit="Ω" busy={busy} />
+            <Big label="Effective εr" value={eeff ? fmt(eeff, 4) : '—'} unit="" busy={busy} />
+          </div>
+          <div className="px-2.5 pb-2">
+            {dev !== null && Number.isFinite(dev) && (
+              <span className={Math.abs(dev) <= 5 ? 'text-ok' : 'text-muted'}>
+                {dev >= 0 ? '+' : ''}
+                {fmt(dev, 3)} % from the {fmt(p.target, 4)} Ω target{Math.abs(dev) <= 10 ? ' (typical fab tolerance ±10 %)' : ''}
+              </span>
             )}
-            {type === 'microstrip' && p.mask && (
-              <Group title="Solder mask">
-                <LenField label="Over laminate" symbol="C1" value={p.c1} onChange={(v) => set({ c1: v })} allowZero />
-                <LenField label="Over trace" symbol="C2" value={p.c2} onChange={(v) => set({ c2: v })} allowZero />
-                <NumField label="Mask εr" value={p.erm} onChange={(v) => set({ erm: v })} min={1} allowZero />
-              </Group>
+          </div>
+          <table className="tbl">
+            <tbody>
+              {diff && r?.odd && (
+                <>
+                  <Result label="Odd-mode impedance Zodd" value={fmt(r.odd.z, 4)} unit="Ω" />
+                  <Result label="Even-mode impedance Zeven" value={r.even ? fmt(r.even.z, 4) : '—'} unit="Ω" />
+                  <Result label="Common-mode impedance Zcomm" value={r.zcomm ? fmt(r.zcomm, 4) : '—'} unit="Ω" sub="Zeven / 2" />
+                  <Result label="εeff odd / even" value={`${fmt(r.odd.eeff, 4)} / ${r.even ? fmt(r.even.eeff, 4) : '—'}`} />
+                  {r.even && <Result label="Coupling (saturated NEXT)" value={`${fmt(100 * nextCoefficient(r.even.z, r.odd.z), 3)} %`} sub="if the two traces carried unrelated signals" />}
+                </>
+              )}
+              {eeff && (
+                <>
+                  <Result label="Propagation delay" value={fmt(delayPsPerMm(eeff), 4)} unit="ps/mm" sub={`${fmt(delayPsPerMm(eeff) * 25.4, 4)} ps/in`} />
+                  <Result label="Velocity" value={`${fmt(100 / Math.sqrt(eeff), 3)} %`} unit="of c" />
+                </>
+              )}
+              {lc && (
+                <>
+                  <Result label={diff ? 'Inductance per line (odd)' : 'Inductance'} value={fmt(lc.lPerM * 1e6, 4)} unit="nH/mm" />
+                  <Result label={diff ? 'Capacitance per line (odd)' : 'Capacitance'} value={fmt(lc.cPerM * 1e9, 4)} unit="pF/mm" />
+                </>
+              )}
+              {cf && z && <Result label={`Closed-form check (${cf.name})`} value={fmt(cf.z, 4)} unit="Ω" sub={`${fmt((100 * (cf.z - z)) / z, 2)} % vs field solver`} />}
+            </tbody>
+          </table>
+        </Panel>
+
+        <Panel
+          title={view === 'section' ? 'Cross-Section' : `Field (${diff ? 'odd mode' : 'single-ended'}), equipotentials every 10 %`}
+          right={
+            <Segmented
+              label="View"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: 'section', label: 'Section' },
+                { value: 'field', label: 'Field' },
+              ]}
+            />
+          }
+        >
+          <div className="p-2">
+            {view === 'section' || !r?.field || !geom ? (
+              <CrossSection
+                spec={{ type, diff, w: p.w, wTop: p.w - p.etch, t: p.t, s: p.s, h: p.h, h2: p.h2, er: p.er, er2: p.er2, mask: p.mask, cpw: p.cpw, gap: p.gap }}
+                unitLabel={unit}
+                toUnit={toUnit}
+              />
+            ) : (
+              <FieldMap field={r.field} geom={geom} />
             )}
-          </Panel>
-
-          <Panel title="From stackup">
-            <Group>
-              <SelectField
-                label="Stackup"
-                value={stack?.id ?? ''}
-                width={200}
-                onChange={(v) => {
-                  setStackId(v);
-                  setLayerId('');
-                }}
-                options={stackups.map((s) => ({ value: s.id, label: s.name }))}
-              />
-              <div className="flex items-center justify-between gap-2">
-                <SelectField
-                  label="Signal layer"
-                  value={layerId || copperLayers[0]?.id || ''}
-                  width={110}
-                  onChange={setLayerId}
-                  options={copperLayers.map((l) => ({ value: l.id, label: `${l.name}${l.role === 'plane' ? ' (plane)' : ''}` }))}
-                />
-                <button className="btn" onClick={applyLayer}>
-                  Apply
-                </button>
-              </div>
-              {stackNote && <p className="text-[12px] text-muted">{stackNote}</p>}
-            </Group>
-          </Panel>
-        </div>
-
-        {/* ---------------- results ---------------- */}
-        <div className="min-w-0 space-y-4">
-          <Panel title="Result" right={<span className="text-[11.5px] text-faint">{busy ? 'Solving…' : r ? `${r.nodes.toLocaleString()} mesh nodes` : ''}</span>}>
-            <div className="flex flex-wrap items-end gap-x-8 gap-y-3 px-3 pt-3">
-              <Big label={diff ? 'Differential impedance Zdiff' : 'Characteristic impedance Z0'} value={z ? fmt(z, 4) : '—'} unit="Ω" busy={busy} />
-              <Big label="Effective εr" value={eeff ? fmt(eeff, 4) : '—'} unit="" busy={busy} />
-              <div className="ml-auto flex flex-wrap items-end gap-2 pb-1">
-                <NumField label="Target" value={p.target} onChange={(v) => set({ target: v })} unit="Ω" width={64} />
-                <button className="btn btn-primary" disabled={!geom || busy} onClick={() => solveFor('w')}>
-                  {solving === 'w' ? 'Solving…' : 'Solve W'}
-                </button>
-                {diff && (
-                  <button className="btn" disabled={!geom || busy} onClick={() => solveFor('s')}>
-                    {solving === 's' ? 'Solving…' : 'Solve S'}
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="px-3 pb-2 pt-1">
-              {dev !== null && Number.isFinite(dev) && (
-                <p className={`text-[12.5px] ${Math.abs(dev) <= 5 ? 'text-ok' : 'text-muted'}`}>
-                  {dev >= 0 ? '+' : ''}
-                  {fmt(dev, 3)} % from the {fmt(p.target, 4)} Ω target{Math.abs(dev) <= 10 ? ' (typical fab tolerance ±10 %)' : ''}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2 px-3 pb-3">
-              <Notes kind="error" items={[...errors, ...(solveState.error && geom ? [solveState.error] : []), ...(solveErr ? [solveErr] : [])]} />
-            </div>
-            <table className="tbl">
-              <tbody>
-                {diff && r?.odd && (
-                  <>
-                    <Result label="Odd-mode impedance Zodd" value={fmt(r.odd.z, 4)} unit="Ω" />
-                    <Result label="Even-mode impedance Zeven" value={r.even ? fmt(r.even.z, 4) : '—'} unit="Ω" />
-                    <Result label="Common-mode impedance Zcomm" value={r.zcomm ? fmt(r.zcomm, 4) : '—'} unit="Ω" sub="Zeven / 2" />
-                    <Result label="εeff odd / even" value={`${fmt(r.odd.eeff, 4)} / ${r.even ? fmt(r.even.eeff, 4) : '—'}`} />
-                    {r.even && (
-                      <Result
-                        label="Coupling (saturated NEXT)"
-                        value={`${fmt(100 * nextCoefficient(r.even.z, r.odd.z), 3)} %`}
-                        sub="if the two traces carried unrelated signals"
-                      />
-                    )}
-                  </>
-                )}
-                {eeff && (
-                  <>
-                    <Result label="Propagation delay" value={`${fmt(delayPsPerMm(eeff), 4)}`} unit="ps/mm" sub={`${fmt(delayPsPerMm(eeff) * 25.4, 4)} ps/in`} />
-                    <Result label="Velocity" value={`${fmt(100 / Math.sqrt(eeff), 3)} %`} unit="of c" />
-                  </>
-                )}
-                {lc && (
-                  <>
-                    <Result label={diff ? 'Inductance per line (odd)' : 'Inductance'} value={fmt(lc.lPerM * 1e6, 4)} unit="nH/mm" />
-                    <Result label={diff ? 'Capacitance per line (odd)' : 'Capacitance'} value={fmt(lc.cPerM * 1e9, 4)} unit="pF/mm" />
-                  </>
-                )}
-                {cf && z && (
-                  <Result label={`Closed-form check (${cf.name})`} value={`${fmt(cf.z, 4)}`} unit="Ω" sub={`${fmt((100 * (cf.z - z)) / z, 2)} % vs field solver`} />
-                )}
-              </tbody>
-            </table>
-          </Panel>
-
-          <Panel
-            title={view === 'section' ? 'Cross-section' : `Field (${diff ? 'odd mode' : 'single-ended'}), equipotentials every 10 %`}
-            right={
-              <Segmented
-                label="View"
-                value={view}
-                onChange={setView}
-                options={[
-                  { value: 'section', label: 'Section' },
-                  { value: 'field', label: 'Field' },
-                ]}
-              />
-            }
-          >
-            <div className="p-3">
-              {view === 'section' || !r?.field || !geom ? (
-                <CrossSection
-                  spec={{
-                    type,
-                    diff,
-                    w: p.w,
-                    wTop: p.w - p.etch,
-                    t: p.t,
-                    s: p.s,
-                    h: p.h,
-                    h2: p.h2,
-                    er: p.er,
-                    er2: p.er2,
-                    mask: p.mask,
-                    cpw: p.cpw,
-                    gap: p.gap,
-                  }}
-                  unitLabel={unit}
-                  toUnit={toUnit}
-                />
-              ) : (
-                <FieldMap field={r.field} geom={geom} />
-              )}
-            </div>
-          </Panel>
-
-          <Panel title="Solver">
-            <Group>
-              <SelectField
-                label="Mesh accuracy"
-                value={acc}
-                onChange={(v) => set({ acc: v })}
-                options={[
-                  { value: 'fast', label: 'Fast' },
-                  { value: 'normal', label: 'Normal' },
-                  { value: 'high', label: 'High' },
-                ]}
-              />
-              <p className="text-[12px] text-muted">Normal agrees with a commercial 2D solver to within about 1 % on typical stackups. Use High to confirm a final design.</p>
-            </Group>
-          </Panel>
-        </div>
+          </div>
+        </Panel>
       </div>
     </ToolPage>
   );

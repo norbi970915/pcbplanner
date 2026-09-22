@@ -1,5 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { APP_NAME } from '../config';
+import { useShell } from '../state/shell';
 import { AdSlot, PartnerBox } from './Ads';
 
 export function useDocumentMeta(title: string, description: string) {
@@ -15,65 +17,65 @@ export function useDocumentMeta(title: string, description: string) {
   }, [title, description]);
 }
 
+/**
+ * Frame of every tool: the document (results, drawings, help) is rendered in
+ * the centre; `properties` go into the docked Properties panel and `status`
+ * into the status bar.
+ */
 export function ToolPage({
   title,
   description,
+  properties,
+  status,
   onReset,
   children,
   method,
 }: {
   title: string;
   description: string;
+  properties?: ReactNode;
+  status?: ReactNode;
   onReset?: () => void;
   children: ReactNode;
   method?: ReactNode;
 }) {
   useDocumentMeta(title, description);
-  const [copied, setCopied] = useState(false);
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      window.prompt('Copy this link:', window.location.href);
-    }
-  };
+  const { propsEl, statusEl, setActions } = useShell();
+  useEffect(() => {
+    setActions({ reset: onReset });
+    return () => setActions(null);
+  }, [onReset, setActions]);
 
   return (
-    <div className="mx-auto max-w-[1180px]">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+    <div className="p-3">
+      <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-[20px] font-bold leading-tight tracking-tight">{title}</h1>
-          <p className="mt-0.5 max-w-[80ch] text-[13px] text-muted">{description}</p>
+          <h1 className="text-[15px] font-semibold">{title}</h1>
+          <p className="max-w-[95ch] text-muted">{description}</p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn" onClick={copyLink} title="Copy a link that reproduces these inputs">
-            {copied ? 'Link copied' : 'Copy link'}
+        {onReset && (
+          <button className="btn" onClick={onReset}>
+            Reset
           </button>
-          {onReset && (
-            <button className="btn" onClick={onReset}>
-              Reset
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {children}
+      <div className="space-y-3">{children}</div>
 
-      <div className="mt-6 2xl:hidden">
-        <div className="grid gap-4 md:grid-cols-[1fr_300px]">
-          <AdSlot slot="inline-responsive" minHeight={120} />
-          <PartnerBox />
-        </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_280px]">
+        <AdSlot slot="document-inline" minHeight={100} />
+        <PartnerBox />
       </div>
 
       {method && (
-        <details className="group mt-6 rounded border border-line bg-panel" open>
-          <summary className="cursor-pointer select-none border-b border-line px-3 py-2 text-[13px] font-semibold">Method, formulas and references</summary>
+        <details id="method" className="mt-4 border border-line bg-sheet" open>
+          <summary className="flex h-[24px] cursor-pointer select-none items-center bg-panel-head px-2 font-semibold">Method, formulas and references</summary>
           <div className="prose-doc px-4 py-3">{method}</div>
         </details>
       )}
+
+      {propsEl && properties && createPortal(properties, propsEl)}
+      {statusEl && status && createPortal(status, statusEl)}
     </div>
   );
 }

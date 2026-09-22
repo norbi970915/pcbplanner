@@ -1,50 +1,51 @@
-// Visual smoke test: opens each tool in Edge, waits for results, saves screenshots
+// Visual smoke test: opens tools in Edge, waits for results, saves screenshots
 // and reports console errors. Usage: node scripts/shots.mjs <outDir> [baseUrl] [theme]
 import { chromium } from 'playwright-core';
 
 const out = process.argv[2] ?? '.';
 const base = process.argv[3] ?? 'http://localhost:4173';
-const theme = process.argv[4] ?? 'light';
+const theme = process.argv[4] ?? 'dark';
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 1100 }, colorScheme: theme });
+const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+await ctx.addInitScript((t) => localStorage.setItem('pcbtk-settings', JSON.stringify({ unit: 'mm', theme: t })), theme);
 const page = await ctx.newPage();
 const errors = [];
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 page.on('pageerror', (e) => errors.push(e.message));
+const idle = (ms = 20000) => page.waitForFunction(() => !document.body.innerText.includes('Solving'), null, { timeout: ms });
 
 const shots = [
   ['home', '/'],
-  ['impedance', '/impedance'],
   ['impedance-diff', '/impedance?mode=diff&w=0.113&s=0.114&h=0.0764&er=3.91&t=0.04064&target=85'],
-  ['stripline', '/impedance?type=stripline&h=0.2&h2=0.2&er=4.3&er2=4.3&w=0.12&t=0.0152'],
-  ['trace', '/trace-width'],
-  ['via', '/via'],
   ['stackup', '/stackup'],
-  ['timing', '/timing'],
+  ['trace', '/trace-width?mode=temp'],
+  ['junction', '/junction-temperature?mode=chain'],
+  ['thermalvias', '/thermal-vias'],
+  ['crosstalk', '/crosstalk'],
+  ['ohms', '/ohms-law'],
+  ['resistors', '/resistors'],
 ];
 for (const [name, path] of shots) {
   await page.goto(base + path, { waitUntil: 'networkidle' });
-  if (path.startsWith('/impedance')) {
-    await page.waitForFunction(() => !document.body.innerText.includes('Solving…'), null, { timeout: 20000 }).catch(() => errors.push(`${name}: solver did not finish`));
-    const big = await page.locator('.tnum').first().innerText();
-    console.log(`${name}: ${big.replace(/\s+/g, ' ')}`);
-  }
-  await page.screenshot({ path: `${out}/shot_${name}.png`, fullPage: false });
+  await idle().catch(() => errors.push(`${name}: still solving`));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${out}/shot_${name}.png` });
 }
-// field view
-await page.goto(base + '/impedance?mode=diff&w=0.113&s=0.114&h=0.0764&er=3.91&t=0.04064&target=85', { waitUntil: 'networkidle' });
-await page.waitForFunction(() => !document.body.innerText.includes('Solving…'), null, { timeout: 20000 });
-await page.getByRole('radio', { name: 'Field' }).click();
-await page.waitForTimeout(500);
-await page.screenshot({ path: `${out}/shot_field.png` });
-// solve for width
-await page.goto(base + '/impedance', { waitUntil: 'networkidle' });
-await page.waitForFunction(() => !document.body.innerText.includes('Solving…'), null, { timeout: 20000 });
-await page.getByRole('button', { name: 'Solve W' }).click();
-await page.waitForFunction(() => !document.body.innerText.includes('Solving…'), null, { timeout: 30000 });
-await page.waitForTimeout(600);
-console.log('after Solve W:', (await page.locator('.tnum').first().innerText()).replace(/\s+/g, ' '), '| url:', page.url());
+
+// stack manager impedance tab
+await page.goto(base + '/stackup', { waitUntil: 'networkidle' });
+await page.getByRole('radio', { name: 'Impedance' }).click();
+await page.waitForFunction(() => !document.body.innerText.includes('solving…'), null, { timeout: 60000 }).catch(() => errors.push('lsm impedance: timeout'));
+await page.screenshot({ path: `${out}/shot_lsm_imp.png` });
+
+// stackup advisor run
+await page.goto(base + '/stackup-advisor', { waitUntil: 'networkidle' });
+const t0 = Date.now();
+await page.getByRole('button', { name: 'Find Best Stackups' }).click();
+await page.waitForFunction(() => document.body.innerText.includes('meet every requirement'), null, { timeout: 180000 }).catch(() => errors.push('advisor: timeout'));
+console.log(`advisor finished in ${((Date.now() - t0) / 1000).toFixed(1)} s:`, await page.locator('text=meet every requirement').first().innerText().catch(() => '?'));
+await page.screenshot({ path: `${out}/shot_advisor.png` });
 
 console.log('console errors:', errors.length ? errors : 'none');
 await browser.close();

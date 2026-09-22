@@ -18,10 +18,10 @@ function read(): { unit: PrefUnit; theme: Theme } {
     const s = JSON.parse(localStorage.getItem(KEY) || '{}');
     return {
       unit: s.unit === 'mil' ? 'mil' : 'mm',
-      theme: s.theme === 'light' || s.theme === 'dark' ? s.theme : 'system',
+      theme: s.theme === 'light' || s.theme === 'system' ? s.theme : 'dark',
     };
   } catch {
-    return { unit: 'mm', theme: 'system' };
+    return { unit: 'mm', theme: 'dark' };
   }
 }
 

@@ -81,7 +81,7 @@ export function CrossSection({ spec, unitLabel, toUnit }: { spec: XsecSpec; unit
     <svg viewBox={`0 ${top} ${Wd} ${Hd - top}`} className="h-auto w-full" role="img" aria-label="Cross-section of the transmission line">
       <style>{`
         .dimline{stroke:var(--ink);stroke-width:.8;fill:none}
-        .dimtxt{fill:var(--ink);font-size:11px;font-family:var(--font-sans);paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
+        .dimtxt{fill:var(--ink);font-size:11px;font-family:var(--font-sans);paint-order:stroke;stroke:var(--sheet);stroke-width:3px;stroke-linejoin:round}
         .sub{fill:var(--muted);font-size:10.5px;font-family:var(--font-sans)}
       `}</style>
       <defs>

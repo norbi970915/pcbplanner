@@ -1,15 +1,17 @@
 /// <reference lib="webworker" />
+import { designLine, type DesignRequest, type DesignResult } from './design';
 import { solve, type Geometry, type SolveOptions, type SolveResult } from './fieldsolver';
 
 export type SolverRequest =
   | { id: number; type: 'solve'; geom: Geometry; opts: SolveOptions }
-  | { id: number; type: 'target'; geom: Geometry; opts: SolveOptions; param: 'w' | 's'; target: number };
+  | { id: number; type: 'target'; geom: Geometry; opts: SolveOptions; param: 'w' | 's'; target: number }
+  | { id: number; type: 'design'; req: DesignRequest };
 
 export type SolverResponse =
-  | { id: number; ok: true; result: SolveResult; value?: number }
+  | { id: number; ok: true; result?: SolveResult; value?: number; design?: DesignResult }
   | { id: number; ok: false; error: string };
 
-const zOf = (r: SolveResult) => (r.zdiff ?? r.se?.z ?? NaN);
+const zOf = (r: SolveResult) => r.zdiff ?? r.se?.z ?? NaN;
 
 function withParam(geom: Geometry, param: 'w' | 's', v: number): Geometry {
   if (param === 's') return { ...geom, s: v };
@@ -17,12 +19,11 @@ function withParam(geom: Geometry, param: 'w' | 's', v: number): Geometry {
   return { ...geom, w: v, wTop: geom.wTop !== undefined ? Math.max(v - etch, v * 0.1) : undefined };
 }
 
-/** Find the width (or spacing) that gives the target impedance. Z falls with W and rises with S. */
+/** Width (or spacing) for a target impedance. Z falls with W and rises with S. */
 function solveTarget(geom: Geometry, opts: SolveOptions, param: 'w' | 's', target: number) {
   const quick: SolveOptions = { ...opts, field: false, even: false };
   const f = (v: number) => zOf(solve(withParam(geom, param, v), quick)) - target;
-  const start = param === 'w' ? geom.w : (geom.s as number);
-  let a = start;
+  let a = param === 'w' ? geom.w : (geom.s as number);
   let fa = f(a);
   const grow = (fa > 0) === (param === 'w');
   let b = grow ? a * 1.4 : a / 1.4;
@@ -34,7 +35,6 @@ function solveTarget(geom: Geometry, opts: SolveOptions, param: 'w' | 's', targe
     if (b < 1e-4 || b > 1e3) throw new Error('No width/spacing reaches this impedance for the given stackup.');
     fb = f(b);
   }
-  // Illinois regula falsi in log space: the root stays bracketed by (la, lb).
   let la = Math.log(a);
   let lb = Math.log(b);
   for (let n = 0; n < 40; n++) {
@@ -43,9 +43,7 @@ function solveTarget(geom: Geometry, opts: SolveOptions, param: 'w' | 's', targe
     if (fc * fb < 0) {
       la = lb;
       fa = fb;
-    } else {
-      fa /= 2;
-    }
+    } else fa /= 2;
     lb = lc;
     fb = fc;
     if (Math.abs(fc) < 0.005 || Math.abs(lb - la) < 1e-7) break;
@@ -54,21 +52,17 @@ function solveTarget(geom: Geometry, opts: SolveOptions, param: 'w' | 's', targe
   return { value, result: solve(withParam(geom, param, value), opts) };
 }
 
+const post = (m: SolverResponse) => (self as DedicatedWorkerGlobalScope).postMessage(m);
+
 self.onmessage = (e: MessageEvent<SolverRequest>) => {
   const req = e.data;
   try {
-    if (req.type === 'solve') {
-      const result = solve(req.geom, req.opts);
-      (self as DedicatedWorkerGlobalScope).postMessage({ id: req.id, ok: true, result } satisfies SolverResponse);
-    } else {
+    if (req.type === 'solve') post({ id: req.id, ok: true, result: solve(req.geom, req.opts) });
+    else if (req.type === 'target') {
       const { value, result } = solveTarget(req.geom, req.opts, req.param, req.target);
-      (self as DedicatedWorkerGlobalScope).postMessage({ id: req.id, ok: true, result, value } satisfies SolverResponse);
-    }
+      post({ id: req.id, ok: true, result, value });
+    } else post({ id: req.id, ok: true, design: designLine(req.req) });
   } catch (err) {
-    (self as DedicatedWorkerGlobalScope).postMessage({
-      id: req.id,
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    } satisfies SolverResponse);
+    post({ id: req.id, ok: false, error: err instanceof Error ? err.message : String(err) });
   }
 };

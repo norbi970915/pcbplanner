@@ -15,6 +15,11 @@ export function currentFor(aMil2: number, dTC: number, k: number): number {
   return k * Math.pow(dTC, IPC2221.b) * Math.pow(aMil2, IPC2221.c);
 }
 
+/** Temperature rise (°C) of a cross-section of `aMil2` mil² carrying `currentA`. */
+export function tempRiseFor(currentA: number, aMil2: number, k: number): number {
+  return Math.pow(currentA / (k * Math.pow(aMil2, IPC2221.c)), 1 / IPC2221.b);
+}
+
 export interface TraceInput {
   currentA: number;
   dTC: number;

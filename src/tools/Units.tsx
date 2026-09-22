@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ToolPage } from '../components/ToolPage';
-import { Group, NumField, Panel, SelectField } from '../components/ui';
+import { NumField, Panel, SelectField } from '../components/ui';
 import { C0, cToF, fmt, fToC, LEN_UNITS, si, type LenUnit } from '../lib/units';
 
 const LENGTHS: LenUnit[] = ['mm', 'mil', 'in', 'um', 'cm', 'oz'];
@@ -17,13 +17,13 @@ export default function Units() {
   const vrms = Math.sqrt(w * r);
 
   return (
-    <ToolPage title="Unit Converter" description="Quick conversions for PCB work: mm, mil, inch, µm and copper weight; temperature; dBm, watts and volts; frequency, period and free-space wavelength.">
-      <div className="grid gap-4 md:grid-cols-2">
+    <ToolPage title="Unit Converter" description="Quick conversions for PCB work: mm, mil, inch, µm and copper weight; temperature; dBm, watts and volts; frequency, period and free-space wavelength." properties={<p className="p-2 text-faint">The converters are in the document area.</p>} status="Unit converter">
+      <div className="grid gap-3 md:grid-cols-2">
         <Panel title="Length and copper weight">
-          <Group>
+          <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Value" value={len} onChange={setLen} allowZero unit="" />
             <SelectField label="Unit" value={lenU} onChange={setLenU} options={LENGTHS.map((u) => ({ value: u, label: u === 'oz' ? 'oz/ft² (copper)' : LEN_UNITS[u].label }))} />
-          </Group>
+          </div>
           <table className="tbl">
             <tbody>
               {LENGTHS.map((u) => (
@@ -36,9 +36,9 @@ export default function Units() {
           </table>
         </Panel>
         <Panel title="Temperature">
-          <Group>
+          <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Celsius" value={tc} onChange={setTc} unit="°C" allowNegative />
-          </Group>
+          </div>
           <table className="tbl">
             <tbody>
               <tr>
@@ -61,10 +61,10 @@ export default function Units() {
           </table>
         </Panel>
         <Panel title="Power">
-          <Group>
+          <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Power" value={dbm} onChange={setDbm} unit="dBm" allowNegative />
             <NumField label="Load" value={r} onChange={setR} unit="Ω" />
-          </Group>
+          </div>
           <table className="tbl">
             <tbody>
               <tr>
@@ -87,9 +87,9 @@ export default function Units() {
           </table>
         </Panel>
         <Panel title="Frequency">
-          <Group>
+          <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Frequency" value={f} onChange={setF} unit="MHz" />
-          </Group>
+          </div>
           <table className="tbl">
             <tbody>
               <tr>

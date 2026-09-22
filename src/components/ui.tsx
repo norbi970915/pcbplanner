@@ -2,12 +2,40 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { fromMm, LEN_UNITS, plain, toMm, type LenUnit } from '../lib/units';
 import { useSettings } from '../state/settings';
 
+/** Collapsible section of the Properties panel (▾ Title). */
+export function Section({ title, children, defaultOpen = true, right }: { title: string; children: ReactNode; defaultOpen?: boolean; right?: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="border-b border-line">
+      <div className="flex h-[24px] items-center bg-panel-head pr-2">
+        <button type="button" className="flex h-full flex-1 items-center gap-1 pl-1.5 text-left font-semibold" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <span className={`inline-block w-3 text-[9px] text-muted transition-transform ${open ? '' : '-rotate-90'}`}>▼</span>
+          {title}
+        </button>
+        {right}
+      </div>
+      {open && <div className="space-y-[3px] px-2 py-1.5">{children}</div>}
+    </section>
+  );
+}
+
+/** Small caption inside a section. */
+export function Group({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <div className="space-y-[3px] pt-0.5">
+      {title && <div className="pt-1 text-[11px] text-faint">{title}</div>}
+      {children}
+    </div>
+  );
+}
+
+/** A titled sheet in the document area. */
 export function Panel({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded border border-line bg-panel ${className}`}>
+    <section className={`border border-line bg-sheet ${className}`}>
       {title && (
-        <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-1.5">
-          <h2 className="text-[11.5px] font-semibold uppercase tracking-wide text-muted">{title}</h2>
+        <div className="flex h-[24px] items-center justify-between gap-2 border-b border-line bg-panel-head px-2">
+          <h2 className="font-semibold">{title}</h2>
           {right}
         </div>
       )}
@@ -16,23 +44,14 @@ export function Panel({ title, right, children, className = '' }: { title?: Reac
   );
 }
 
-export function Group({ title, children }: { title?: string; children: ReactNode }) {
-  return (
-    <div className="border-b border-line px-3 py-2 last:border-b-0">
-      {title && <div className="mb-1 text-[11.5px] font-medium text-faint">{title}</div>}
-      <div className="space-y-1.5">{children}</div>
-    </div>
-  );
-}
-
 function Row({ label, symbol, hint, htmlFor, children }: { label: ReactNode; symbol?: ReactNode; hint?: string; htmlFor?: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-[28px] items-center justify-between gap-2" title={hint}>
-      <label htmlFor={htmlFor} className="min-w-0 flex-1 truncate text-[13px]">
+    <div className="grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2" title={hint}>
+      <label htmlFor={htmlFor} className="truncate text-muted">
         {label}
-        {symbol && <span className="ml-1 font-serif italic text-muted">{symbol}</span>}
+        {symbol && <span className="ml-1 font-[Cambria,serif] italic text-faint">{symbol}</span>}
       </label>
-      <div className="flex shrink-0 items-center gap-1">{children}</div>
+      <div className="flex items-center gap-1">{children}</div>
     </div>
   );
 }
@@ -86,7 +105,7 @@ export function LenField({
     <Row label={label} symbol={symbol} hint={hint} htmlFor={id}>
       <input
         id={id}
-        className="fld w-[92px] text-right"
+        className="fld w-[84px] text-right"
         inputMode="decimal"
         value={text}
         aria-invalid={bad}
@@ -101,7 +120,7 @@ export function LenField({
         }}
       />
       <select
-        className="fld w-[56px]"
+        className="fld w-[48px]"
         aria-label="unit"
         value={unit}
         onChange={(e) => {
@@ -120,7 +139,7 @@ export function LenField({
   );
 }
 
-/** Plain numeric input with a fixed unit label. */
+/** Numeric input with a fixed unit label. */
 export function NumField({
   label,
   symbol,
@@ -131,7 +150,7 @@ export function NumField({
   allowZero = false,
   allowNegative = false,
   hint,
-  width = 92,
+  width = 84,
 }: {
   label: ReactNode;
   symbol?: ReactNode;
@@ -166,7 +185,7 @@ export function NumField({
           }
         }}
       />
-      <span className="w-[56px] text-[12.5px] text-muted">{unit}</span>
+      <span className="w-[48px] text-muted">{unit}</span>
     </Row>
   );
 }
@@ -176,23 +195,31 @@ export function SelectField<T extends string>({
   value,
   onChange,
   options,
-  width = 152,
+  width = 136,
 }: {
   label: ReactNode;
   value: T;
   onChange: (v: T) => void;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; group?: string }[];
   width?: number;
 }) {
   const id = useId();
+  const groups = [...new Set(options.map((o) => o.group ?? ''))];
+  const opt = (o: { value: T; label: string }) => (
+    <option key={o.value} value={o.value}>
+      {o.label}
+    </option>
+  );
   return (
     <Row label={label} htmlFor={id}>
       <select id={id} className="fld" style={{ width }} value={value} onChange={(e) => onChange(e.target.value as T)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
+        {groups.length > 1
+          ? groups.map((g) => (
+              <optgroup key={g} label={g}>
+                {options.filter((o) => (o.group ?? '') === g).map(opt)}
+              </optgroup>
+            ))
+          : options.map(opt)}
       </select>
     </Row>
   );
@@ -200,7 +227,7 @@ export function SelectField<T extends string>({
 
 export function Check({ label, checked, onChange, hint }: { label: ReactNode; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
   return (
-    <label className="flex min-h-[26px] cursor-pointer items-center gap-2 text-[13px]" title={hint}>
+    <label className="flex min-h-[22px] cursor-pointer items-center gap-2" title={hint}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
@@ -209,7 +236,7 @@ export function Check({ label, checked, onChange, hint }: { label: ReactNode; ch
 
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded border border-line-strong bg-field p-[2px]">
+    <div role="radiogroup" aria-label={label} className="inline-flex border border-[var(--field-line)] bg-field">
       {options.map((o) => (
         <button
           key={o.value}
@@ -217,7 +244,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`h-[24px] rounded-[2px] px-2.5 text-[12.5px] ${value === o.value ? 'bg-accent text-white' : 'text-ink hover:bg-sel'}`}
+          className={`h-[20px] px-2 ${value === o.value ? 'bg-accent text-white' : 'text-ink hover:bg-hover'}`}
         >
           {o.label}
         </button>
@@ -226,16 +253,16 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   );
 }
 
-/** Key result line in the results table. */
+/** Row of a result table: label | value | unit. */
 export function Result({ label, value, unit, strong, sub }: { label: ReactNode; value: ReactNode; unit?: ReactNode; strong?: boolean; sub?: ReactNode }) {
   return (
     <tr>
-      <th scope="row" className="text-left text-[13px] font-normal">
+      <th scope="row" className="text-left font-normal">
         {label}
-        {sub && <div className="text-[11.5px] text-faint">{sub}</div>}
+        {sub && <div className="text-[11px] text-faint">{sub}</div>}
       </th>
-      <td className={`v ${strong ? 'text-[15px] font-semibold' : ''}`}>{value}</td>
-      <td className="w-[64px] text-[12.5px] text-muted">{unit}</td>
+      <td className={`v ${strong ? 'font-semibold' : ''}`}>{value}</td>
+      <td className="w-[60px] text-muted">{unit}</td>
     </tr>
   );
 }
@@ -244,7 +271,7 @@ export function Notes({ items, kind = 'note' }: { items: string[]; kind?: 'note'
   if (!items.length) return null;
   const cls = kind === 'error' ? 'border-[var(--err-line)] bg-[var(--err-bg)]' : 'border-[var(--note-line)] bg-[var(--note-bg)]';
   return (
-    <div className={`border-l-[3px] px-3 py-2 text-[13px] ${cls}`} role={kind === 'error' ? 'alert' : undefined}>
+    <div className={`border-l-[3px] px-2.5 py-1.5 ${cls}`} role={kind === 'error' ? 'alert' : undefined}>
       {items.length === 1 ? (
         items[0]
       ) : (
@@ -258,12 +285,13 @@ export function Notes({ items, kind = 'note' }: { items: string[]; kind?: 'note'
   );
 }
 
+/** Headline value in the document area. */
 export function Big({ label, value, unit, busy }: { label: ReactNode; value: ReactNode; unit: ReactNode; busy?: boolean }) {
   return (
-    <div className="min-w-[140px]">
-      <div className="text-[12px] text-muted">{label}</div>
-      <div className={`tnum text-[26px] font-semibold leading-tight ${busy ? 'opacity-60' : ''}`}>
-        {value} <span className="text-[15px] font-normal text-muted">{unit}</span>
+    <div className="min-w-[130px]">
+      <div className="text-muted">{label}</div>
+      <div className={`tnum text-[24px] font-semibold leading-tight ${busy ? 'opacity-60' : ''}`}>
+        {value} <span className="text-[13px] font-normal text-muted">{unit}</span>
       </div>
     </div>
   );

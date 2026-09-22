@@ -1,5 +1,5 @@
 import { ToolPage } from '../components/ToolPage';
-import { Group, LenField, Notes, NumField, Panel, Result } from '../components/ui';
+import { LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { via } from '../lib/via';
 import { fmt, si } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
@@ -19,64 +19,64 @@ export default function Via() {
   const notes: string[] = [];
   if (r && r.aspectRatio > 10) notes.push(`Aspect ratio ${fmt(r.aspectRatio, 3)}:1 is above the ~10:1 many fabs accept for through holes.`);
 
+  const properties = (
+    <>
+      <Section title="Geometry">
+        <LenField label="Finished hole" symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} />
+        <LenField label="Plating thickness" value={p.plating} onChange={(v) => set({ plating: v })} units={['um', 'mil', 'mm', 'oz']} />
+        <LenField label="Via length" symbol="h" value={p.len} onChange={(v) => set({ len: v })} />
+        <LenField label="Pad diameter" symbol="D1" value={p.pad} onChange={(v) => set({ pad: v })} />
+        <LenField label="Antipad diameter" symbol="D2" value={p.antipad} onChange={(v) => set({ antipad: v })} />
+        <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+      </Section>
+      <Section title="Thermal / Electrical">
+        <NumField label="Temperature rise" symbol="ΔT" value={p.dT} onChange={(v) => set({ dT: v })} unit="°C" />
+        <NumField label="Ambient" value={p.amb} onChange={(v) => set({ amb: v })} unit="°C" allowNegative />
+        <NumField label="Line impedance" symbol="Z0" value={p.z0} onChange={(v) => set({ z0: v })} unit="Ω" />
+      </Section>
+    </>
+  );
+
   return (
     <ToolPage
       title="Via Calculator"
       description="Plated through-hole via: current capacity, DC resistance, voltage drop, thermal resistance, parasitic capacitance and inductance, and the rise-time penalty on a high-speed line."
       onReset={reset}
+      properties={properties}
+      status={r ? `Via: ${fmt(r.currentExt, 3)} A capacity, ${si(r.capPf * 1e-12, 'F', 3)}, ${si(r.indNh * 1e-9, 'H', 3)}` : 'Check the inputs'}
       method={<Method />}
     >
-      <div className="grid gap-4 lg:grid-cols-[350px_minmax(0,1fr)]">
-        <Panel title="Inputs">
-          <Group title="Geometry">
-            <LenField label="Finished hole diameter" symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} />
-            <LenField label="Plating thickness" value={p.plating} onChange={(v) => set({ plating: v })} units={['um', 'mil', 'mm', 'oz']} />
-            <LenField label="Via length (board thickness)" symbol="h" value={p.len} onChange={(v) => set({ len: v })} />
-            <LenField label="Pad diameter" symbol="D1" value={p.pad} onChange={(v) => set({ pad: v })} />
-            <LenField label="Antipad diameter" symbol="D2" value={p.antipad} onChange={(v) => set({ antipad: v })} />
-            <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
-          </Group>
-          <Group title="Thermal / electrical">
-            <NumField label="Temperature rise" symbol="ΔT" value={p.dT} onChange={(v) => set({ dT: v })} unit="°C" />
-            <NumField label="Ambient" value={p.amb} onChange={(v) => set({ amb: v })} unit="°C" allowNegative />
-            <NumField label="Line impedance" symbol="Z0" value={p.z0} onChange={(v) => set({ z0: v })} unit="Ω" />
-          </Group>
-        </Panel>
-
-        <div className="min-w-0 space-y-4">
-          <Notes kind="error" items={errors} />
-          <Notes items={notes} />
-          {r && (
-            <>
-              <Panel title="Current and resistance">
-                <table className="tbl">
-                  <tbody>
-                    <Result label="Current capacity (IPC-2221, external k)" value={fmt(r.currentExt, 4)} unit="A" strong sub={`internal k: ${fmt(r.currentInt, 4)} A`} />
-                    <Result label="Barrel cross-section" value={fmt(r.areaMm2, 4)} unit="mm²" sub={`${fmt(r.areaMil2, 4)} mil²`} />
-                    <Result label="DC resistance" value={si(r.resistance, 'Ω')} sub={`at ${fmt(p.amb + p.dT, 4)} °C`} />
-                    <Result label="Voltage drop at capacity" value={si(r.voltageDropAtCurrent, 'V')} />
-                    <Result label="Power at capacity" value={si(r.powerAtCurrent, 'W')} />
-                    <Result label="Thermal resistance (barrel)" value={fmt(r.thermalRes, 4)} unit="°C/W" />
-                    <Result label="Aspect ratio" value={`${fmt(r.aspectRatio, 3)} : 1`} />
-                  </tbody>
-                </table>
-              </Panel>
-              <Panel title="High-speed parasitics">
-                <table className="tbl">
-                  <tbody>
-                    <Result label="Capacitance" value={si(r.capPf * 1e-12, 'F')} strong />
-                    <Result label="Inductance" value={si(r.indNh * 1e-9, 'H')} strong />
-                    <Result label="Via impedance √(L/C)" value={fmt(r.zVia, 4)} unit="Ω" />
-                    <Result label="Delay √(LC)" value={fmt(r.delayPs, 4)} unit="ps" />
-                    <Result label="Rise-time degradation" value={fmt(r.riseDegradationPs, 4)} unit="ps" sub={`10–90 %, on a ${fmt(p.z0, 3)} Ω line`} />
-                    <Result label="L-C resonance" value={fmt(r.resonanceGHz, 4)} unit="GHz" />
-                  </tbody>
-                </table>
-              </Panel>
-            </>
-          )}
+      <Notes kind="error" items={errors} />
+      <Notes items={notes} />
+      {r && (
+        <div className="grid gap-3 xl:grid-cols-2">
+          <Panel title="Current and Resistance">
+            <table className="tbl">
+              <tbody>
+                <Result label="Current capacity (IPC-2221, external k)" value={fmt(r.currentExt, 4)} unit="A" strong sub={`internal k: ${fmt(r.currentInt, 4)} A`} />
+                <Result label="Barrel cross-section" value={fmt(r.areaMm2, 4)} unit="mm²" sub={`${fmt(r.areaMil2, 4)} mil²`} />
+                <Result label="DC resistance" value={si(r.resistance, 'Ω')} sub={`at ${fmt(p.amb + p.dT, 4)} °C`} />
+                <Result label="Voltage drop at capacity" value={si(r.voltageDropAtCurrent, 'V')} />
+                <Result label="Power at capacity" value={si(r.powerAtCurrent, 'W')} />
+                <Result label="Thermal resistance (barrel)" value={fmt(r.thermalRes, 4)} unit="°C/W" />
+                <Result label="Aspect ratio" value={`${fmt(r.aspectRatio, 3)} : 1`} />
+              </tbody>
+            </table>
+          </Panel>
+          <Panel title="High-Speed Parasitics">
+            <table className="tbl">
+              <tbody>
+                <Result label="Capacitance" value={si(r.capPf * 1e-12, 'F')} strong />
+                <Result label="Inductance" value={si(r.indNh * 1e-9, 'H')} strong />
+                <Result label="Via impedance √(L/C)" value={fmt(r.zVia, 4)} unit="Ω" />
+                <Result label="Delay √(LC)" value={fmt(r.delayPs, 4)} unit="ps" />
+                <Result label="Rise-time degradation" value={fmt(r.riseDegradationPs, 4)} unit="ps" sub={`10–90 %, on a ${fmt(p.z0, 3)} Ω line`} />
+                <Result label="L-C resonance" value={fmt(r.resonanceGHz, 4)} unit="GHz" />
+              </tbody>
+            </table>
+          </Panel>
         </div>
-      </div>
+      )}
     </ToolPage>
   );
 }

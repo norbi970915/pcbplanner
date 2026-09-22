@@ -71,7 +71,7 @@ export function FieldMap({ field, geom }: { field: FieldData; geom: Geometry }) 
 
     const pos = hexToRgb(readVar('--copper', '#c7702f'));
     const neg: [number, number, number] = [59, 111, 182];
-    const bg = hexToRgb(readVar('--panel', '#ffffff'));
+    const bg = hexToRgb(readVar('--sheet', '#282828'));
     const img = ctx.createImageData(cv.width, cv.height);
     const data = img.data;
 
