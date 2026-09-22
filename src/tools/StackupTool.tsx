@@ -6,7 +6,7 @@ import { Notes, NumField, Panel, Section, Segmented } from '../components/ui';
 import type { DesignResult } from '../lib/design';
 import { runPooled } from '../lib/solverClient';
 import { toAltium, toEagleDru, toKicad, zip } from '../lib/stackupExport';
-import { boardThickness, copperCount, DEFAULT_DF, geometryForLayer, MASK_DF, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
+import { boardThickness, copperCount, DEFAULT_DF, shortName, geometryForLayer, MASK_DF, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
 import { fmt, fromMm, MM_PER_OZ, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { stackupStore, useStackups } from '../state/stackupStore';
@@ -44,6 +44,31 @@ function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false
     />
   );
 }
+/** Prepreg glass styles used in the library, with the thickness and Dk range they have there. */
+const GLASS_TABLE = (() => {
+  const m = new Map<string, { style: string; tMin: number; tMax: number; dkMin: number; dkMax: number }>();
+  for (const s of PRESETS)
+    for (const l of s.layers) {
+      const g = l.kind === 'dielectric' ? /^Prepreg\s+(\d+)$/.exec(l.name)?.[1] : undefined;
+      if (!g) continue;
+      const e = m.get(g) ?? { style: g, tMin: Infinity, tMax: 0, dkMin: Infinity, dkMax: 0 };
+      e.tMin = Math.min(e.tMin, l.t);
+      e.tMax = Math.max(e.tMax, l.t);
+      e.dkMin = Math.min(e.dkMin, l.er ?? Infinity);
+      e.dkMax = Math.max(e.dkMax, l.er ?? 0);
+      m.set(g, e);
+    }
+  return [...m.values()].sort((a, b) => a.tMin - b.tMin);
+})();
+const WEAVE: Record<string, string> = {
+  '106': 'very fine, resin-rich',
+  '1080': 'fine, resin-rich',
+  '2313': 'medium',
+  '3313': 'medium',
+  '2116': 'medium-heavy',
+  '7628': 'coarse, glass-rich',
+};
+
 function download(name: string, data: string | Uint8Array, type: string) {
   const blob = new Blob([typeof data === 'string' ? data : (data as BlobPart)], { type });
   const url = URL.createObjectURL(blob);
@@ -100,7 +125,7 @@ export default function StackupTool() {
   };
 
   const saveCopy = () => {
-    const copy: Stackup = { ...draft, id: `custom-${Date.now().toString(36)}`, name: `${draft.name.replace(/ · .*$/, '')} (copy)`, builtin: false };
+    const copy: Stackup = { ...draft, id: `custom-${Date.now().toString(36)}`, name: `${draft.name} (copy)`, label: undefined, builtin: false };
     stackupStore.save(copy);
     setId(copy.id);
   };
@@ -194,7 +219,7 @@ export default function StackupTool() {
                   .filter((s) => stackupGroup(s) === g)
                   .map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name.replace(/ · .*$/, '')}
+                      {shortName(s)}
                     </option>
                   ))}
               </optgroup>
@@ -286,7 +311,7 @@ export default function StackupTool() {
       title="Layer Stack Manager"
       description={`${PRESETS.length} standard FR-4 stackups (2 to 12 layers, 0.8–2.0 mm) plus your own. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
       properties={properties}
-      status={`${draft.name.replace(/ · .*$/, '')} · ${copperCount(draft)} layers · ${L(board)} ${unit}${dirty ? ' · modified' : ''}`}
+      status={`${draft.name} · ${copperCount(draft)} layers · ${L(board)} ${unit}${dirty ? ' · modified' : ''}`}
     >
       <Panel
         title={draft.name}
@@ -466,6 +491,41 @@ export default function StackupTool() {
         </div>
       </Panel>
       <Notes items={draft.layers.some((l) => l.kind === 'copper' && l.role === 'plane') ? [] : ['Mark at least one copper layer as a plane so signal layers have a reference.']} />
+      <Panel title="Reading the Stackup Names">
+        <div className="prose-doc px-4 pt-3">
+          <p>
+            Library stackups are named by how they are built: <b>the prepreg under the outer layers</b>, then <b>the core thickness</b>, for example “1080 prepreg · core 0.6 mm”.
+            “2×2116” means two plies of 2116; “7628+1080” means a 7628 ply plus a 1080 ply. Where two stackups would otherwise share a name, the prepreg between L3 and L4 is added.
+          </p>
+          <p>
+            The numbers are standard glass-fabric styles (IPC-4412), the woven fibreglass inside the prepreg. A finer weave is thinner and resin-rich, so it has a lower Dk; a coarse
+            weave is thicker with more glass. The outer prepreg sets the distance from an outer trace to its plane, so it decides the trace width for a given impedance. For fast
+            differential pairs, fine weaves (1080, 2116, 3313) reduce the skew caused by the glass weave.
+          </p>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Glass style</th>
+              <th className="v">Ply thickness in the library</th>
+              <th className="v">Dk in the library</th>
+              <th>Weave</th>
+            </tr>
+          </thead>
+          <tbody>
+            {GLASS_TABLE.map((g) => (
+              <tr key={g.style}>
+                <td>{g.style}</td>
+                <td className="v">
+                  {g.tMin === g.tMax ? fmt(g.tMin, 3) : `${fmt(g.tMin, 3)} – ${fmt(g.tMax, 3)}`} mm
+                </td>
+                <td className="v">{g.dkMin === g.dkMax ? fmt(g.dkMin, 3) : `${fmt(g.dkMin, 3)} – ${fmt(g.dkMax, 3)}`}</td>
+                <td className="text-muted">{WEAVE[g.style] ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Panel>
       <Panel title="Importing the Stackup">
         <div className="prose-doc px-4 py-3">
           <h3>KiCad 8, 9 and 10</h3>

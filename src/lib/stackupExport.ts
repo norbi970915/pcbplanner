@@ -62,7 +62,9 @@ const isCore = (l: Layer) => /core/i.test(l.name);
 const dk = (l: Layer) => l.er ?? 4.2;
 const dfOf = (l: Layer) => l.df ?? (l.kind === 'mask' ? MASK_DF : DEFAULT_DF);
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-const safeName = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'stackup';
+/** Plain-ASCII spelling of the typographic characters used in names. */
+const ascii = (s: string) => s.replace(/·/g, '-').replace(/×/g, 'x').replace(/[–—]/g, '-').replace(/µ/g, 'u');
+const safeName = (s: string) => ascii(s).replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'stackup';
 
 /* ------------------------------------------------------------------ KiCad */
 
@@ -121,7 +123,7 @@ export function toKicad(s: Stackup): ExportFile[] {
 \t)
 \t(paper "A4")
 \t(title_block
-\t\t(title "${esc(s.name.replace(/ · .*$/, ''))} stackup")
+\t\t(title "${esc(s.name)} stackup")
 \t\t(comment 1 "Exported from pcbplanner.com")
 \t)
 \t(layers
@@ -270,7 +272,7 @@ export function toEagleDru(s: Stackup): ExportFile {
       return `${c.name} ${num(c.t * 1000, 1)} um` + (g ? `, ${g.plies.map((p) => `${p.name} ${num(p.t)} mm Dk ${num(dk(p), 3)} Df ${num(dfOf(p), 4)}`).join(' + ')}` : '');
     })
     .join('<br>');
-  const text = `description[en] = <b>${xml(s.name.replace(/ · .*$/, ''))}</b> - layer stack exported from pcbplanner.com\\n<p>\\nThis file sets the layer stack only (layer setup, copper and isolation thicknesses).\\n<p>\\n${summary}
+  const text = `description[en] = <b>${xml(ascii(s.name))}</b> - layer stack exported from pcbplanner.com\\n<p>\\nThis file sets the layer stack only (layer setup, copper and isolation thicknesses).\\n<p>\\n${summary}
 layerSetup = ${setup}
 mtCopper = ${copper.map(mm).join(' ')}
 mtIsolate = ${iso.map(mm).join(' ')}

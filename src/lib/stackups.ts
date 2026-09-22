@@ -19,6 +19,7 @@ export interface Stackup {
   name: string;
   layers: Layer[];
   builtin?: boolean;
+  label?: string; // short name inside its layer-count/thickness group (library stackups)
   note?: string;
   vendor?: string;
   nominal?: number; // nominal finished thickness, mm
@@ -64,7 +65,8 @@ function fromRaw(r: RawStackup): Stackup {
   layers.push({ id: `${r.id}-mb`, kind: 'mask', name: 'Bottom Solder', t: MASK_T, er: MASK_ER, df: MASK_DF });
   return {
     id: r.id,
-    name: `${r.name} · ${r.n}L ${r.nominal} mm`,
+    name: `${r.n}L ${r.nominal} mm · ${r.name}`,
+    label: r.name,
     layers,
     builtin: true,
     nominal: r.nominal,
@@ -74,6 +76,8 @@ function fromRaw(r: RawStackup): Stackup {
 
 export const PRESETS: Stackup[] = FAB_STACKUPS.map(fromRaw);
 
+/** Name inside a stackup dropdown group (the group already says layers and thickness). */
+export const shortName = (s: Stackup) => s.label ?? s.name;
 export const copperCount = (s: Stackup) => s.layers.filter((l) => l.kind === 'copper').length;
 export const signalLayers = (s: Stackup) => s.layers.filter((l) => l.kind === 'copper' && l.role !== 'plane');
 export const totalThickness = (s: Stackup) => s.layers.reduce((a, l) => a + l.t, 0);

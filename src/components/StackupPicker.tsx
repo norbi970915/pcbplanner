@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { copperCount, type Stackup } from '../lib/stackups';
+import { copperCount, shortName, type Stackup } from '../lib/stackups';
 import { useStackups } from '../state/stackupStore';
 
 /** Group label used in stackup dropdowns: "6 layers · 1.6 mm", or "My stackups". */
@@ -38,7 +38,7 @@ export function StackupPicker({ onApply, applyLabel = 'Apply' }: { onApply: (sta
                 .filter((s) => stackupGroup(s) === g)
                 .map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name.replace(/ · .*$/, '')}
+                    {shortName(s)}
                   </option>
                 ))}
             </optgroup>

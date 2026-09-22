@@ -316,7 +316,7 @@ export default function StackupAdvisor() {
                         <td className="tnum text-muted">{i + 1}</td>
                         <td>
                           <span className="mr-1 text-[9px] text-muted">{open ? '▼' : '▶'}</span>
-                          {r.plan.stackup.name.replace(/ · .*$/, '')}
+                          {r.plan.stackup.name}
                         </td>
                         <td className="v">{copperCount(r.plan.stackup)}</td>
                         <td className="v">{fmt(nominalThickness(r.plan.stackup), 3)} mm</td>
