@@ -5,7 +5,8 @@ import { ToolPage } from '../components/ToolPage';
 import { Notes, NumField, Panel, Section, Segmented } from '../components/ui';
 import type { DesignResult } from '../lib/design';
 import { runPooled } from '../lib/solverClient';
-import { boardThickness, copperCount, geometryForLayer, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
+import { toAltium, toEagleDru, toKicad, zip } from '../lib/stackupExport';
+import { boardThickness, copperCount, DEFAULT_DF, geometryForLayer, MASK_DF, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
 import { fmt, fromMm, MM_PER_OZ, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { stackupStore, useStackups } from '../state/stackupStore';
@@ -43,6 +44,18 @@ function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false
     />
   );
 }
+function download(name: string, data: string | Uint8Array, type: string) {
+  const blob = new Blob([typeof data === 'string' ? data : (data as BlobPart)], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export default function StackupTool() {
   const stackups = useStackups();
   const navigate = useNavigate();
@@ -75,8 +88,8 @@ export default function StackupTool() {
         kind === 'copper'
           ? { id: newId(), kind, name: 'Layer', t: MM_PER_OZ, role: 'signal' }
           : kind === 'mask'
-            ? { id: newId(), kind, name: 'Solder Mask', t: 0.0305, er: 3.8 }
-            : { id: newId(), kind, name: 'Prepreg', t: 0.1, er: 4.2 };
+            ? { id: newId(), kind, name: 'Solder Mask', t: 0.0305, er: 3.8, df: MASK_DF }
+            : { id: newId(), kind, name: 'Prepreg', t: 0.1, er: 4.2, df: DEFAULT_DF };
       const layers = [...d.layers];
       layers.splice(i + 1, 0, l);
       return { ...d, layers };
@@ -136,6 +149,30 @@ export default function StackupTool() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, impKey]);
+
+  // ---- export ----
+  const [exportMsg, setExportMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  useEffect(() => setExportMsg(null), [draft]);
+  const runExport = (kind: 'kicad' | 'altium' | 'fusion') => {
+    try {
+      if (kind === 'kicad') {
+        const files = toKicad(draft);
+        const base = files[0].name.replace(/\.kicad_pcb$/, '');
+        download(`${base}_kicad_stackup.zip`, zip(files), 'application/zip');
+        setExportMsg({ text: `Saved ${base}_kicad_stackup.zip: unzip it, then in your board use Board Setup → Import Settings from Another Board → select ${base}.kicad_pcb → tick “Board layers and physical stackup”.` });
+      } else if (kind === 'altium') {
+        const f = toAltium(draft);
+        download(f.name, f.content, 'application/xml');
+        setExportMsg({ text: `Saved ${f.name}: in Altium open the Layer Stack Manager → File → Load Stackup from File.` });
+      } else {
+        const f = toEagleDru(draft);
+        download(f.name, f.content, 'text/plain');
+        setExportMsg({ text: `Saved ${f.name}: in Fusion open Design Rules → File → Load. Then enter Dk/Df in the Layer Stack Manager (DRU files carry thicknesses only).` });
+      }
+    } catch (e) {
+      setExportMsg({ text: e instanceof Error ? e.message : String(e), error: true });
+    }
+  };
 
   const L = (mm: number) => fmt(fromMm(mm, unit), 4);
   const total = totalThickness(draft);
@@ -219,6 +256,21 @@ export default function StackupTool() {
           </tbody>
         </table>
       </Section>
+      <Section title="Export">
+        <div className="flex flex-wrap gap-1">
+          <button className="btn" onClick={() => runExport('kicad')}>
+            KiCad
+          </button>
+          <button className="btn" onClick={() => runExport('altium')}>
+            Altium
+          </button>
+          <button className="btn" onClick={() => runExport('fusion')}>
+            Fusion 360 / EAGLE
+          </button>
+        </div>
+        {exportMsg && <p className={exportMsg.error ? 'text-[var(--err-line)]' : 'text-faint'}>{exportMsg.text}</p>}
+        {!exportMsg && <p className="text-faint">Downloads the stackup shown, including unsaved edits. See “Importing the stackup” below the stack preview.</p>}
+      </Section>
       {tab === 'impedance' && (
         <Section title="Impedance Profiles">
           <NumField label="Single-ended target" value={targets.se} onChange={(v) => setTargets((t) => ({ ...t, se: v }))} unit="Ω" />
@@ -285,6 +337,7 @@ export default function StackupTool() {
                     <th className="v">Thickness ({unit})</th>
                     <th className="v">Weight</th>
                     <th className="v">Dk</th>
+                    <th className="v">Df</th>
                     <th>Role</th>
                     <th />
                   </tr>
@@ -308,6 +361,7 @@ export default function StackupTool() {
                         </td>
                         <td className="v text-muted">{l.kind === 'copper' ? `${fmt(l.t / MM_PER_OZ, 2)} oz` : ''}</td>
                         <td className="v">{l.kind === 'copper' ? <span className="text-faint">—</span> : <Num value={l.er ?? 4} onChange={(v) => update(i, { er: v })} width={52} min={1} inclusive />}</td>
+                        <td className="v">{l.kind === 'copper' ? <span className="text-faint">—</span> : <Num value={l.df ?? (l.kind === 'mask' ? MASK_DF : DEFAULT_DF)} onChange={(v) => update(i, { df: v })} width={60} min={0} inclusive />}</td>
                         <td>
                           {l.kind === 'copper' && (
                             <select className="fld" aria-label="Copper role" value={l.role ?? 'signal'} onChange={(e) => update(i, { role: e.target.value as 'signal' | 'plane' })}>
@@ -412,6 +466,36 @@ export default function StackupTool() {
         </div>
       </Panel>
       <Notes items={draft.layers.some((l) => l.kind === 'copper' && l.role === 'plane') ? [] : ['Mark at least one copper layer as a plane so signal layers have a reference.']} />
+      <Panel title="Importing the Stackup">
+        <div className="prose-doc px-4 py-3">
+          <h3>KiCad 8, 9 and 10</h3>
+          <ol>
+            <li>Click Export → KiCad and unzip the download. It contains a small board file and its project file; keep them together.</li>
+            <li>In your own board: File → Board Setup → <i>Import Settings from Another Board…</i>, choose the exported .kicad_pcb.</li>
+            <li>Tick <i>Board layers and physical stackup</i> and import. Copper layers, thicknesses, Dk, Df and the prepreg plies (as sublayers) appear in Board Setup → Physical Stackup.</li>
+          </ol>
+          <p>The import replaces the board's layer setup. Tested by loading the exported files in KiCad 10 for 2- to 12-layer stackups.</p>
+          <h3>Altium Designer</h3>
+          <ol>
+            <li>Click Export → Altium to download a .stackupx file.</li>
+            <li>In the Layer Stack Manager: File → Load Stackup from File, and choose it.</li>
+          </ol>
+          <p>
+            Every prepreg and core ply becomes its own dielectric layer with thickness, Dk, Df and material. Plane layers are exported as signal layers; change them to planes in Altium
+            if you use negative planes. The file follows the published .stackupx structure but could not be tested in Altium here.
+          </p>
+          <h3>Fusion 360 Electronics and EAGLE</h3>
+          <ol>
+            <li>Click Export → Fusion 360 / EAGLE to download a .dru design-rules file.</li>
+            <li>In the PCB editor: Design Rules → File → Load, and choose it. The layer setup, copper thicknesses and isolation (dielectric) thicknesses are set.</li>
+            <li>DRU files cannot carry Dk or Df: enter them in the Layer Stack Manager, using the values in the table above.</li>
+          </ol>
+          <p>
+            Loading a DRU file replaces the board's design rules: rules that are not in the file (clearances, sizes, restring) go back to the defaults, so check them afterwards or load the
+            file into a new board first.
+          </p>
+        </div>
+      </Panel>
     </ToolPage>
   );
 }

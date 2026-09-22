@@ -10,6 +10,7 @@ export interface Layer {
   name: string;
   t: number; // mm
   er?: number;
+  df?: number; // loss tangent (dielectric and mask)
   role?: CopperRole;
 }
 
@@ -41,21 +42,26 @@ export const ROLE_PATTERNS: Record<number, string> = {
 
 const MASK_T = 0.0305; // 1.2 mil, JLCPCB calculator default
 const MASK_ER = 3.8;
+/** Df of NP-155F (Nan Ya datasheet 0.014–0.016 at 1 GHz, middle) and a typical LPI mask (Taiyo PSR-4000 BN: 0.027 at 1 GHz). */
+export const JLC_DF = 0.015;
+export const MASK_DF = 0.027;
+/** Default Df for new dielectric layers (same FR-4 as the JLC templates). */
+export const DEFAULT_DF = JLC_DF;
 
 function fromRaw(r: RawStackup): Stackup {
   const pattern = ROLE_PATTERNS[r.n] ?? '';
   let ci = 0;
-  const layers: Layer[] = [{ id: `${r.id}-mt`, kind: 'mask', name: 'Top Solder', t: MASK_T, er: MASK_ER }];
+  const layers: Layer[] = [{ id: `${r.id}-mt`, kind: 'mask', name: 'Top Solder', t: MASK_T, er: MASK_ER, df: MASK_DF }];
   r.L.forEach((l, i) => {
     if (l[0] === 'c') {
       const role: CopperRole = pattern[ci] === 'P' ? 'plane' : 'signal';
       ci++;
       layers.push({ id: `${r.id}-${i}`, kind: 'copper', name: l[1], t: l[2], role });
     } else {
-      layers.push({ id: `${r.id}-${i}`, kind: 'dielectric', name: l[1], t: l[2], er: l[3] });
+      layers.push({ id: `${r.id}-${i}`, kind: 'dielectric', name: l[1], t: l[2], er: l[3], df: JLC_DF });
     }
   });
-  layers.push({ id: `${r.id}-mb`, kind: 'mask', name: 'Bottom Solder', t: MASK_T, er: MASK_ER });
+  layers.push({ id: `${r.id}-mb`, kind: 'mask', name: 'Bottom Solder', t: MASK_T, er: MASK_ER, df: MASK_DF });
   return {
     id: r.id,
     name: `${r.name} · ${r.n}L ${r.nominal} mm`,
