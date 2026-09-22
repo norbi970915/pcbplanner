@@ -79,8 +79,12 @@ export function Layout() {
     if (!known) return;
     setTabs((t) => (t.includes(path) ? t : [...t, path]));
   }, [path, known]);
-  useEffect(() => writeJson(TABS_KEY, tabs), [tabs]);
-  useEffect(() => writeJson(PANELS_KEY, panels), [panels]);
+  useEffect(() => {
+    writeJson(TABS_KEY, tabs);
+  }, [tabs]);
+  useEffect(() => {
+    writeJson(PANELS_KEY, panels);
+  }, [panels]);
 
   // close menus on outside click / Escape
   useEffect(() => {

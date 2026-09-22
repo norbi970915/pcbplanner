@@ -25,7 +25,9 @@ const layerSwatch = (l: Layer, i: number, all: Layer[]) => {
 /** Numeric cell; only values above `min` (or at least `min` when `inclusive`) are accepted. */
 function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false }: { value: number; onChange: (v: number) => void; width?: number; disabled?: boolean; min?: number; inclusive?: boolean }) {
   const [text, setText] = useState(plain(value, 5));
-  useEffect(() => setText(plain(value, 5)), [value]);
+  useEffect(() => {
+    setText(plain(value, 5));
+  }, [value]);
   const n = Number.parseFloat(text);
   const valid = (v: number) => Number.isFinite(v) && (inclusive ? v >= min : v > min) && v < 1000;
   return (
@@ -89,7 +91,9 @@ export default function StackupTool() {
   const id = params.get('id') ?? stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id;
   const current = stackups.find((s) => s.id === id) ?? stackups[0];
   const [draft, setDraft] = useState<Stackup>(current);
-  useEffect(() => setDraft(current), [current]);
+  useEffect(() => {
+    setDraft(current);
+  }, [current]);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(current), [draft, current]);
   const [tab, setTab] = useState<'stackup' | 'impedance'>('stackup');
   const [sel, setSel] = useState<string | null>(null);
@@ -177,7 +181,9 @@ export default function StackupTool() {
 
   // ---- export ----
   const [exportMsg, setExportMsg] = useState<{ text: string; error?: boolean } | null>(null);
-  useEffect(() => setExportMsg(null), [draft]);
+  useEffect(() => {
+    setExportMsg(null);
+  }, [draft]);
   const runExport = (kind: 'kicad' | 'altium' | 'fusion') => {
     try {
       if (kind === 'kicad') {

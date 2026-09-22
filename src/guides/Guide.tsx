@@ -17,7 +17,12 @@ export function Guide({ children, tools, sources }: { children: ReactNode; tools
   const g = guideByPath(pathname)!;
   useDocumentMeta(g.title, g.description);
   const { statusEl } = useShell();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // start each article at the top (the document area scrolls on desktop, the window on phones).
+  // Block body on purpose: scrollTo returns a Promise in current browsers, and an effect must not return one.
+  useEffect(() => {
+    document.querySelector('main')?.scrollTo(0, 0);
+    window.scrollTo(0, 0);
+  }, [pathname]);
   const others = GUIDES.filter((x) => x.path !== g.path);
   return (
     <article className="p-3">
