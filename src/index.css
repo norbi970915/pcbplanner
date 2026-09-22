@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+  --bg: #f4f4f2;
+  --panel: #ffffff;
+  --panel-2: #fafaf8;
+  --ink: #1f2328;
+  --muted: #5b626b;
+  --faint: #8a9098;
+  --line: #dcdee1;
+  --line-strong: #b9bdc3;
+  --accent: #9c4a14;
+  --accent-ink: #7d3a0e;
+  --accent-soft: #f7e9dd;
+  --sel: #fbf0e6;
+  --field: #ffffff;
+  --note-bg: #fff8e1;
+  --note-line: #d9a82b;
+  --err-bg: #fdecec;
+  --err-line: #c0392b;
+  --ok: #2f7d4f;
+  --laminate: #d9cfa8;
+  --prepreg: #e6dcb6;
+  --mask: #3f7d58;
+  --copper: #c7702f;
+  --grid: #e6e7e9;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: #141619;
+  --panel: #1c1f23;
+  --panel-2: #202328;
+  --ink: #e4e4e1;
+  --muted: #a4a9af;
+  --faint: #7d838a;
+  --line: #30343a;
+  --line-strong: #484d54;
+  --accent: #d88a52;
+  --accent-ink: #eba878;
+  --accent-soft: #33271e;
+  --sel: #2a2520;
+  --field: #15171a;
+  --note-bg: #2a261a;
+  --note-line: #a9852a;
+  --err-bg: #2e1d1d;
+  --err-line: #d0645a;
+  --ok: #5fb884;
+  --laminate: #4a4430;
+  --prepreg: #5a5238;
+  --mask: #2f6146;
+  --copper: #c9763a;
+  --grid: #2a2d31;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-sel: var(--sel);
+  --color-field: var(--field);
+  --color-ok: var(--ok);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, Cambria, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+body {
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* compact form controls */
+.fld {
+  background: var(--field);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  height: 28px;
+  padding: 0 7px;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.fld:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+.fld[aria-invalid='true'] {
+  border-color: var(--err-line);
+  outline-color: var(--err-line);
+}
+select.fld {
+  padding: 0 2px 0 5px;
+}
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--accent);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: var(--muted);
+}
+.btn:disabled {
+  opacity: 0.55;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tbl th,
+.tbl td {
+  border-bottom: 1px solid var(--line);
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+.tbl thead th {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: left;
+  border-bottom-color: var(--line-strong);
+}
+.tbl .v {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* long-form method text */
+.prose-doc {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 72ch;
+}
+.prose-doc p {
+  margin: 0 0 0.9em;
+}
+.prose-doc h2 {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 650;
+  margin: 1.6em 0 0.5em;
+}
+.prose-doc h3 {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 650;
+  margin: 1.3em 0 0.4em;
+}
+.prose-doc ul {
+  list-style: disc;
+  margin: 0 0 0.9em 1.3em;
+}
+.prose-doc ol {
+  list-style: decimal;
+  margin: 0 0 0.9em 1.3em;
+}
+.prose-doc .eq {
+  font-size: 17px;
+  text-align: center;
+  padding: 10px 6px;
+  margin: 0.8em 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.prose-doc .eq .no {
+  float: right;
+  color: var(--faint);
+  font-size: 14px;
+}
