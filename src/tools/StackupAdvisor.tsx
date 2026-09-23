@@ -31,6 +31,7 @@ const DEFAULTS = {
   sig: 2,
   minW: 0.09,
   minS: 0.09,
+  minDrill: 0.3,
   maxW: 0.35,
   etch: 0.0127,
   prio: 'cost',
@@ -97,6 +98,9 @@ export default function StackupAdvisor() {
 
   if (p.lmin > p.lmax) errors.push('Minimum layer count is above the maximum.');
   if (p.tmin > p.tmax) errors.push('Minimum thickness is above the maximum.');
+  if (p.minW <= 0) errors.push('Minimum trace width must be positive.');
+  if (p.minS <= 0) errors.push('Minimum spacing must be positive.');
+  if (!hasImpedance && p.minDrill <= 0) errors.push('Minimum via drill must be positive.');
 
   const run = async () => {
     const my = ++runId.current;
@@ -181,6 +185,14 @@ export default function StackupAdvisor() {
         <SelectField label="Thickness (max)" value={String(p.tmax)} onChange={(v) => set({ tmax: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />
         {hasImpedance && <NumField label="Signal layers needed" value={p.sig} onChange={(v) => set({ sig: Math.max(1, Math.round(v)) })} unit="" />}
       </Section>
+      {!hasImpedance && (
+        <Section title="Fabrication Requirements">
+          <LenField label="Minimum trace width" value={p.minW} onChange={(v) => set({ minW: v })} hint="Smallest trace in your design; confirm support with your fabricator." />
+          <LenField label="Minimum spacing" value={p.minS} onChange={(v) => set({ minS: v })} hint="Smallest copper gap in your design; confirm support with your fabricator." />
+          <LenField label="Minimum via drill" value={p.minDrill} onChange={(v) => set({ minDrill: v })} hint="Smallest production drill diameter for a through via, before plating. Not the finished hole diameter." />
+          <p className="text-faint">Via drill is the production diameter before plating. These requirements are saved with your search; fabrication capability needs confirmation.</p>
+        </Section>
+      )}
       {hasImpedance && (
         <>
           <Section title="Fabrication Limits">
@@ -287,7 +299,7 @@ export default function StackupAdvisor() {
         running
           ? `Solving ${progress.done}/${progress.total} line designs on ${poolSize()} threads…`
           : ranked
-            ? `${okCount} of ${shown.length} stackups meet every requirement`
+            ? hasImpedance ? `${okCount} of ${shown.length} stackups meet every requirement` : `${shown.length} stackups match layer count and thickness; fabrication requirements unverified`
             : hasImpedance ? `${preview.plans.length} candidate stackups, ${preview.jobs.size} unique line designs` : `${preview.plans.length} stackups match the board limits`
       }
       method={<Method />}
@@ -310,6 +322,12 @@ export default function StackupAdvisor() {
         <div className="px-2.5 py-2 text-muted">
           {preview.plans.length} stackups match the board limits{hasImpedance ? ` (${preview.jobs.size} unique line designs to solve)` : '; ordered by fewest layers'}
           {rejectedCount > 0 && ranked ? `; ${rejectedCount} excluded by the layer requirements` : ''}.
+          {!hasImpedance && (
+            <p className="mt-1">
+              Required trace / spacing: {L(p.minW)} / {L(p.minS)} {unit}; via production drill: {L(p.minDrill)} {unit}.
+              {' '}Matches below cover layer count and thickness only. Confirm trace, spacing and drilling capability with your fabricator.
+            </p>
+          )}
           {running && (
             <div className="mt-1.5 h-[6px] bg-field">
               <div className="h-full bg-accent transition-[width]" style={{ width: `${progress.total ? (100 * progress.done) / progress.total : 0}%` }} />
@@ -331,7 +349,7 @@ export default function StackupAdvisor() {
                       <div className="font-normal text-faint">outer | inner ({unit})</div>
                     </th>
                   ))}
-                  {hasImpedance && <th className="v">Margin</th>}
+                  {hasImpedance ? <th className="v">Margin</th> : <th className="v" title="Nominal board thickness / production drill diameter, before plating. Through vias only; confirm the permitted ratio with your fabricator.">Via aspect ratio</th>}
                   <th>Status</th>
                 </tr>
               </thead>
@@ -354,13 +372,13 @@ export default function StackupAdvisor() {
                             {cellText(r, q.id, true)} <span className="text-faint">|</span> {cellText(r, q.id, false)}
                           </td>
                         ))}
-                        {hasImpedance && <td className="v">{r.ok ? `${fmt(r.margin, 3)}×` : '—'}</td>}
-                        <td className={r.ok ? 'text-ok' : 'text-[var(--err-line)]'}>{r.ok ? (hasImpedance ? 'Meets all' : 'Matches board') : `${r.reasons.length} issue${r.reasons.length > 1 ? 's' : ''}`}</td>
+                        {hasImpedance ? <td className="v">{r.ok ? `${fmt(r.margin, 3)}×` : '—'}</td> : <td className="v">{p.minDrill > 0 ? `${fmt(nominalThickness(r.plan.stackup) / p.minDrill, 3)}:1` : '—'}</td>}
+                        <td className={r.ok ? 'text-ok' : 'text-[var(--err-line)]'}>{r.ok ? (hasImpedance ? 'Meets all' : 'Matches dimensions') : `${r.reasons.length} issue${r.reasons.length > 1 ? 's' : ''}`}</td>
                       </tr>
                       {open && (
                         <tr key={`${id}-d`}>
                           <td />
-                          <td colSpan={reqs.length + (hasImpedance ? 5 : 4)} className="pb-2">
+                          <td colSpan={reqs.length + 5} className="pb-2">
                             {r.reasons.length > 0 && <Notes items={r.reasons.slice(0, 6)} />}
                             {!hasImpedance && (
                               <table className="tbl">
@@ -407,6 +425,17 @@ export function Method() {
   return (
     <>
       <h2>How the advisor works</h2>
+      <p>
+        For regular stackups, minimum trace width, minimum spacing and minimum via drill record your design requirements. The construction library has no verified manufacturing
+        capability limits, so these inputs do not filter candidates or certify manufacturability. Trace and spacing capability depends on copper thickness and fabrication process;
+        see <a href="https://www.eurocircuits.com/technical-guidelines/understanding-manufacturing-tolerances-on-a-pcb/track-width-and-isolation-gap-tolerances/" target="_blank" rel="noopener noreferrer">track width and isolation gap tolerances</a>.
+      </p>
+      <p>
+        Through-via aspect ratio is nominal board thickness divided by the smallest production drill diameter, before plating. For example, a 1.6 mm board with a 0.3 mm drill
+        gives 5.33:1. This is a nominal estimate; thickness tolerance, drill allowances and permitted aspect ratio must be agreed with the fabricator.
+        Finished hole diameter is smaller after plating. Blind and buried vias need their actual drilled depth.
+        See <a href="https://www.eurocircuits.com/technical-guidelines/understanding-manufacturing-tolerances-on-a-pcb/tolerances-on-a-pcb/" target="_blank" rel="noopener noreferrer">the production-drill definition of aspect ratio</a>.
+      </p>
       <ol>
         <li>Every stackup in the library (and your saved stackups) is filtered by layer count and nominal thickness.</li>
         <li>Regular stackups need no impedance requirements or reference-plane assignment. Matches are ordered by fewest layers; expand a row to inspect the construction and open it in the Layer Stack Manager to assign signal and plane roles.</li>
