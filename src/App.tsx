@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Layout } from './components/Layout';
 import { GUIDES } from './guides/registry';
 import { SettingsProvider } from './state/settings';
@@ -26,6 +27,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      <SpeedInsights />
     </SettingsProvider>
   );
 }
