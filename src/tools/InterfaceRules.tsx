@@ -9,8 +9,8 @@ import { FOILS, LAMINATES, laminateById, maskById } from '../data/laminates';
 import type { Accuracy } from '../lib/fieldsolver';
 import { evaluateInterface, freqLabel, interfaceLossRequest, rateLabel, type CheckRow, type LineMetrics } from '../lib/interfaceRules';
 import type { LossRequest } from '../lib/solver.worker';
-import { runSolver } from '../lib/solverClient';
-import { geometryForLayer, type StackupGeometry } from '../lib/stackups';
+import { runPooled, runSolver } from '../lib/solverClient';
+import { geometryForLayer, type Layer, type StackupGeometry } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { useStackups } from '../state/stackupStore';
@@ -34,6 +34,16 @@ const DEFAULTS = {
 };
 
 type P = typeof DEFAULTS;
+
+/** One stackup layer measured against the interface: what it takes to route it there. */
+interface LayerFit {
+  id: string;
+  name: string;
+  type: StackupGeometry['type'];
+  w: number;
+  s?: number;
+  dbPerMm: number;
+}
 
 /** Loss of the designed line at the interface Nyquist frequency, on the stackup's own plies. */
 function lossRequest(sg: StackupGeometry, w: number, s: number | undefined, diff: boolean, p: P, fGHz: number): LossRequest {
@@ -136,6 +146,39 @@ export default function InterfaceRules() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  // every layer of the stackup, so the answer to “this does not fit” is on the same page
+  const [scan, setScan] = useState<LayerFit[] | null>(null);
+  const scanSeq = useRef(0);
+  const scanKey = JSON.stringify([stack?.id, spec?.id, p.etch, p.srule, p.k, p.sfix, p.minS, p.mat, p.foil]);
+
+  useEffect(() => {
+    if (!stack || !spec) return;
+    const my = ++scanSeq.current;
+    setScan(null);
+    const t = setTimeout(() => {
+      const diff = spec.z.kind === 'diff';
+      const rule = diff ? { mode: p.srule as 'ratio' | 'fixed', s: p.sfix, ratio: p.k, minS: p.minS } : undefined;
+      const jobs = stack.layers
+        .filter((l) => l.kind === 'copper' && l.role !== 'plane')
+        .map((l) => ({ layer: l, g: geometryForLayer(stack, l.id) }))
+        .filter((x): x is { layer: Layer; g: StackupGeometry } => !!x.g)
+        .map(({ layer, g }) =>
+          runPooled({ type: 'design', req: { sg: g, kind: spec.z.kind, target: spec.z.target, etch: p.etch, rule, accuracy: 'fast' } }).then((d) => {
+            if (!d.ok || !d.design) return null;
+            const { w, s } = d.design;
+            return runPooled({ type: 'loss', req: lossRequest(g, w, s, diff, { ...p, acc: 'fast' }, spec.nyquistGHz) }).then((l): LayerFit | null =>
+              l.ok && l.loss ? { id: layer.id, name: layer.name, type: g.type, w, s, dbPerMm: l.loss.points[0].alpha / 1000 } : null,
+            );
+          }),
+        );
+      void Promise.all(jobs).then((r) => {
+        if (my === scanSeq.current) setScan(r.filter((x): x is LayerFit => !!x));
+      });
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanKey]);
+
   const L = (mm: number) => `${fmt(fromMm(mm, unit), 3)} ${unit}`;
   const rows: CheckRow[] = spec && line ? evaluateInterface(spec, line, { minW: p.minW, minS: p.minS, maxW: p.maxW }, p.len, L, second ?? undefined) : [];
 
@@ -222,6 +265,7 @@ export default function InterfaceRules() {
           ) : (
             <LenField label="Spacing S" value={p.sfix} onChange={(v) => set({ sfix: v })} />
           )}
+          <p className="text-faint">Tight coupling (k = 1) keeps the pair narrow; loosening it to k = 2 widens the trace at the same impedance, which often rescues a 100 Ω pair on a thin dielectric.</p>
         </Section>
       )}
       <Section title="Material & Loss">
@@ -301,6 +345,51 @@ export default function InterfaceRules() {
               </table>
             )}
           </Panel>
+          <Panel title="Which layer to route it on" className="mt-3">
+            {scan ? (
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Layer</th>
+                    <th>Cross-section</th>
+                    <th className="v">{spec.z.kind === 'diff' ? 'Width / spacing' : 'Width'}</th>
+                    <th className="v">Loss at {freqLabel(spec.nyquistGHz)}</th>
+                    {spec.lossBudgetDb !== undefined && <th className="v">Longest route</th>}
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {scan.map((f) => {
+                    const ok = f.w >= p.minW && f.w <= p.maxW && (f.s === undefined || f.s >= p.minS);
+                    return (
+                      <tr key={f.id} className={f.id === layerId ? 'sel' : ''}>
+                        <td>{f.name}</td>
+                        <td className="text-muted">{f.type === 'microstrip' ? 'Microstrip' : f.type === 'stripline' ? 'Stripline' : 'Embedded microstrip'}</td>
+                        <td className={`v ${ok ? '' : 'text-[var(--err-line)]'}`}>{f.s !== undefined ? `${L(f.w)} / ${L(f.s)}` : L(f.w)}</td>
+                        <td className="v">{fmt(f.dbPerMm * 25.4, 3)} dB/in</td>
+                        {spec.lossBudgetDb !== undefined && <td className="v">{L(spec.lossBudgetDb / f.dbPerMm)}</td>}
+                        <td className="text-right">
+                          {f.id === layerId ? (
+                            <span className="text-muted">shown above</span>
+                          ) : (
+                            <button className="btn" onClick={() => set({ lay: f.id })}>
+                              Use
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="px-2.5 py-2 text-muted">Solving every layer of the stackup…</p>
+            )}
+            <p className="px-2.5 py-1.5 text-faint">
+              Each layer is designed to the same impedance target and spacing rule at fast accuracy, so a width in red cannot be built within your fabrication limits. A layer marked as a plane, or one with no reference plane beside it, is left out.
+            </p>
+          </Panel>
+
           <Panel title={`${spec.name} rules`} className="mt-3">
             <table className="tbl">
               <thead>
