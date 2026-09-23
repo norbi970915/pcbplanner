@@ -7,6 +7,7 @@ import Home from './tools/Home';
 import { TOOLS } from './tools/registry';
 
 const GuidesIndex = lazy(() => import('./guides/GuidesIndex'));
+const About = lazy(() => import('./pages/About'));
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
               <Route key={t.path} path={t.path} element={<t.component />} />
             ))}
             <Route path="/guides" element={<GuidesIndex />} />
+            <Route path="/about" element={<About />} />
             {GUIDES.map((g) => (
               <Route key={g.path} path={g.path} element={<g.component />} />
             ))}

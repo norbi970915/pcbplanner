@@ -13,8 +13,9 @@ const { TOOLS, GROUPS } = await vite.ssrLoadModule('/src/tools/registry.ts');
 const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
+const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/guides', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/guides', '/about', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -140,6 +141,25 @@ for (const tool of TOOLS) {
     }),
   );
 }
+// About: the page text rendered into the HTML, so it reads without JavaScript
+writeFileSync(
+  'dist/about.html',
+  page({
+    path: '/about',
+    title: `About ${APP}`,
+    description: ABOUT_DESCRIPTION,
+    raw: guideHtml['/about'],
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'AboutPage',
+      name: `About ${APP}`,
+      url: `${SITE}/about`,
+      description: ABOUT_DESCRIPTION,
+      mainEntity: app(APP, `${SITE}/`, ABOUT_DESCRIPTION),
+    },
+  }),
+);
+
 // Guides: index and articles, with the full article text rendered into the page
 mkdirSync('dist/guides', { recursive: true });
 const guidesDescription = 'Practical PCB design guides with real numbers: controlled impedance, choosing a stackup, PCIe Gen3 routing, copper area for cooling, and creepage and clearance for mains.';
@@ -198,4 +218,4 @@ for (const g of GUIDES) {
   );
 }
 await vite.close();
-console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages`);
+console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages, about`);

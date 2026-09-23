@@ -5,7 +5,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const SITE = 'https://www.pcbplanner.com';
 const registry = readFileSync('src/tools/registry.ts', 'utf8');
 const guides = readFileSync('src/guides/registry.ts', 'utf8');
-const paths = ['/', ...[...registry.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1]), '/guides', ...[...guides.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1])];
+const paths = [
+  '/',
+  ...[...registry.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1]),
+  '/guides',
+  ...[...guides.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1]),
+  '/about',
+];
 const today = new Date().toISOString().slice(0, 10);
 const urls = paths
   .map((p) => `  <url><loc>${SITE}${p === '/' ? '/' : p}</loc><lastmod>${today}</lastmod><changefreq>monthly</changefreq><priority>${p === '/' ? '1.0' : '0.8'}</priority></url>`)

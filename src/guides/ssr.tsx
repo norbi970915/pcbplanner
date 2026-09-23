@@ -1,4 +1,4 @@
-// Build-time rendering of the guide articles to static HTML (used by scripts/prerender.mjs).
+// Build-time rendering of the guide articles and the About page to static HTML (used by scripts/prerender.mjs).
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import ChoosingStackup from './ChoosingStackup';
@@ -7,6 +7,7 @@ import CopperCooling from './CopperCooling';
 import CreepageMains from './CreepageMains';
 import GuidesIndex from './GuidesIndex';
 import PcieRouting from './PcieRouting';
+import About from '../pages/About';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides': GuidesIndex,
@@ -15,6 +16,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/pcie-gen3-routing': PcieRouting,
   '/guides/copper-area-for-cooling': CopperCooling,
   '/guides/creepage-clearance-mains': CreepageMains,
+  '/about': About,
 };
 
 // every tool module, so its exported Method (formulas, explanation, references) can be rendered
@@ -31,9 +33,10 @@ export function renderToolMethod(file: string): string {
   );
 }
 
+/** Static HTML of a routed page that is not a tool: a guide article, the guide index or About. */
 export function renderGuide(path: string): string {
   const Page = PAGES[path];
-  if (!Page) throw new Error(`No guide component for ${path}`);
+  if (!Page) throw new Error(`No page component for ${path}`);
   return renderToString(
     <MemoryRouter initialEntries={[path]}>
       <Page />

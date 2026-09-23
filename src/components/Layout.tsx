@@ -204,7 +204,7 @@ export function Layout() {
           <Menu {...menuProps('Help')}>
             <Item onClick={run(() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' }))}>Method &amp; References</Item>
             <Item onClick={run(() => navigate('/guides'))}>Guides</Item>
-            <Item onClick={run(() => navigate('/'))}>About {APP_NAME}</Item>
+            <Item onClick={run(() => navigate('/about'))}>About {APP_NAME}</Item>
           </Menu>
           <Link to="/guides" className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}>
             Guides
