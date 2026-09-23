@@ -51,11 +51,12 @@ function parseReqs(s: string): Requirement[] {
 }
 
 export default function StackupAdvisor() {
-  const [p, set, reset] = useUrlState(DEFAULTS);
+  const [p, setParams, resetParams] = useUrlState(DEFAULTS);
   const { unit } = useSettings();
   const stackups = useStackups();
   const navigate = useNavigate();
   const reqs = useMemo(() => parseReqs(p.reqs), [p.reqs]);
+  const hasImpedance = reqs.length > 0;
   const setReqs = (r: Requirement[]) => set({ reqs: JSON.stringify(r) });
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -63,6 +64,21 @@ export default function StackupAdvisor() {
   const [rejectedCount, setRejectedCount] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
   const runId = useRef(0);
+  const clearResults = () => {
+    runId.current++;
+    if (running) cancelPool();
+    setRunning(false);
+    setRanked(null);
+    setOpenId(null);
+  };
+  const set = (patch: Partial<typeof DEFAULTS>) => {
+    clearResults();
+    setParams(patch);
+  };
+  const reset = () => {
+    clearResults();
+    resetParams();
+  };
 
   const c: Constraints = {
     layersMin: p.lmin,
@@ -78,7 +94,7 @@ export default function StackupAdvisor() {
   };
   const preview = useMemo(() => planAdvice(stackups, reqs, c, p.acc as Accuracy), [stackups, reqs, JSON.stringify(c), p.acc]); // eslint-disable-line react-hooks/exhaustive-deps
   const errors: string[] = [];
-  if (!reqs.length) errors.push('Add at least one impedance requirement.');
+
   if (p.lmin > p.lmax) errors.push('Minimum layer count is above the maximum.');
   if (p.tmin > p.tmax) errors.push('Minimum thickness is above the maximum.');
 
@@ -150,98 +166,111 @@ export default function StackupAdvisor() {
   const properties = (
     <>
       <Section title="Board">
+        <SelectField
+          label="Search"
+          value={hasImpedance ? 'impedance' : 'regular'}
+          onChange={(v) => setReqs(v === 'regular' ? [] : parseReqs(DEFAULTS.reqs))}
+          options={[
+            { value: 'regular', label: 'Regular stackups' },
+            { value: 'impedance', label: 'Controlled impedance' },
+          ]}
+        />
         <SelectField label="Layers (min)" value={String(p.lmin)} onChange={(v) => set({ lmin: Number(v) })} options={LAYER_COUNTS.map((n) => ({ value: String(n), label: `${n}` }))} width={80} />
         <SelectField label="Layers (max)" value={String(p.lmax)} onChange={(v) => set({ lmax: Number(v) })} options={LAYER_COUNTS.map((n) => ({ value: String(n), label: `${n}` }))} width={80} />
         <SelectField label="Thickness (min)" value={String(p.tmin)} onChange={(v) => set({ tmin: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />
         <SelectField label="Thickness (max)" value={String(p.tmax)} onChange={(v) => set({ tmax: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />
-        <NumField label="Signal layers needed" value={p.sig} onChange={(v) => set({ sig: Math.max(1, Math.round(v)) })} unit="" />
+        {hasImpedance && <NumField label="Signal layers needed" value={p.sig} onChange={(v) => set({ sig: Math.max(1, Math.round(v)) })} unit="" />}
       </Section>
-      <Section title="Fabrication Limits">
-        <LenField label="Minimum trace width" value={p.minW} onChange={(v) => set({ minW: v })} />
-        <LenField label="Minimum spacing" value={p.minS} onChange={(v) => set({ minS: v })} />
-        <LenField label="Maximum trace width" value={p.maxW} onChange={(v) => set({ maxW: v })} hint="Widest trace that still routes, e.g. between BGA pads or through connector pin fields." />
-        <LenField label="Etch (W − top)" value={p.etch} onChange={(v) => set({ etch: v })} allowZero />
-      </Section>
-      <Section title="Impedance Requirements">
-        {reqs.map((r, i) => (
-          <div key={r.id} className="space-y-[3px] border-b border-line pb-1.5 last:border-b-0">
-            <div className="flex items-center gap-1">
-              <input className="fld min-w-0 flex-1" aria-label="Requirement name" value={r.label} onChange={(e) => updateReq(i, { label: e.target.value })} />
-              <button className="btn px-1.5" aria-label="Remove requirement" onClick={() => setReqs(reqs.filter((_, n) => n !== i))}>
-                ✕
-              </button>
-            </div>
-            <SelectField
-              label="Type"
-              value={r.kind}
-              onChange={(v) => updateReq(i, { kind: v })}
-              options={[
-                { value: 'se', label: 'Single-ended' },
-                { value: 'diff', label: 'Differential' },
-              ]}
-              width={110}
-            />
-            <NumField label="Impedance" value={r.z} onChange={(v) => updateReq(i, { z: v })} unit="Ω" />
-            {r.kind === 'diff' && (
-              <>
+      {hasImpedance && (
+        <>
+          <Section title="Fabrication Limits">
+            <LenField label="Minimum trace width" value={p.minW} onChange={(v) => set({ minW: v })} />
+            <LenField label="Minimum spacing" value={p.minS} onChange={(v) => set({ minS: v })} />
+            <LenField label="Maximum trace width" value={p.maxW} onChange={(v) => set({ maxW: v })} hint="Widest trace that still routes, e.g. between BGA pads or through connector pin fields." />
+            <LenField label="Etch (W − top)" value={p.etch} onChange={(v) => set({ etch: v })} allowZero />
+          </Section>
+          <Section title="Impedance Requirements">
+            {reqs.map((r, i) => (
+              <div key={r.id} className="space-y-[3px] border-b border-line pb-1.5 last:border-b-0">
+                <div className="flex items-center gap-1">
+                  <input className="fld min-w-0 flex-1" aria-label="Requirement name" value={r.label} onChange={(e) => updateReq(i, { label: e.target.value })} />
+                  <button className="btn px-1.5" aria-label="Remove requirement" onClick={() => setReqs(reqs.filter((_, n) => n !== i))}>
+                    ✕
+                  </button>
+                </div>
                 <SelectField
-                  label="Spacing rule"
-                  value={r.spacing}
-                  onChange={(v) => updateReq(i, { spacing: v })}
+                  label="Type"
+                  value={r.kind}
+                  onChange={(v) => updateReq(i, { kind: v })}
                   options={[
-                    { value: 'ratio', label: 'S = k · W' },
-                    { value: 'fixed', label: 'Fixed S' },
+                    { value: 'se', label: 'Single-ended' },
+                    { value: 'diff', label: 'Differential' },
                   ]}
                   width={110}
                 />
-                {r.spacing === 'ratio' ? (
-                  <NumField label="k (S / W)" value={r.ratio} onChange={(v) => updateReq(i, { ratio: v })} unit="" />
-                ) : (
-                  <LenField label="Spacing S" value={r.s} onChange={(v) => updateReq(i, { s: v })} />
+                <NumField label="Impedance" value={r.z} onChange={(v) => updateReq(i, { z: v })} unit="Ω" />
+                {r.kind === 'diff' && (
+                  <>
+                    <SelectField
+                      label="Spacing rule"
+                      value={r.spacing}
+                      onChange={(v) => updateReq(i, { spacing: v })}
+                      options={[
+                        { value: 'ratio', label: 'S = k · W' },
+                        { value: 'fixed', label: 'Fixed S' },
+                      ]}
+                      width={110}
+                    />
+                    {r.spacing === 'ratio' ? (
+                      <NumField label="k (S / W)" value={r.ratio} onChange={(v) => updateReq(i, { ratio: v })} unit="" />
+                    ) : (
+                      <LenField label="Spacing S" value={r.s} onChange={(v) => updateReq(i, { s: v })} />
+                    )}
+                  </>
                 )}
-              </>
-            )}
+                <SelectField
+                  label="On layers"
+                  value={r.where}
+                  onChange={(v) => updateReq(i, { where: v })}
+                  options={[
+                    { value: 'all', label: 'All signal layers' },
+                    { value: 'outer', label: 'Outer only' },
+                    { value: 'inner', label: 'Inner only' },
+                  ]}
+                  width={130}
+                />
+              </div>
+            ))}
+            <div className="flex flex-wrap gap-1 pt-1">
+              {Object.entries(PRESET_REQS).map(([k, v]) => (
+                <button key={k} className="btn px-1.5" onClick={() => setReqs([...reqs, { id: `r${Date.now().toString(36)}${k}`, ...v }])}>
+                  + {v.label.replace(' single-ended', ' SE')}
+                </button>
+              ))}
+            </div>
+          </Section>
+          <Section title="Ranking">
             <SelectField
-              label="On layers"
-              value={r.where}
-              onChange={(v) => updateReq(i, { where: v })}
+              label="Prefer"
+              value={p.prio as 'cost' | 'margin'}
+              onChange={(v) => set({ prio: v })}
               options={[
-                { value: 'all', label: 'All signal layers' },
-                { value: 'outer', label: 'Outer only' },
-                { value: 'inner', label: 'Inner only' },
+                { value: 'cost', label: 'Fewest layers' },
+                { value: 'margin', label: 'Widest traces' },
               ]}
-              width={130}
             />
-          </div>
-        ))}
-        <div className="flex flex-wrap gap-1 pt-1">
-          {Object.entries(PRESET_REQS).map(([k, v]) => (
-            <button key={k} className="btn px-1.5" onClick={() => setReqs([...reqs, { id: `r${Date.now().toString(36)}${k}`, ...v }])}>
-              + {v.label.replace(' single-ended', ' SE')}
-            </button>
-          ))}
-        </div>
-      </Section>
-      <Section title="Ranking">
-        <SelectField
-          label="Prefer"
-          value={p.prio as 'cost' | 'margin'}
-          onChange={(v) => set({ prio: v })}
-          options={[
-            { value: 'cost', label: 'Fewest layers' },
-            { value: 'margin', label: 'Widest traces' },
-          ]}
-        />
-        <SelectField
-          label="Solver accuracy"
-          value={p.acc as Accuracy}
-          onChange={(v) => set({ acc: v })}
-          options={[
-            { value: 'fast', label: 'Fast (screening)' },
-            { value: 'normal', label: 'Normal' },
-          ]}
-        />
-      </Section>
+            <SelectField
+              label="Solver accuracy"
+              value={p.acc as Accuracy}
+              onChange={(v) => set({ acc: v })}
+              options={[
+                { value: 'fast', label: 'Fast (screening)' },
+                { value: 'normal', label: 'Normal' },
+              ]}
+            />
+          </Section>
+        </>
+      )}
     </>
   );
 
@@ -251,7 +280,7 @@ export default function StackupAdvisor() {
   return (
     <ToolPage
       title="Stackup Advisor"
-      description="Set the board thickness, layer count, fabrication limits and impedance requirements. The field solver designs every line on every candidate stackup and ranks the stackups that meet all requirements."
+      description="Find stackups by board thickness and layer count. Add optional impedance requirements to solve trace widths and rank candidates against your fabrication limits."
       onReset={reset}
       properties={properties}
       status={
@@ -259,7 +288,7 @@ export default function StackupAdvisor() {
           ? `Solving ${progress.done}/${progress.total} line designs on ${poolSize()} threads…`
           : ranked
             ? `${okCount} of ${shown.length} stackups meet every requirement`
-            : `${preview.plans.length} candidate stackups, ${preview.jobs.size} unique line designs`
+            : hasImpedance ? `${preview.plans.length} candidate stackups, ${preview.jobs.size} unique line designs` : `${preview.plans.length} stackups match the board limits`
       }
       method={<Method />}
     >
@@ -273,13 +302,13 @@ export default function StackupAdvisor() {
             </button>
           ) : (
             <button className="btn btn-primary" disabled={errors.length > 0 || !preview.plans.length} onClick={run}>
-              Find Best Stackups
+              {hasImpedance ? 'Find Best Stackups' : 'Find Stackups'}
             </button>
           )
         }
       >
         <div className="px-2.5 py-2 text-muted">
-          {preview.plans.length} stackups match the board limits ({preview.jobs.size} unique line designs to solve)
+          {preview.plans.length} stackups match the board limits{hasImpedance ? ` (${preview.jobs.size} unique line designs to solve)` : '; ordered by fewest layers'}
           {rejectedCount > 0 && ranked ? `; ${rejectedCount} excluded by the layer requirements` : ''}.
           {running && (
             <div className="mt-1.5 h-[6px] bg-field">
@@ -302,7 +331,7 @@ export default function StackupAdvisor() {
                       <div className="font-normal text-faint">outer | inner ({unit})</div>
                     </th>
                   ))}
-                  <th className="v">Margin</th>
+                  {hasImpedance && <th className="v">Margin</th>}
                   <th>Status</th>
                 </tr>
               </thead>
@@ -325,16 +354,32 @@ export default function StackupAdvisor() {
                             {cellText(r, q.id, true)} <span className="text-faint">|</span> {cellText(r, q.id, false)}
                           </td>
                         ))}
-                        <td className="v">{r.ok ? `${fmt(r.margin, 3)}×` : '—'}</td>
-                        <td className={r.ok ? 'text-ok' : 'text-[var(--err-line)]'}>{r.ok ? 'Meets all' : `${r.reasons.length} issue${r.reasons.length > 1 ? 's' : ''}`}</td>
+                        {hasImpedance && <td className="v">{r.ok ? `${fmt(r.margin, 3)}×` : '—'}</td>}
+                        <td className={r.ok ? 'text-ok' : 'text-[var(--err-line)]'}>{r.ok ? (hasImpedance ? 'Meets all' : 'Matches board') : `${r.reasons.length} issue${r.reasons.length > 1 ? 's' : ''}`}</td>
                       </tr>
                       {open && (
                         <tr key={`${id}-d`}>
                           <td />
-                          <td colSpan={reqs.length + 5} className="pb-2">
+                          <td colSpan={reqs.length + (hasImpedance ? 5 : 4)} className="pb-2">
                             {r.reasons.length > 0 && <Notes items={r.reasons.slice(0, 6)} />}
+                            {!hasImpedance && (
+                              <table className="tbl">
+                                <thead>
+                                  <tr><th>Layer / material</th><th>Type</th><th className="v">Thickness ({unit})</th></tr>
+                                </thead>
+                                <tbody>
+                                  {r.plan.stackup.layers.map((l) => (
+                                    <tr key={l.id}>
+                                      <td>{l.name}</td>
+                                      <td>{l.kind === 'copper' ? 'Copper' : l.kind === 'mask' ? 'Solder mask' : 'Dielectric'}</td>
+                                      <td className="v">{L(l.t)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
                             <div className="mt-1 flex flex-wrap gap-1">
-                              {r.plan.layers.map((l) => (
+                              {hasImpedance && r.plan.layers.map((l) => (
                                 <button key={l.layerId} className="btn" onClick={() => openLayer(r, l.layerId)} title={l.sg.note}>
                                   {l.name} → Impedance
                                 </button>
@@ -363,7 +408,9 @@ export function Method() {
     <>
       <h2>How the advisor works</h2>
       <ol>
-        <li>Every stackup in the library (and your saved stackups) is filtered by layer count, nominal thickness and the number of referenced signal layers.</li>
+        <li>Every stackup in the library (and your saved stackups) is filtered by layer count and nominal thickness.</li>
+        <li>Regular stackups need no impedance requirements or reference-plane assignment. Matches are ordered by fewest layers; expand a row to inspect the construction and open it in the Layer Stack Manager to assign signal and plane roles.</li>
+        <li>For controlled impedance, candidates must also provide the requested number of referenced signal layers.</li>
         <li>
           For each remaining stackup, each signal layer is converted into its cross-section: surface microstrip with solder mask on the outer layers, stripline (with the real prepreg
           and core εr on each side) on the inner layers.

@@ -67,7 +67,7 @@ export function planAdvice(stackups: Stackup[], reqs: Requirement[], c: Constrai
       const sg = geometryForLayer(s, l.id);
       if (sg) layers.push({ layerId: l.id, name: l.name, outer: sg.outer, sg });
     }
-    if (layers.length < c.signalMin) {
+    if (reqs.length > 0 && layers.length < c.signalMin) {
       rejected.push({ stackup: s, reason: `${layers.length} referenced signal layers, ${c.signalMin} needed` });
       continue;
     }

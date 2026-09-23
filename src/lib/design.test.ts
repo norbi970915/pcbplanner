@@ -85,3 +85,29 @@ describe('advisor planning', () => {
   });
 });
 
+
+describe('regular stackup searches', () => {
+  const c: Constraints = { layersMin: 2, layersMax: 6, thickMin: 1.6, thickMax: 1.6, signalMin: 99, minW: 1, minS: 1, maxW: 0.01, etch: 0, priority: 'margin' };
+  it('matches only physical board limits without impedance jobs or fabrication checks', () => {
+    const { plans, jobs, rejected } = planAdvice(PRESETS, [], c, 'fast');
+    const expected = PRESETS.filter(s => copperCount(s) >= 2 && copperCount(s) <= 6 && s.nominal === 1.6);
+    expect(plans.map(p => p.stackup.id)).toEqual(expected.map(s => s.id));
+    expect(plans.some(p => copperCount(p.stackup) === 2)).toBe(true);
+    expect(jobs.size).toBe(0);
+    expect(rejected).toEqual([]);
+    const ranked = rankAdvice(plans, [], c, new Map());
+    expect(ranked.every(r => r.ok && r.reasons.length === 0 && Object.keys(r.cells).length === 0)).toBe(true);
+    const counts = ranked.map(r => copperCount(r.plan.stackup));
+    expect(counts).toEqual([...counts].sort((a, b) => a - b));
+  });
+  it('accepts a saved two-layer construction with no reference plane, but rejects it for controlled impedance', () => {
+    const board = { ...PRESETS.find(s => copperCount(s) === 2 && s.nominal === 1.6)!, id: 'custom-unreferenced' };
+    board.layers = board.layers.map(l => l.kind === 'copper' ? { ...l, role: 'signal' as const } : l);
+    const limits = { ...c, signalMin: 2 };
+    expect(planAdvice([board], [], limits, 'fast').plans).toHaveLength(1);
+    const req: Requirement = { id: 'r', label: '50 ohm', kind: 'se', z: 50, spacing: 'fixed', s: 0.1, ratio: 1, where: 'all' };
+    const controlled = planAdvice([board], [req], limits, 'fast');
+    expect(controlled.plans).toHaveLength(0);
+    expect(controlled.rejected[0].reason).toContain('0 referenced signal layers');
+  });
+});

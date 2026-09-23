@@ -85,7 +85,7 @@ export const TOOLS: ToolDef[] = [
     title: 'Stackup Advisor',
     nav: 'Stackup advisor',
     group: 'Stackup',
-    summary: 'Enter board thickness, layer count and impedance requirements; the field solver ranks every matching fab stackup and gives the trace widths.',
+    summary: 'Find stackups by board thickness and layer count, with optional impedance requirements to rank candidates and solve trace widths.',
     component: lazy(() => import('./StackupAdvisor')),
   },
   {
