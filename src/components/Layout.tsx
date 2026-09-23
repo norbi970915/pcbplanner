@@ -4,6 +4,7 @@ import { APP_NAME } from '../config';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
+import { projectStore, useProjects } from '../state/projectStore';
 import { GROUP_COLORS, GROUPS, TOOLS, toolByPath } from '../tools/registry';
 
 const TABS_KEY = 'pcbtk-tabs';
@@ -63,6 +64,9 @@ export function Layout() {
   const [propsEl, setPropsEl] = useState<HTMLElement | null>(null);
   const [statusEl, setStatusEl] = useState<HTMLElement | null>(null);
   const [headEl, setHeadEl] = useState<HTMLElement | null>(null);
+  const { projects, activeId } = useProjects();
+  const activeProject = projects.find((p) => p.id === activeId);
+  const [saved, setSaved] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const actions = useRef<ToolActions | null>(null);
   const setActions = useCallback((a: ToolActions | null) => {
@@ -82,6 +86,9 @@ export function Layout() {
   useEffect(() => {
     writeJson(TABS_KEY, tabs);
   }, [tabs]);
+  useEffect(() => {
+    setSaved(null);
+  }, [path]);
   useEffect(() => {
     writeJson(PANELS_KEY, panels);
   }, [panels]);
@@ -138,6 +145,19 @@ export function Layout() {
               Copy Link to Inputs
             </Item>
             <Item onClick={run(() => actions.current?.reset?.())}>Reset Inputs</Item>
+            <div className="menu-sep" />
+            <Item
+              onClick={run(() => {
+                const tool = toolByPath(path);
+                if (!tool) return;
+                const id = activeId ?? projectStore.create('My board').id;
+                projectStore.saveTool(id, path, loc.search.replace(/^[?]/, ''));
+                setSaved(`Saved to ${projects.find((x) => x.id === id)?.name ?? 'project'}`);
+              })}
+            >
+              Save Tool to Project
+            </Item>
+            <Item onClick={run(() => navigate('/projects'))}>Projects…</Item>
             <div className="menu-sep" />
             <Item onClick={run(() => window.print())} hint="Ctrl+P">
               Print…
@@ -298,6 +318,11 @@ export function Layout() {
         {/* status bar */}
         <div className="flex h-[22px] shrink-0 items-center gap-3 border-t border-line bg-chrome px-2 text-muted">
           <div ref={setStatusEl} className="min-w-0 flex-1 truncate" />
+          {(saved || activeProject) && (
+            <Link to="/projects" className="hidden truncate text-muted no-underline hover:text-ink sm:inline" title="Projects">
+              {saved ?? `Project: ${activeProject?.name}`}
+            </Link>
+          )}
           <button type="button" className="hover:text-ink" onClick={() => setUnit(unit === 'mm' ? 'mil' : 'mm')} title="Toggle default unit">
             Units: {unit}
           </button>

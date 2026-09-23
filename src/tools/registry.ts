@@ -281,6 +281,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./Attenuator')),
   },
   {
+    path: '/projects',
+    title: 'Projects',
+    nav: 'Projects',
+    group: 'Utilities',
+    summary: 'Save the inputs of every calculator for a board under one name, reopen them later, and export or import them as a project file.',
+    component: lazy(() => import('./Projects')),
+  },
+  {
     path: '/units',
     title: 'Unit Converter',
     nav: 'Unit converter',
