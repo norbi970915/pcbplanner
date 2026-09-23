@@ -265,6 +265,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./Reactance')),
   },
   {
+    path: '/rc-filter',
+    title: 'RC Low-Pass & High-Pass Filter Calculator',
+    nav: 'RC filters',
+    group: 'Electronics',
+    summary: 'Passive RC low-pass and high-pass filters with source/load resistance, standard component selection, tolerance bounds and interactive gain and phase plots.',
+    component: lazy(() => import('./RcFilter')),
+  },
+  {
     path: '/crystal',
     title: 'Crystal Load Capacitors & PPM',
     nav: 'Crystal & ppm',
