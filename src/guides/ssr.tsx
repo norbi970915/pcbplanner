@@ -7,12 +7,18 @@ import ControlledImpedance from './ControlledImpedance';
 import CopperCooling from './CopperCooling';
 import CreepageMains from './CreepageMains';
 import GuidesIndex from './GuidesIndex';
+import CrosstalkSpacing from './CrosstalkSpacing';
+import ViaCurrent from './ViaCurrent';
+import DecouplingCapacitors from './DecouplingCapacitors';
 import PcieRouting from './PcieRouting';
 import Usb3Impedance from './Usb3Impedance';
 import About from '../pages/About';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides': GuidesIndex,
+  '/guides/pcb-crosstalk-3w-rule': CrosstalkSpacing,
+  '/guides/pcb-via-current-capacity': ViaCurrent,
+  '/guides/decoupling-capacitor-values': DecouplingCapacitors,
   '/guides/controlled-impedance': ControlledImpedance,
   '/guides/choosing-a-pcb-stackup': ChoosingStackup,
   '/guides/pcie-gen3-routing': PcieRouting,

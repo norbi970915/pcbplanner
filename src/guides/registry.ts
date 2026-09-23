@@ -13,6 +13,39 @@ export interface GuideDef {
 
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/pcb-crosstalk-3w-rule',
+    title: 'PCB Crosstalk and the 3W Rule: How Much Spacing Is Enough?',
+    seoTitle: 'PCB Crosstalk: 3W Rule and Trace Spacing',
+    tools: ['/crosstalk', '/impedance', '/timing', '/interface-rules'],
+    description:
+      'What 3W means in edge-to-edge clearance, how the reference-plane distance changes crosstalk, and why coupled length and rise time matter. With reproducible field-solver examples.',
+    date: '2026-09-23',
+    minutes: 7,
+    component: lazy(() => import('./CrosstalkSpacing')),
+  },
+  {
+    path: '/guides/pcb-via-current-capacity',
+    title: 'How Much Current Can a PCB Via Carry? Worked Examples for Power Rails',
+    seoTitle: 'PCB Via Current Capacity: Size and Via Count',
+    tools: ['/via', '/trace-width'],
+    description:
+      'Resistance and current estimates for a 0.3 mm PCB via, the effect of barrel plating, and parallel-via counts for a 5 A rail. Assumptions, voltage drop and thermal limits explained.',
+    date: '2026-09-23',
+    minutes: 7,
+    component: lazy(() => import('./ViaCurrent')),
+  },
+  {
+    path: '/guides/decoupling-capacitor-values',
+    title: '100 nF or 10 µF? Choosing Decoupling Capacitors for a PCB',
+    seoTitle: 'Decoupling Capacitors: 100 nF or 10 µF?',
+    tools: ['/pdn'],
+    description:
+      'Compare 100 nF and 10 µF decoupling capacitors using mounted impedance, series resonance and antiresonance. Worked examples, DC bias, placement and a PDN target-impedance budget.',
+    date: '2026-09-23',
+    minutes: 8,
+    component: lazy(() => import('./DecouplingCapacitors')),
+  },
+  {
     path: '/guides/controlled-impedance',
     title: 'Controlled Impedance Explained: Microstrip, Stripline and Solder Mask',
     seoTitle: 'Controlled Impedance: Microstrip vs Stripline',

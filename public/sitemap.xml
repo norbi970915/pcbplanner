@@ -38,6 +38,9 @@
   <url><loc>https://www.pcbplanner.com/units</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/reference-charts</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/guides/pcb-crosstalk-3w-rule</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/guides/pcb-via-current-capacity</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/guides/decoupling-capacitor-values</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/controlled-impedance</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/choosing-a-pcb-stackup</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/pcie-gen3-routing</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
