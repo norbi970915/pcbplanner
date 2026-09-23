@@ -1,10 +1,13 @@
 // Stacked dielectric entry: a list of plies (thickness + Dk, and Df where loss matters),
-// kept in the URL as "t:dk[:df], t:dk[:df], …". Below the trace the list runs from the
+// kept in the URL as "t:dk[:df[:material]],…". Below the trace the list runs from the
 // reference plane up to the trace; above it runs from the trace outward.
+// A ply may name a material from the laminate library instead of its own numbers; the
+// stored dk/df are then only a cache for display, and the library value is what counts.
 export interface PlyInput {
   t: number; // mm
   dk: number;
   df?: number;
+  mat?: string; // laminate library id
 }
 
 /** Parse the URL form; returns [] when the text is empty, null when it does not parse. */
@@ -13,18 +16,26 @@ export function parsePlies(text: string): PlyInput[] | null {
   if (!s) return [];
   const out: PlyInput[] = [];
   for (const part of s.split(',')) {
-    const [a, b, c] = part.split(':');
+    const [a, b, c, m] = part.split(':');
     const t = Number.parseFloat(a);
     const dk = Number.parseFloat(b);
     const df = c === undefined || c === '' ? undefined : Number.parseFloat(c);
+    const mat = m === undefined || m === '' ? undefined : m;
     if (!(t > 0) || !(dk >= 1) || (df !== undefined && !(df >= 0 && df < 1))) return null;
-    out.push(df === undefined ? { t, dk } : { t, dk, df });
+    if (mat !== undefined && !/^[\w.-]+$/.test(mat)) return null;
+    out.push({ t, dk, ...(df === undefined ? {} : { df }), ...(mat === undefined ? {} : { mat }) });
   }
   return out;
 }
 
 const n = (v: number) => Number(v.toFixed(6));
-export const formatPlies = (plies: PlyInput[]): string => plies.map((p) => `${n(p.t)}:${n(p.dk)}${p.df === undefined ? '' : `:${n(p.df)}`}`).join(',');
+export const formatPlies = (plies: PlyInput[]): string =>
+  plies
+    .map((p) => {
+      const df = p.df === undefined ? '' : String(n(p.df));
+      return p.mat ? `${n(p.t)}:${n(p.dk)}:${df}:${p.mat}` : `${n(p.t)}:${n(p.dk)}${df === '' ? '' : `:${df}`}`;
+    })
+    .join(',');
 
 export const pliesThickness = (plies: PlyInput[]) => plies.reduce((a, p) => a + p.t, 0);
 

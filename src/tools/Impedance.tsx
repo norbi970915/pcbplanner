@@ -82,6 +82,9 @@ function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: str
   if (errors.length || !below || !above) return { geom: null, errors };
 
   // stacked plies model each prepreg / core exactly; a single Dk is the simple case
+  const lib = (ps: typeof below) => ps.map((x) => (x.mat ? { ...x, dk: erOf(x.mat, x.dk, p.fq) } : x));
+  const belowR = lib(below);
+  const aboveR = lib(above);
   const hBelow = below.length ? pliesThickness(below) : p.h;
   const hAbove = above.length ? pliesThickness(above) : p.h2;
   const g: Geometry = {
@@ -92,12 +95,12 @@ function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: str
     diff,
     s: diff ? p.s : undefined,
     coplanarGap: p.cpw ? p.gap : undefined,
-    slabs: below.length ? slabsBelow(below) : [{ y0: 0, y1: hBelow, er: p.er }],
+    slabs: below.length ? slabsBelow(belowR) : [{ y0: 0, y1: hBelow, er: p.er }],
   };
   if (type === 'microstrip') {
     if (p.mask && (p.c1 > 0 || p.c2 > 0)) g.mask = { surfaceY: hBelow, overSubstrate: p.c1, overTrace: p.c2, er: p.erm };
   } else {
-    if (above.length) g.slabs.push(...slabsAbove(above, hBelow, p.t));
+    if (above.length) g.slabs.push(...slabsAbove(aboveR, hBelow, p.t));
     else g.slabs.push({ y0: hBelow, y1: hBelow + p.t + hAbove, er: p.er2 });
     if (type === 'stripline') g.topPlane = hBelow + p.t + hAbove;
   }
@@ -108,7 +111,10 @@ export default function Impedance() {
   const [raw, set, reset] = useUrlState(DEFAULTS);
   // library materials replace the εr fields at the design frequency
   const p = useMemo(() => ({ ...raw, er: erOf(raw.mat, raw.er, raw.fq), er2: erOf(raw.mat2, raw.er2, raw.fq) }), [raw]);
-  const usesLib = raw.mat !== 'custom' || (raw.type !== 'microstrip' && raw.mat2 !== 'custom');
+  const usesLib =
+    raw.mat !== 'custom' ||
+    (raw.type !== 'microstrip' && raw.mat2 !== 'custom') ||
+    [...(parsePlies(raw.dl) ?? []), ...(parsePlies(raw.dl2) ?? [])].some((x) => x.mat);
   const { unit } = useSettings();
   const [stackNote, setStackNote] = useState<string | null>(null);
   const [solving, setSolving] = useState<null | 'w' | 's'>(null);
@@ -238,7 +244,7 @@ export default function Impedance() {
           hint="Model each prepreg or core between the plane and the trace separately, with its own Dk."
         />
         {plyBelow.length ? (
-          <PlyEditor value={raw.dl} onChange={(v) => set({ dl: v })} firstLabel="plane" />
+          <PlyEditor value={raw.dl} onChange={(v) => set({ dl: v })} firstLabel="plane" materials={MAT_OPTIONS.slice(1)} resolve={(m) => ({ dk: erOf(m, 4, raw.fq) })} />
         ) : (
           <>
             <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
@@ -260,7 +266,7 @@ export default function Impedance() {
             hint="Model each prepreg or core between the trace and the layer above separately."
           />
           {plyAbove.length ? (
-            <PlyEditor value={raw.dl2} onChange={(v) => set({ dl2: v })} firstLabel="trace" />
+            <PlyEditor value={raw.dl2} onChange={(v) => set({ dl2: v })} firstLabel="trace" materials={MAT_OPTIONS.slice(1)} resolve={(m) => ({ dk: erOf(m, 4, raw.fq) })} />
           ) : (
             <>
               <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />

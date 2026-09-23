@@ -114,7 +114,8 @@ function buildRequest(p: P): { req: LossRequest | null; errors: string[] } {
   const dkAt = (s: DielectricSpec) => djordjevicSarkar(s).dk(fRef);
 
   // stacked plies: every prepreg / core gets its own Dk, Df and slab
-  const plySpec = (x: { dk: number; df?: number }, f0: number): DielectricSpec => ({ dk: x.dk, df: x.df ?? 0, f0: f0 * 1e9 });
+  const plySpec = (x: { dk: number; df?: number; mat?: string }, f0: number): DielectricSpec =>
+    x.mat ? specOf(x.mat, x.dk, x.df ?? 0, f0, laminateById) : { dk: x.dk, df: x.df ?? 0, f0: f0 * 1e9 };
   const hBelow = below.length ? pliesThickness(below) : p.h;
   const hAbove = above.length ? pliesThickness(above) : p.h2;
   const belowSpecs = below.length ? below.map((x) => plySpec(x, p.f0)) : [s1];
@@ -311,7 +312,17 @@ export default function TraceLoss() {
         />
         {plyBelow.length ? (
           <>
-            <PlyEditor value={p.dl} onChange={(v) => set({ dl: v })} withDf firstLabel="plane" />
+            <PlyEditor
+              value={p.dl}
+              onChange={(v) => set({ dl: v })}
+              withDf
+              firstLabel="plane"
+              materials={matOptions.slice(1)}
+              resolve={(m) => {
+                const l = laminateById(m);
+                return l ? { dk: l.dk, df: l.df } : null;
+              }}
+            />
             <NumField label="Dk / Df given at" value={p.f0} onChange={(v) => set({ f0: v })} unit="GHz" hint="Datasheet frequency of the ply values; they are extended across frequency from there." />
           </>
         ) : (
@@ -331,7 +342,17 @@ export default function TraceLoss() {
           />
           {plyAbove.length ? (
             <>
-              <PlyEditor value={p.dl2} onChange={(v) => set({ dl2: v })} withDf firstLabel="trace" />
+              <PlyEditor
+                value={p.dl2}
+                onChange={(v) => set({ dl2: v })}
+                withDf
+                firstLabel="trace"
+                materials={matOptions.slice(1)}
+                resolve={(m) => {
+                  const l = laminateById(m);
+                  return l ? { dk: l.dk, df: l.df } : null;
+                }}
+              />
               <NumField label="Dk / Df given at" value={p.f02} onChange={(v) => set({ f02: v })} unit="GHz" />
             </>
           ) : (

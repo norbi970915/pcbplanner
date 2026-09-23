@@ -44,3 +44,16 @@ describe('stacked plies match the stackup path', () => {
     expect(averageDk(plies)).not.toBeCloseTo(plies[0].dk, 2);
   });
 });
+
+describe('library material per ply', () => {
+  it('round-trips the material id, with and without Df', () => {
+    expect(parsePlies('0.1:4.4::s1141')).toEqual([{ t: 0.1, dk: 4.4, mat: 's1141' }]);
+    expect(parsePlies('0.1:4.4:0.015:np155f')).toEqual([{ t: 0.1, dk: 4.4, df: 0.015, mat: 'np155f' }]);
+    expect(formatPlies([{ t: 0.1, dk: 4.4, mat: 's1141' }])).toBe('0.1:4.4::s1141');
+    expect(formatPlies([{ t: 0.1, dk: 4.4, df: 0.015, mat: 'np155f' }])).toBe('0.1:4.4:0.015:np155f');
+    expect(parsePlies(formatPlies([{ t: 0.2, dk: 3.9 }]))).toEqual([{ t: 0.2, dk: 3.9 }]);
+  });
+  it('rejects a material id that is not an id', () => {
+    expect(parsePlies('0.1:4.4::bad id')).toBeNull();
+  });
+});
