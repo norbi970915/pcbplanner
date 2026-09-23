@@ -162,7 +162,7 @@ writeFileSync(
 
 // Guides: index and articles, with the full article text rendered into the page
 mkdirSync('dist/guides', { recursive: true });
-const guidesDescription = 'Practical PCB design guides with real numbers: controlled impedance, choosing a stackup, PCIe Gen3 routing, copper area for cooling, and creepage and clearance for mains.';
+const guidesDescription = 'Practical PCB design guides with real numbers: controlled impedance, choosing a stackup, PCIe Gen3 routing, AC coupling capacitor values, USB 3 impedance, copper area for cooling, and creepage and clearance for mains.';
 writeFileSync(
   'dist/guides.html',
   page({

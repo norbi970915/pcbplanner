@@ -1,12 +1,14 @@
 // Build-time rendering of the guide articles and the About page to static HTML (used by scripts/prerender.mjs).
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import AcCouplingCaps from './AcCouplingCaps';
 import ChoosingStackup from './ChoosingStackup';
 import ControlledImpedance from './ControlledImpedance';
 import CopperCooling from './CopperCooling';
 import CreepageMains from './CreepageMains';
 import GuidesIndex from './GuidesIndex';
 import PcieRouting from './PcieRouting';
+import Usb3Impedance from './Usb3Impedance';
 import About from '../pages/About';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
@@ -16,6 +18,8 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/pcie-gen3-routing': PcieRouting,
   '/guides/copper-area-for-cooling': CopperCooling,
   '/guides/creepage-clearance-mains': CreepageMains,
+  '/guides/ac-coupling-capacitors': AcCouplingCaps,
+  '/guides/usb3-85-or-90-ohm': Usb3Impedance,
   '/about': About,
 };
 

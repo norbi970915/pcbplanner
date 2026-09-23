@@ -5,7 +5,7 @@ import { useShell } from '../state/shell';
 import { GUIDES } from './registry';
 
 export default function GuidesIndex() {
-  useDocumentMeta('PCB Design Guides', 'Practical PCB design guides with real numbers: controlled impedance, choosing a stackup, PCIe Gen3 routing, copper area for cooling, and creepage and clearance for mains.');
+  useDocumentMeta('PCB Design Guides', 'Practical PCB design guides with real numbers: controlled impedance, choosing a stackup, PCIe Gen3 routing, AC coupling capacitor values, USB 3 impedance, copper area for cooling, and creepage and clearance for mains.');
   const { statusEl } = useShell();
   return (
     <div className="p-3">

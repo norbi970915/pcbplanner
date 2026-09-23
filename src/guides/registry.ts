@@ -46,6 +46,28 @@ export const GUIDES: GuideDef[] = [
     component: lazy(() => import('./PcieRouting')),
   },
   {
+    path: '/guides/ac-coupling-capacitors',
+    title: 'AC Coupling Capacitors on High-Speed Links: the Value for Every Interface',
+    seoTitle: 'AC Coupling Capacitor Values by Interface',
+    tools: ['/interface-rules', '/impedance', '/trace-loss'],
+    description:
+      'Which high-speed links need a series AC coupling capacitor and which forbid one, the value each specification allows — PCIe, USB 3.2, SATA, SGMII, DisplayPort, HDMI, Ethernet — and why the package size matters more than the capacitance.',
+    date: '2026-09-23',
+    minutes: 7,
+    component: lazy(() => import('./AcCouplingCaps')),
+  },
+  {
+    path: '/guides/usb3-85-or-90-ohm',
+    title: 'Is USB 3 85 Ω or 90 Ω? What the Specifications Actually Say',
+    seoTitle: 'USB 3 Impedance: 85 Ω or 90 Ω?',
+    tools: ['/interface-rules', '/impedance', '/stackup-advisor'],
+    description:
+      'USB 3.2 traces are designed to 90 Ω differential; 85 Ω is the mated Type-C connector target and the S-parameter reference. What each document says, and why the difference costs less return loss than your fabricator’s tolerance.',
+    date: '2026-09-23',
+    minutes: 6,
+    component: lazy(() => import('./Usb3Impedance')),
+  },
+  {
     path: '/guides/copper-area-for-cooling',
     title: 'How Much Copper Does a Regulator Need? PCB Heat Spreading in Numbers',
     seoTitle: 'How Much Copper Does a Regulator Need?',
