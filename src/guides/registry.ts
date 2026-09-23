@@ -16,7 +16,7 @@ export const GUIDES: GuideDef[] = [
     path: '/guides/controlled-impedance',
     title: 'Controlled Impedance Explained: Microstrip, Stripline and Solder Mask',
     seoTitle: 'Controlled Impedance: Microstrip vs Stripline',
-    tools: ['/impedance', '/timing', '/crosstalk', '/trace-loss'],
+    tools: ['/impedance', '/timing', '/crosstalk', '/trace-loss', '/interface-rules'],
     description:
       'What PCB trace impedance is, when a trace needs it, how microstrip and stripline differ, and why solder mask, etching and closed-form formulas shift the result by several ohms. With field-solver numbers.',
     date: '2026-09-22',
@@ -38,7 +38,7 @@ export const GUIDES: GuideDef[] = [
     path: '/guides/pcie-gen3-routing',
     title: 'PCIe Gen3 Routing on a Hobby Budget: Lessons from an M.2 NVMe Carrier Card',
     seoTitle: 'PCIe Gen3 Routing Guide for M.2 Carrier Cards',
-    tools: ['/impedance', '/trace-loss', '/timing', '/differential-via', '/stackup'],
+    tools: ['/impedance', '/trace-loss', '/timing', '/differential-via', '/stackup', '/interface-rules'],
     description:
       'Impedance, AC coupling, skew, loss budget, vias and the reference clock for PCIe Gen3 on a standard FR-4 six-layer board, with numbers for trace width and loss per inch at 4 GHz.',
     date: '2026-09-22',

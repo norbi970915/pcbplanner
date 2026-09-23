@@ -73,6 +73,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./ViaStitching')),
   },
   {
+    path: '/interface-rules',
+    title: 'Interface Design Rules',
+    nav: 'Interface rules',
+    group: 'Signal integrity',
+    summary: 'Impedance, skew, loss budget and length limits of PCIe, USB, Ethernet, HDMI, DDR and other interfaces, applied to a layer of your own stackup with the field solver.',
+    component: lazy(() => import('./InterfaceRules')),
+  },
+  {
     path: '/stackup-advisor',
     title: 'Stackup Advisor',
     nav: 'Stackup advisor',
