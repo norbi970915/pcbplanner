@@ -10,7 +10,9 @@ import { delayPsPerMm, lineLC, nextCoefficient } from '../lib/signal';
 import { runSolver, useFieldSolve } from '../lib/solverClient';
 import { geometryForLayer, type Stackup } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
+import { PlyEditor } from '../components/PlyEditor';
 import { LAMINATES, laminateById } from '../data/laminates';
+import { averageDk, formatPlies, parsePlies, pliesThickness, slabsAbove, slabsBelow } from '../lib/plies';
 import { djordjevicSarkar } from '../lib/dielectric';
 import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
@@ -39,6 +41,8 @@ const DEFAULTS = {
   mat: 'custom',
   mat2: 'custom',
   fq: 1,
+  dl: '', // stacked dielectric below the trace: "t:dk,…" from the plane up to the trace
+  dl2: '', // stacked dielectric above the trace, from the trace outward
 };
 
 /** εr from the material library at the design frequency, or the entered value. */
@@ -58,36 +62,44 @@ function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: str
   };
   pos(p.w, 'Width W');
   pos(p.t, 'Thickness T');
-  pos(p.h, 'Height H');
+  if (!p.dl.trim()) pos(p.h, 'Height H');
   if (!(p.er >= 1)) errors.push('εr must be at least 1.');
   if (type !== 'microstrip') {
-    pos(p.h2, 'Height H2');
+    if (!p.dl2.trim()) pos(p.h2, 'Height H2');
     if (!(p.er2 >= 1)) errors.push('Upper εr must be at least 1.');
   }
   if (diff) pos(p.s, 'Spacing S');
   if (p.cpw) pos(p.gap, 'Coplanar gap G');
   if (p.etch < 0 || p.etch >= p.w) errors.push('Etch must be between 0 and the trace width.');
+  const below = parsePlies(p.dl);
+  const above = parsePlies(p.dl2);
+  if (below === null) errors.push('Check the dielectric plies below the trace: each needs a thickness and a Dk of at least 1.');
+  if (above === null) errors.push('Check the dielectric plies above the trace: each needs a thickness and a Dk of at least 1.');
   if (type === 'microstrip' && p.mask) {
     if (!(p.c1 >= 0 && p.c2 >= 0)) errors.push('Mask thickness cannot be negative.');
     if (!(p.erm >= 1)) errors.push('Mask εr must be at least 1.');
   }
-  if (errors.length) return { geom: null, errors };
+  if (errors.length || !below || !above) return { geom: null, errors };
 
+  // stacked plies model each prepreg / core exactly; a single Dk is the simple case
+  const hBelow = below.length ? pliesThickness(below) : p.h;
+  const hAbove = above.length ? pliesThickness(above) : p.h2;
   const g: Geometry = {
     w: p.w,
     wTop: p.etch > 0 ? p.w - p.etch : undefined,
     t: p.t,
-    yTrace: p.h,
+    yTrace: hBelow,
     diff,
     s: diff ? p.s : undefined,
     coplanarGap: p.cpw ? p.gap : undefined,
-    slabs: [{ y0: 0, y1: p.h, er: p.er }],
+    slabs: below.length ? slabsBelow(below) : [{ y0: 0, y1: hBelow, er: p.er }],
   };
   if (type === 'microstrip') {
-    if (p.mask && (p.c1 > 0 || p.c2 > 0)) g.mask = { surfaceY: p.h, overSubstrate: p.c1, overTrace: p.c2, er: p.erm };
+    if (p.mask && (p.c1 > 0 || p.c2 > 0)) g.mask = { surfaceY: hBelow, overSubstrate: p.c1, overTrace: p.c2, er: p.erm };
   } else {
-    g.slabs.push({ y0: p.h, y1: p.h + p.t + p.h2, er: p.er2 });
-    if (type === 'stripline') g.topPlane = p.h + p.t + p.h2;
+    if (above.length) g.slabs.push(...slabsAbove(above, hBelow, p.t));
+    else g.slabs.push({ y0: hBelow, y1: hBelow + p.t + hAbove, er: p.er2 });
+    if (type === 'stripline') g.topPlane = hBelow + p.t + hAbove;
   }
   return { geom: g, errors };
 }
@@ -106,6 +118,13 @@ export default function Impedance() {
   const type = p.type as LineType;
   const diff = p.mode === 'diff';
   const acc = p.acc as Accuracy;
+  // stacked plies: the drawing and the closed-form check use the weighted average Dk
+  const plyBelow = parsePlies(raw.dl) ?? [];
+  const plyAbove = parsePlies(raw.dl2) ?? [];
+  const erShown = plyBelow.length ? averageDk(plyBelow, p.er) : p.er;
+  const er2Shown = plyAbove.length ? averageDk(plyAbove, p.er2) : p.er2;
+  const hShown = plyBelow.length ? pliesThickness(plyBelow) : p.h;
+  const h2Shown = plyAbove.length ? pliesThickness(plyAbove) : p.h2;
   const { geom, errors } = useMemo(() => buildGeometry(p), [p]);
   const solveState = useFieldSolve(geom, { accuracy: acc, field: true, even: true });
   const r = geom ? solveState.result : null;
@@ -117,7 +136,7 @@ export default function Impedance() {
 
   // closed-form cross-check (single-ended, no coplanar ground)
   let cf: { z: number; name: string } | null = null;
-  if (!diff && !p.cpw && geom) {
+  if (!diff && !p.cpw && geom && !plyBelow.length && !plyAbove.length) {
     const wAvg = p.w - p.etch / 2;
     if (type === 'microstrip' && !p.mask) cf = { z: microstripHJ(wAvg, p.h, p.t, p.er).z0, name: 'Hammerstad–Jensen' };
     if (type === 'stripline' && Math.abs(p.er - p.er2) < 1e-9) {
@@ -134,10 +153,13 @@ export default function Impedance() {
       setStackNote('That layer has no reference plane marked in the stackup.');
       return;
     }
+    const asPlies = (ps?: { t: number; er: number }[]) => (ps && ps.length > 1 ? formatPlies(ps.map((x) => ({ t: x.t, dk: x.er }))) : '');
     set({
       type: g.type,
       h: g.h,
       er: g.er,
+      dl: asPlies(g.below),
+      dl2: asPlies(g.above),
       mat: 'custom',
       t: g.t,
       ...(g.h2 !== undefined ? { h2: g.h2, er2: g.er2 ?? g.er, mat2: 'custom' } : {}),
@@ -209,22 +231,46 @@ export default function Impedance() {
         {p.cpw && <LenField label="Coplanar gap" symbol="G" value={p.gap} onChange={(v) => set({ gap: v })} />}
       </Section>
       <Section title={type === 'stripline' ? 'Dielectric Below' : 'Dielectric'}>
-        <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
-        <SelectField label="Material" value={raw.mat} onChange={(v) => set({ mat: v })} options={MAT_OPTIONS} width={176} />
-        {raw.mat === 'custom' ? (
-          <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+        <Check
+          label="Stacked plies (different Dk)"
+          checked={!!plyBelow.length}
+          onChange={(v) => set({ dl: v ? formatPlies([{ t: p.h / 2, dk: p.er }, { t: p.h / 2, dk: p.er }]) : '' })}
+          hint="Model each prepreg or core between the plane and the trace separately, with its own Dk."
+        />
+        {plyBelow.length ? (
+          <PlyEditor value={raw.dl} onChange={(v) => set({ dl: v })} firstLabel="plane" />
         ) : (
-          <p className="text-faint">εr = {fmt(p.er, 4)} at {fmt(raw.fq, 4)} GHz</p>
+          <>
+            <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
+            <SelectField label="Material" value={raw.mat} onChange={(v) => set({ mat: v })} options={MAT_OPTIONS} width={176} />
+            {raw.mat === 'custom' ? (
+              <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+            ) : (
+              <p className="text-faint">εr = {fmt(p.er, 4)} at {fmt(raw.fq, 4)} GHz</p>
+            )}
+          </>
         )}
       </Section>
       {type !== 'microstrip' && (
         <Section title={type === 'stripline' ? 'Dielectric Above' : 'Cover Dielectric'}>
-          <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
-          <SelectField label="Material" value={raw.mat2} onChange={(v) => set({ mat2: v })} options={MAT_OPTIONS} width={176} />
-          {raw.mat2 === 'custom' ? (
-            <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+          <Check
+            label="Stacked plies (different Dk)"
+            checked={!!plyAbove.length}
+            onChange={(v) => set({ dl2: v ? formatPlies([{ t: p.h2 / 2, dk: p.er2 }, { t: p.h2 / 2, dk: p.er2 }]) : '' })}
+            hint="Model each prepreg or core between the trace and the layer above separately."
+          />
+          {plyAbove.length ? (
+            <PlyEditor value={raw.dl2} onChange={(v) => set({ dl2: v })} firstLabel="trace" />
           ) : (
-            <p className="text-faint">εr = {fmt(p.er2, 4)} at {fmt(raw.fq, 4)} GHz</p>
+            <>
+              <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
+              <SelectField label="Material" value={raw.mat2} onChange={(v) => set({ mat2: v })} options={MAT_OPTIONS} width={176} />
+              {raw.mat2 === 'custom' ? (
+                <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+              ) : (
+                <p className="text-faint">εr = {fmt(p.er2, 4)} at {fmt(raw.fq, 4)} GHz</p>
+              )}
+            </>
           )}
         </Section>
       )}
@@ -338,7 +384,7 @@ export default function Impedance() {
           <div className="p-2">
             {view === 'section' || !r?.field || !geom ? (
               <CrossSection
-                spec={{ type, diff, w: p.w, wTop: p.w - p.etch, t: p.t, s: p.s, h: p.h, h2: p.h2, er: p.er, er2: p.er2, mask: p.mask, cpw: p.cpw, gap: p.gap }}
+                spec={{ type, diff, w: p.w, wTop: p.w - p.etch, t: p.t, s: p.s, h: hShown, h2: h2Shown, er: erShown, er2: er2Shown, mask: p.mask, cpw: p.cpw, gap: p.gap }}
                 unitLabel={unit}
                 toUnit={toUnit}
               />

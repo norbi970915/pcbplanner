@@ -5,7 +5,9 @@ import { StackupPicker } from '../components/StackupPicker';
 import { ToolPage } from '../components/ToolPage';
 import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, Segmented, SelectField } from '../components/ui';
 import { FOILS, HURAY_SR, hurayRadius, LAMINATE_SOURCES, LAMINATES, laminateById, MASKS, maskById } from '../data/laminates';
+import { PlyEditor } from '../components/PlyEditor';
 import { djordjevicSarkar, type DielectricSpec } from '../lib/dielectric';
+import { averageDk, formatPlies, parsePlies, pliesThickness, slabsAbove, slabsBelow } from '../lib/plies';
 import type { Accuracy, Geometry } from '../lib/fieldsolver';
 import type { LossPoint, RoughnessModel } from '../lib/loss';
 import { logSpace } from '../lib/pdn';
@@ -47,6 +49,8 @@ const DEFAULTS = {
   rq: 3.2,
   hr: 0.6651,
   sr: 4.887,
+  dl: '', // stacked dielectric below the trace: "t:dk:df,…" from the plane up to the trace
+  dl2: '', // stacked dielectric above the trace, from the trace outward
   temp: 20,
   len: 254,
   f: 4,
@@ -71,8 +75,8 @@ function buildRequest(p: P): { req: LossRequest | null; errors: string[] } {
   };
   pos(p.w, 'Width W');
   pos(p.t, 'Thickness T');
-  pos(p.h, 'Height H');
-  if (type !== 'microstrip') pos(p.h2, 'Height H2');
+  if (!p.dl.trim()) pos(p.h, 'Height H');
+  if (type !== 'microstrip' && !p.dl2.trim()) pos(p.h2, 'Height H2');
   if (diff) pos(p.s, 'Spacing S');
   pos(p.len, 'Length');
   pos(p.f, 'Frequency');
@@ -97,7 +101,11 @@ function buildRequest(p: P): { req: LossRequest | null; errors: string[] } {
     if (!(p.hr > 0 && p.hr <= 10)) errors.push('Sphere radius must be between 0 and 10 µm.');
     if (!(p.sr >= 0 && p.sr <= 20)) errors.push('Surface ratio must be between 0 and 20.');
   }
-  if (errors.length) return { req: null, errors };
+  const below = parsePlies(p.dl);
+  const above = parsePlies(p.dl2);
+  if (below === null) errors.push('Check the dielectric plies below the trace: each needs a thickness, a Dk of at least 1 and a Df below 1.');
+  if (above === null) errors.push('Check the dielectric plies above the trace: each needs a thickness, a Dk of at least 1 and a Df below 1.');
+  if (errors.length || !below || !above) return { req: null, errors };
 
   const fRef = p.f * 1e9;
   const s1 = specOf(p.mat, p.er, p.df, p.f0, laminateById);
@@ -105,22 +113,29 @@ function buildRequest(p: P): { req: LossRequest | null; errors: string[] } {
   const sm = specOf(p.mmat, p.erm, p.dfm, p.fm, maskById);
   const dkAt = (s: DielectricSpec) => djordjevicSarkar(s).dk(fRef);
 
+  // stacked plies: every prepreg / core gets its own Dk, Df and slab
+  const plySpec = (x: { dk: number; df?: number }, f0: number): DielectricSpec => ({ dk: x.dk, df: x.df ?? 0, f0: f0 * 1e9 });
+  const hBelow = below.length ? pliesThickness(below) : p.h;
+  const hAbove = above.length ? pliesThickness(above) : p.h2;
+  const belowSpecs = below.length ? below.map((x) => plySpec(x, p.f0)) : [s1];
+  const aboveSpecs = above.length ? above.map((x) => plySpec(x, p.f02)) : [s2];
   const geom: Geometry = {
     w: p.w,
     wTop: p.etch > 0 ? p.w - p.etch : undefined,
     t: p.t,
-    yTrace: p.h,
+    yTrace: hBelow,
     diff,
     s: diff ? p.s : undefined,
-    slabs: [{ y0: 0, y1: p.h, er: dkAt(s1) }],
+    slabs: below.length ? slabsBelow(below).map((sl, i) => ({ ...sl, er: dkAt(belowSpecs[i]) })) : [{ y0: 0, y1: hBelow, er: dkAt(s1) }],
   };
-  const slabSpecs = [s1];
+  const slabSpecs = [...belowSpecs];
   if (type === 'microstrip') {
-    if (hasMask) geom.mask = { surfaceY: p.h, overSubstrate: p.c1, overTrace: p.c2, er: dkAt(sm) };
+    if (hasMask) geom.mask = { surfaceY: hBelow, overSubstrate: p.c1, overTrace: p.c2, er: dkAt(sm) };
   } else {
-    geom.slabs.push({ y0: p.h, y1: p.h + p.t + p.h2, er: dkAt(s2) });
-    slabSpecs.push(s2);
-    if (type === 'stripline') geom.topPlane = p.h + p.t + p.h2;
+    if (above.length) geom.slabs.push(...slabsAbove(above, hBelow, p.t).map((sl, i) => ({ ...sl, er: dkAt(aboveSpecs[i]) })));
+    else geom.slabs.push({ y0: hBelow, y1: hBelow + p.t + hAbove, er: dkAt(s2) });
+    slabSpecs.push(...aboveSpecs);
+    if (type === 'stripline') geom.topPlane = hBelow + p.t + hAbove;
   }
   const freqs = [...logSpace(1e7, p.fmax * 1e9, 81), fRef];
   return {
@@ -149,6 +164,8 @@ export default function TraceLoss() {
   const res = req ? st.result : null;
   const at = res ? res.points[res.points.length - 1] : null;
   const sweep = res ? res.points.slice(0, -1) : [];
+  const plyBelow = parsePlies(p.dl) ?? [];
+  const plyAbove = parsePlies(p.dl2) ?? [];
   const lenIn = p.len / 25.4;
 
   const applyLayer = (stack: Stackup, layerId: string) => {
@@ -157,12 +174,15 @@ export default function TraceLoss() {
       setStackNote('That layer has no reference plane marked in the stackup.');
       return;
     }
+    const asPlies = (ps?: { t: number; er: number }[]) => (ps && ps.length > 1 ? formatPlies(ps.map((x) => ({ t: x.t, dk: x.er, df: p.df }))) : '');
     set({
       type: g.type,
       h: g.h,
       t: g.t,
       mat: 'custom',
       er: g.er,
+      dl: asPlies(g.below),
+      dl2: asPlies(g.above),
       ...(g.h2 !== undefined ? { h2: g.h2, mat2: 'custom', er2: g.er2 ?? g.er } : {}),
       ...(g.type === 'microstrip' ? { mask: !!g.mask, ...(g.mask ? { c1: g.mask.c1, c2: g.mask.c2, mmat: 'custom', erm: g.mask.er } : {}) } : {}),
     });
@@ -283,13 +303,43 @@ export default function TraceLoss() {
         {p.rough !== 'smooth' && p.foil !== 'custom' && <p className="text-faint">{FOILS.find((f) => f.id === p.foil)?.note} Treated sides differ; oxide or micro-etch changes the roughness.</p>}
       </Section>
       <Section title={type === 'stripline' ? 'Dielectric Below' : 'Dielectric'}>
-        <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
-        {material('Material', p.mat, p.er, p.df, p.f0, { mat: 'mat', er: 'er', df: 'df', f0: 'f0' })}
+        <Check
+          label="Stacked plies (different Dk / Df)"
+          checked={!!plyBelow.length}
+          onChange={(v) => set({ dl: v ? formatPlies([{ t: p.h / 2, dk: p.er, df: p.df }, { t: p.h / 2, dk: p.er, df: p.df }]) : '' })}
+          hint="Model each prepreg or core between the plane and the trace separately."
+        />
+        {plyBelow.length ? (
+          <>
+            <PlyEditor value={p.dl} onChange={(v) => set({ dl: v })} withDf firstLabel="plane" />
+            <NumField label="Dk / Df given at" value={p.f0} onChange={(v) => set({ f0: v })} unit="GHz" hint="Datasheet frequency of the ply values; they are extended across frequency from there." />
+          </>
+        ) : (
+          <>
+            <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
+            {material('Material', p.mat, p.er, p.df, p.f0, { mat: 'mat', er: 'er', df: 'df', f0: 'f0' })}
+          </>
+        )}
       </Section>
       {type !== 'microstrip' && (
         <Section title={type === 'stripline' ? 'Dielectric Above' : 'Cover Dielectric'}>
-          <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
-          {material('Material', p.mat2, p.er2, p.df2, p.f02, { mat: 'mat2', er: 'er2', df: 'df2', f0: 'f02' })}
+          <Check
+            label="Stacked plies (different Dk / Df)"
+            checked={!!plyAbove.length}
+            onChange={(v) => set({ dl2: v ? formatPlies([{ t: p.h2 / 2, dk: p.er2, df: p.df2 }, { t: p.h2 / 2, dk: p.er2, df: p.df2 }]) : '' })}
+            hint="Model each prepreg or core between the trace and the layer above separately."
+          />
+          {plyAbove.length ? (
+            <>
+              <PlyEditor value={p.dl2} onChange={(v) => set({ dl2: v })} withDf firstLabel="trace" />
+              <NumField label="Dk / Df given at" value={p.f02} onChange={(v) => set({ f02: v })} unit="GHz" />
+            </>
+          ) : (
+            <>
+              <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
+              {material('Material', p.mat2, p.er2, p.df2, p.f02, { mat: 'mat2', er: 'er2', df: 'df2', f0: 'f02' })}
+            </>
+          )}
         </Section>
       )}
       {type === 'microstrip' && p.mask && (
@@ -370,9 +420,9 @@ export default function TraceLoss() {
                 wTop: p.w - p.etch,
                 t: p.t,
                 s: p.s,
-                h: p.h,
-                h2: p.h2,
-                er: req?.geom.slabs[0].er ?? p.er,
+                h: plyBelow.length ? pliesThickness(plyBelow) : p.h,
+                h2: plyAbove.length ? pliesThickness(plyAbove) : p.h2,
+                er: plyBelow.length ? averageDk(plyBelow, p.er) : (req?.geom.slabs[0].er ?? p.er),
                 er2: req?.geom.slabs[1]?.er ?? p.er2,
                 mask: p.mask,
                 cpw: false,
