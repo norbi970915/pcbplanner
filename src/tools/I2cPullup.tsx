@@ -1,3 +1,4 @@
+import { SiField } from '../components/SiField';
 import { ToolPage } from '../components/ToolPage';
 import { Big, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import type { ESeries } from '../lib/electronics';
@@ -48,7 +49,7 @@ export default function I2cPullup() {
           <NumField label="Sink capability" symbol="IOL" value={p.sink} onChange={v => set({ sink: v })} unit="mA" hint="Use the smallest guaranteed sink current among devices driving this line LOW." />
         </Section>
         <Section title="Resistor">
-          <NumField label="Selected pull-up" symbol="Rp" value={p.resistance} onChange={v => set({ resistance: v })} unit="Ω" />
+          <SiField label="Selected pull-up" symbol="Rp" value={p.resistance} onChange={v => set({ resistance: v })} unit="Ω" prefixes={['m', '', 'k', 'M']} />
           <NumField label="Resistor tolerance" value={p.tolerance} onChange={v => set({ tolerance: v })} unit="%" allowZero />
           <SelectField label="Preferred values" value={series} onChange={v => set({ series: v })} options={['E12', 'E24', 'E96'].map(x => ({ value: x as ESeries, label: x }))} />
         </Section>
