@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { i2cPullup, shuntSelection, termination } from './newCalculators';
+import { i2cBusCapacitance, i2cPullup, shuntSelection, termination } from './newCalculators';
+
+const bus = { model: 'known' as const, traceCm: 20, widthMm: 0.2, planeGapMm: 0.2, copperUm: 35, er: 4.2, knownPfCm: 1.5, pinCount: 4, pinPf: 10, cableCm: 30, cablePfPerM: 50, extraPf: 5 };
+
+describe('I²C bus capacitance estimate', () => {
+  it('adds every contribution on one net, including trace branches and cable', () => {
+    const r = i2cBusCapacitance(bus)!;
+    expect(r.tracePf).toBe(30);
+    expect(r.pinsPf).toBe(40);
+    expect(r.cablePf).toBe(15);
+    expect(r.totalPf).toBe(90);
+  });
+
+  it('derives trace capacitance from geometry and increases with trace width', () => {
+    const narrow = i2cBusCapacitance({ ...bus, model: 'microstrip', widthMm: 0.2 })!;
+    const wide = i2cBusCapacitance({ ...bus, model: 'microstrip', widthMm: 0.4 })!;
+    expect(narrow.tracePfCm).toBeGreaterThan(0.5);
+    expect(narrow.tracePfCm).toBeLessThan(5);
+    expect(wide.tracePfCm).toBeGreaterThan(narrow.tracePfCm);
+  });
+
+  it('rejects fractional device counts and impossible geometry', () => {
+    expect(i2cBusCapacitance({ ...bus, pinCount: 1.5 })).toBeNull();
+    expect(i2cBusCapacitance({ ...bus, model: 'stripline', planeGapMm: 0 })).toBeNull();
+  });
+});
 
 describe('I²C pull-up window', () => {
   it('reproduces TI SLVA689 fast-mode 3.3 V, 200 pF example', () => {

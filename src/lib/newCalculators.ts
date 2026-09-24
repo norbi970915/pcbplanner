@@ -1,4 +1,6 @@
 import { eValuesInRange, type ESeries } from './electronics';
+import { microstripHJ, striplineWheeler } from './closedform';
+import { lineLC } from './signal';
 
 export type I2cMode = 'standard' | 'fast' | 'fastPlus';
 
@@ -7,6 +9,42 @@ export const I2C_LIMITS: Record<I2cMode, { label: string; minRiseNs: number; ris
   fast: { label: 'Fast-mode', minRiseNs: 20, riseNs: 300, busPf: 400, frequencyKhz: 400 },
   fastPlus: { label: 'Fast-mode Plus', minRiseNs: 0, riseNs: 120, busPf: 550, frequencyKhz: 1000 },
 };
+
+export type I2cTraceModel = 'microstrip' | 'stripline' | 'known';
+
+export interface I2cCapacitanceInputs {
+  model: I2cTraceModel;
+  traceCm: number;
+  widthMm: number;
+  planeGapMm: number;
+  copperUm: number;
+  er: number;
+  knownPfCm: number;
+  pinCount: number;
+  pinPf: number;
+  cableCm: number;
+  cablePfPerM: number;
+  extraPf: number;
+}
+
+/** Estimate the lumped load seen by ONE SDA or SCL line, not the sum of both lines. */
+export function i2cBusCapacitance(p: I2cCapacitanceInputs) {
+  if (!(p.traceCm >= 0 && Number.isInteger(p.pinCount) && p.pinCount >= 0 && p.pinPf >= 0 && p.cableCm >= 0 && p.cablePfPerM >= 0 && p.extraPf >= 0)) return null;
+  if (p.model === 'known' ? !(p.knownPfCm > 0) : !(p.widthMm > 0 && p.planeGapMm > 0 && p.copperUm >= 0 && p.er >= 1)) return null;
+  if (p.model !== 'microstrip' && p.model !== 'stripline' && p.model !== 'known') return null;
+  const line = p.model === 'microstrip'
+    ? microstripHJ(p.widthMm, p.planeGapMm, p.copperUm / 1000, p.er)
+    : p.model === 'stripline'
+      ? striplineWheeler(p.widthMm, 2 * p.planeGapMm + p.copperUm / 1000, p.copperUm / 1000, p.er)
+      : null;
+  const tracePfCm = line ? lineLC(line.z0, line.eeff).cPerM * 1e10 : p.knownPfCm;
+  if (!(tracePfCm >= 0 && Number.isFinite(tracePfCm))) return null;
+  const tracePf = p.traceCm * tracePfCm;
+  const pinsPf = p.pinCount * p.pinPf;
+  const cablePf = p.cableCm / 100 * p.cablePfPerM;
+  const totalPf = tracePf + pinsPf + cablePf + p.extraPf;
+  return Number.isFinite(totalPf) ? { tracePfCm, tracePf, pinsPf, cablePf, extraPf: p.extraPf, totalPf, lineZ0: line?.z0 ?? null, eeff: line?.eeff ?? null } : null;
+}
 
 /** Independent calculation for one open-drain SDA or SCL line. */
 export function i2cPullup(vdd: number, capacitancePf: number, vol: number, sinkMa: number, mode: I2cMode, series: ESeries, tolerancePct = 0) {
