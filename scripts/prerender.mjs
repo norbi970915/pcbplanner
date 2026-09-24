@@ -200,9 +200,9 @@ for (const g of GUIDES) {
             dateModified: g.date,
             url,
             mainEntityOfPage: url,
-            image: `${SITE}/og-image.png?v=2`,
+            image: `${SITE}/og-image.png?v=3`,
             author: { '@type': 'Organization', name: APP, url: `${SITE}/` },
-            publisher: { '@type': 'Organization', name: APP, url: `${SITE}/`, logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png?v=2` } },
+            publisher: { '@type': 'Organization', name: APP, url: `${SITE}/`, logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png?v=3` } },
           },
           {
             '@type': 'BreadcrumbList',

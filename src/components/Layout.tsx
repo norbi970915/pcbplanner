@@ -135,7 +135,7 @@ export function Layout() {
         {/* menu bar */}
         <div ref={barRef} className="flex h-[26px] shrink-0 items-center border-b border-line bg-chrome">
           <Link to="/" className="flex h-full items-center gap-1.5 px-2.5 text-ink no-underline" title={`${APP_NAME} – pcbplanner.com`}>
-            <img src="/favicon.svg?v=2" width="16" height="16" alt="" />
+            <img src="/favicon.svg?v=3" width="16" height="16" alt="" />
             <span className="font-semibold">
               <span className="text-[var(--copper)]">pcb</span>planner
             </span>
