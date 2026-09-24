@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CrossSection } from '../components/CrossSection';
 import { FieldMap } from '../components/FieldMap';
 import { ToolPage } from '../components/ToolPage';
@@ -344,6 +345,7 @@ export default function Impedance() {
                 {fmt(dev, 3)} % from the {fmt(p.target, 4)} Ω target{Math.abs(dev) <= 10 ? ' (typical fab tolerance ±10 %)' : ''}
               </span>
             )}
+            {z && !busy && <div className="pt-1"><Link to={`/termination?kind=${diff ? 'differential' : 'source'}&z0=${Number(z.toPrecision(7))}&chosen=${Number((diff ? z : Math.max(0, z - 17)).toPrecision(7))}&swing=${diff ? 0.4 : 3.3}&handoff=1`}>Size a termination for this {diff ? 'pair' : 'trace'} →</Link></div>}
           </div>
           <table className="tbl">
             <tbody>

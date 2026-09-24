@@ -41,6 +41,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./Timing')),
   },
   {
+    path: '/termination',
+    title: 'Signal Termination Calculator',
+    nav: 'Termination',
+    group: 'Signal integrity',
+    summary: 'Source-series, single-ended load and differential load termination from trace impedance, with E-series values, reflection and resistor stress.',
+    component: lazy(() => import('./Termination')),
+  },
+  {
     path: '/trace-loss',
     title: 'Trace Loss (Insertion Loss) Calculator',
     nav: 'Trace loss',
@@ -279,6 +287,22 @@ export const TOOLS: ToolDef[] = [
     group: 'Electronics',
     summary: 'Crystal load capacitors with the nearest E12/E24 values and resulting CL, plus frequency error ↔ ppm and clock drift.',
     component: lazy(() => import('./Crystal')),
+  },
+  {
+    path: '/i2c-pullup',
+    title: 'I²C Pull-up Calculator',
+    nav: 'I²C pull-up',
+    group: 'Electronics',
+    summary: 'Pull-up resistor range for Standard, Fast and Fast-mode Plus I²C from bus capacitance, rise time and device sink current.',
+    component: lazy(() => import('./I2cPullup')),
+  },
+  {
+    path: '/current-sense-shunt',
+    title: 'Current-Sense Shunt Selector',
+    nav: 'Current-sense shunt',
+    group: 'Electronics',
+    summary: 'Select a shunt from current range and voltage-drop budget, with power, tolerance, TCR and amplifier-offset checks.',
+    component: lazy(() => import('./CurrentShunt')),
   },
   {
     path: '/resistors',
