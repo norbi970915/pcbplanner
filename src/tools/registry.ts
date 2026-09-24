@@ -205,7 +205,7 @@ export const TOOLS: ToolDef[] = [
     title: 'Boost Converter Calculator',
     nav: 'Boost converter',
     group: 'Power supply',
-    summary: 'Step-up converter power stage: duty cycle, inductor, peak switch current, maximum output current of the IC and output capacitor (TI SLVA372D).',
+    summary: 'Boost power-stage sizing with conduction-mode checks, real inductor and capacitor ratings, IC timing limits and current waveforms across the input range.',
     component: lazy(() => import('./Boost')),
   },
   {
