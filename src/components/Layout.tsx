@@ -1,8 +1,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Analytics, type BeforeSendEvent } from '@vercel/analytics/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
 import { GUIDES } from '../guides/registry';
-import { ANALYTICS_CONSENT_KEY, disableAnalytics, enableAnalytics, readAnalyticsChoice, saveAnalyticsChoice, type AnalyticsChoice } from '../lib/analytics';
+import { ANALYTICS_CONSENT_KEY, disableAnalytics, enableAnalytics, isAnalyticsHost, readAnalyticsChoice, saveAnalyticsChoice, type AnalyticsChoice } from '../lib/analytics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
@@ -11,6 +12,13 @@ import { GROUP_COLORS, GROUPS, TOOLS, toolByPath } from '../tools/registry';
 
 const TABS_KEY = 'pcbtk-tabs';
 const PANELS_KEY = 'pcbtk-panels';
+
+function beforeVercelSend(event: BeforeSendEvent): BeforeSendEvent | null {
+  try {
+    const url = new URL(event.url, window.location.origin);
+    return { ...event, url: url.origin + url.pathname };
+  } catch { return null; }
+}
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -422,11 +430,12 @@ export function Layout() {
             Panels
           </button>
         </div>
+        {analyticsChoice === 'accepted' && isAnalyticsHost() && <Analytics mode="production" route={path} path={path} beforeSend={beforeVercelSend} />}
         {consentOpen && <aside role="region" aria-labelledby="analytics-consent-title" className="fixed inset-x-0 bottom-0 z-50 border-t border-line-strong bg-chrome px-4 py-3 shadow-[0_-6px_24px_#0008]">
           <div className="mx-auto flex max-w-[1100px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-[75ch]">
               <h2 id="analytics-consent-title" className="font-semibold text-ink">Site analytics</h2>
-              <p className="mt-1 text-muted">May we use Google Analytics to measure visits and pages viewed? It uses cookies. You can change your choice under Help &gt; Analytics preferences. <Link to="/about">How your data is used</Link>.</p>
+              <p className="mt-1 text-muted">May we use Google Analytics and Vercel Web Analytics to measure visits and pages viewed? Google Analytics uses cookies; Vercel Web Analytics does not. You can change your choice under Help &gt; Analytics preferences. <Link to="/about">How your data is used</Link>.</p>
               {analyticsChoice && <p className="mt-1 text-faint">Current choice: {analyticsChoice === 'accepted' ? 'accepted' : 'declined'}.</p>}
             </div>
             <div className="flex shrink-0 gap-2">

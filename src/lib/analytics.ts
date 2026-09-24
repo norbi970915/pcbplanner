@@ -23,12 +23,12 @@ export function saveAnalyticsChoice(choice: AnalyticsChoice) {
   } catch { /* storage unavailable; the choice still applies for this page */ }
 }
 
-function productionHost() {
+export function isAnalyticsHost() {
   return window.location.hostname === 'www.pcbplanner.com' || window.location.hostname === 'pcbplanner.com';
 }
 
 export function enableAnalytics(): boolean {
-  if (!productionHost()) return false;
+  if (!isAnalyticsHost()) return false;
   (window as unknown as Record<string, unknown>)[`ga-disable-${ANALYTICS_ID}`] = false;
   const googleWindow = window as GoogleWindow;
   if (tagLoaded) {

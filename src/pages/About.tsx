@@ -45,9 +45,11 @@ export default function About() {
             Projects and custom stackups are stored in your browser and can be exported to a file you keep.
           </p>
           <p>
-            With your permission, Google Analytics measures site visits and pages viewed. Google may receive your IP address, browser information and the page you visit, and may use
-            cookies for measurement. We do not use Analytics for advertising. Your choice is saved in this browser and you can change or withdraw it from Help &gt; Analytics preferences.
-            See <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">how Google uses information from sites using its services</a>.
+            With your permission, Google Analytics and Vercel Web Analytics measure site visits and pages viewed. Google may receive your IP address, browser information and the page you visit,
+            and may use cookies for measurement. Vercel Web Analytics collects aggregated traffic data without cookies. The app's page-view events omit calculator input query values.
+            We do not use Analytics for advertising. Your choice is saved in this browser and you can change or withdraw it from Help &gt; Analytics preferences.
+            See <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">how Google uses information from sites using its services</a> and{' '}
+            <a href="https://vercel.com/docs/analytics/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel's Web Analytics privacy information</a>.
           </p>
 
           <h2>Accuracy and limits</h2>
