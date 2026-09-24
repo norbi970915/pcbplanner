@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { SiField } from '../components/SiField';
 import { ToolPage } from '../components/ToolPage';
-import { Big, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
+import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import type { ESeries } from '../lib/electronics';
 import { I2C_LIMITS, i2cBusCapacitance, i2cPullup, type I2cMode, type I2cTraceModel } from '../lib/newCalculators';
 import { fmt, si } from '../lib/units';
@@ -54,8 +54,8 @@ export default function I2cPullup() {
         <Section title="I²C bus">
           <SelectField label="Mode" value={mode} onChange={v => set({ mode: v, sink: v === 'fastPlus' ? 20 : 3 })} options={MODES} />
           <NumField label="Bus supply" symbol="VDD" value={p.vdd} onChange={v => set({ vdd: v })} unit="V" />
-          <SelectField label="Bus capacitance" value={capSource} onChange={v => set({ capSource: v })} options={[{ value: 'manual', label: 'Enter total' }, { value: 'estimate', label: 'Estimate below' }]} />
-          {capSource === 'manual' ? <NumField label="Capacitance per line" symbol="Cb" value={p.cap} onChange={v => set({ cap: v })} unit="pF" hint="Include all device pins, PCB trace branches, connectors and cable on one SDA or SCL line." /> : <p className="text-faint">Using the live estimate from the panel below: {fmt(busCapPf, 5)} pF per line.</p>}
+          <Check label="Estimate bus capacitance" checked={capSource === 'estimate'} onChange={enabled => set({ capSource: enabled ? 'estimate' : 'manual' })} hint="When off, enter the total capacitance per line yourself. When on, calculate it from the board and connected devices below." />
+          {capSource === 'manual' ? <NumField label="Capacitance per line" symbol="Cb" value={p.cap} onChange={v => set({ cap: v })} unit="pF" hint="Include all device pins, PCB trace branches, connectors and cable on one SDA or SCL line." /> : <p className="text-faint">Estimated capacitance: {fmt(busCapPf, 5)} pF per line.</p>}
         </Section>
         <Section title="Weakest device">
           <NumField label="Maximum LOW voltage" symbol="VOL" value={p.vol} onChange={v => set({ vol: v })} unit="V" allowZero />
@@ -70,10 +70,7 @@ export default function I2cPullup() {
       status={result ? `${limits.label}, Cb ${fmt(busCapPf, 4)} pF: ${si(result.min, 'Ω', 4)} to ${si(result.max, 'Ω', 4)}` : 'Check the inputs'} method={<Method />}>
       <Notes kind="error" items={errors} />
       <Notes items={notes} />
-      {capSource === 'estimate' ? <CapacitanceEstimate p={p} set={set} model={traceModel} estimate={estimate} limitPf={limits.busPf} /> : <Panel title="How to Find Bus Capacitance">
-        <p className="px-3 pt-2 text-muted">C<sub>b</sub> is the capacitance of <strong>one</strong> SDA or SCL net: every connected device pin, all PCB trace branches, cable and connector or protection-device capacitance. Do not add SDA and SCL together. Use datasheet maximum pin values where available.</p>
-        <div className="px-3 py-2"><button className="btn" type="button" onClick={() => set({ capSource: 'estimate' })}>Estimate from board and devices</button></div>
-      </Panel>}
+      {capSource === 'estimate' && <CapacitanceEstimate p={p} set={set} model={traceModel} estimate={estimate} limitPf={limits.busPf} />}
       {result && actual && <div className="grid gap-3 xl:grid-cols-2">
         <Panel title="Valid Pull-up Range">
           <div className="flex flex-wrap gap-8 px-2.5 py-3">
