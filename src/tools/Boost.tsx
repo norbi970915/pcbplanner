@@ -52,6 +52,14 @@ export default function Boost() {
   const toggle = (label: string, k: 'xcin' | 'xrat' | 'xic' | 'xsweep' | 'xwave', hint: string) =>
     <Check key={k} label={label} checked={p[k]} onChange={v => set({ [k]: v })} hint={hint} />;
   const properties = <>
+    <Section title="Extras">
+      <p className="pb-0.5 text-faint">Switch off anything this design does not need: its inputs, its results and its checks all disappear.</p>
+      {toggle('Input capacitor', 'xcin', 'Sizing, ripple and the input-capacitor checks.')}
+      {toggle('Capacitor ratings', 'xrat', 'Ripple-current and voltage ratings of the capacitor banks.')}
+      {toggle('IC timing / voltage limits', 'xic', 'Duty cycle, minimum on and off time, switch and diode voltage.')}
+      {toggle('Input-range sweep', 'xsweep', 'The plot across the input-voltage range.')}
+      {toggle('Current waveform', 'xwave', 'The inductor current waveform at the inspected voltage.')}
+    </Section>
     <Section title="Input / Output">
       {field('Input voltage min.', 'vmin', 'V')}
       {field('Input voltage nominal', 'vnom', 'V')}
@@ -81,14 +89,6 @@ export default function Boost() {
       {field('Capacitance retained', 'cbias', '%', 'Percentage remaining at operating DC voltage and temperature, before the tolerance above. Use your capacitor data.')}
       {field('Bank ESR', 'esr', 'mΩ', 'Effective ESR of the complete parallel bank at the relevant frequency.', true)}
       {field('Total ripple budget', 'total', 'mV', '0 = skip. Checks conservative capacitive + ESR ripple; excludes ESL spikes.', true)}
-    </Section>
-    <Section title="Extras">
-      <p className="pb-0.5 text-faint">Switch off anything this design does not need: its inputs, its results and its checks all disappear.</p>
-      {toggle('Input capacitor', 'xcin', 'Sizing, ripple and the input-capacitor checks.')}
-      {toggle('Capacitor ratings', 'xrat', 'Ripple-current and voltage ratings of the capacitor banks.')}
-      {toggle('IC timing / voltage limits', 'xic', 'Duty cycle, minimum on and off time, switch and diode voltage.')}
-      {toggle('Input-range sweep', 'xsweep', 'The plot across the input-voltage range.')}
-      {toggle('Current waveform', 'xwave', 'The inductor current waveform at the inspected voltage.')}
     </Section>
     {p.xcin && <Section title="Input Capacitor" defaultOpen={false}>
       {field('Input capacitive ripple', 'dvin', 'mV')}
