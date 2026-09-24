@@ -137,3 +137,26 @@ describe('boost component analysis', () => {
 it('rejects numeric overflow in retained capacitor sizing', () => {
   expect(() => analyseBoost({ ...base, cBias: 1e-320 })).toThrow('numerical range');
 });
+
+describe('check groups (for switching optional sections off)', () => {
+  const group = (label: string) => analyseBoost(base).checks.find(c => c.label === label)?.group;
+
+  it('leaves the core checks ungrouped, so they are always shown', () => {
+    for (const label of ['Continuous conduction', 'Inductor saturation current', 'Inductor RMS rating', 'Switch peak-current limit', 'Output capacitance', 'Total output ripple'])
+      expect(group(label), label).toBeUndefined();
+  });
+  it('tags every optional check with the section that owns it', () => {
+    expect(group('Input capacitance')).toBe('cin');
+    expect(group('Output capacitor ripple rating')).toBe('ratings');
+    expect(group('Output capacitor voltage')).toBe('ratings');
+    expect(group('Input capacitor ripple rating')).toBe('cinRating');
+    expect(group('Input capacitor voltage')).toBe('cinRating');
+    for (const label of ['Maximum duty cycle', 'Minimum on-time', 'Minimum off-time', 'Switch voltage (steady state)', 'Diode reverse voltage (steady state)'])
+      expect(group(label), label).toBe('ic');
+  });
+  it('drops input-capacitor ESR loss when the input capacitor is left out', () => {
+    const on = analyseBoost(base).partialLoss;
+    const off = analyseBoost({ ...base, cin: 0, cinEsr: 0, cinDataMin: 0 }).partialLoss;
+    expect(off).toBeLessThan(on);
+  });
+});

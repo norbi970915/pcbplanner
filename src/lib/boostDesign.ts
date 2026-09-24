@@ -30,7 +30,9 @@ export interface BoostDesign extends BoostInput {
   diodeVoltage: number;
 }
 export type CheckState = 'pass' | 'fail' | 'unknown';
-export interface BoostCheck { label: string; state: CheckState; detail: string }
+/** Optional input group a check belongs to, so a page can drop it when that group is switched off. */
+export type CheckGroup = 'cin' | 'ratings' | 'cinRating' | 'ic';
+export interface BoostCheck { label: string; state: CheckState; detail: string; group?: CheckGroup }
 
 export function validateBoost(b: BoostDesign): string[] {
   const errors: string[] = [];
@@ -111,36 +113,36 @@ export function analyseBoost(b: BoostDesign) {
   if (!derived.every(Number.isFinite) || (b.cout > 0 && coutEffective === 0) || (b.cin > 0 && cinEffective === 0))
     throw new Error('Capacitor inputs exceed the numerical range of this model.');
   const checks: BoostCheck[] = [];
-  const add = (label: string, state: CheckState, detail: string) => checks.push({ label, state, detail });
-  const rating = (label: string, value: number, need: number, unit: string, dependent = true) => {
-    if (!value) add(label, 'unknown', 'Rating not supplied.');
-    else if (dependent && !ccm) add(label, 'unknown', 'Outside the supported CCM range.');
-    else add(label, value >= need ? 'pass' : 'fail', 'Need ≥ ' + Number(need.toPrecision(4)) + ' ' + unit + '; supplied ' + value + ' ' + unit + '.');
+  const add = (label: string, state: CheckState, detail: string, group?: CheckGroup) => checks.push({ label, state, detail, group });
+  const rating = (label: string, value: number, need: number, unit: string, dependent = true, group?: CheckGroup) => {
+    if (!value) add(label, 'unknown', 'Rating not supplied.', group);
+    else if (dependent && !ccm) add(label, 'unknown', 'Outside the supported CCM range.', group);
+    else add(label, value >= need ? 'pass' : 'fail', 'Need ≥ ' + Number(need.toPrecision(4)) + ' ' + unit + '; supplied ' + value + ' ' + unit + '.', group);
   };
   add('Continuous conduction', ccm ? 'pass' : 'fail', ccm ? 'Positive valley current across the input range at the entered load.' : 'Boundary or discontinuous operation is predicted. CCM current and capacitor checks are unavailable.');
   rating('Inductor saturation current', b.isat, peak.iSwMax, 'A');
   rating('Inductor RMS rating', b.irms, rms.ilRms, 'A');
   rating('Switch peak-current limit', b.ilim ?? 0, peak.iSwMax, 'A');
-  rating('Output capacitor ripple rating', b.cRating, max(p => p.outputRms).outputRms, 'A');
-  rating('Input capacitor ripple rating', b.cinRating, max(p => p.inputRms).inputRms, 'A');
-  rating('Output capacitor voltage', b.cVoltage, b.vout, 'V', false);
-  rating('Input capacitor voltage', b.cinVoltage, b.vinMax, 'V', false);
-  rating('Switch voltage (steady state)', b.switchVoltage, b.vout + (b.vf ?? 0), 'V', false);
-  if (b.vf) rating('Diode reverse voltage (steady state)', b.diodeVoltage, b.vout, 'V', false);
-  for (const [label, actual, required, selected] of [
-    ['Output capacitance', coutEffective, requiredOut, b.cout],
-    ['Input capacitance', cinEffective, requiredIn, b.cin],
+  rating('Output capacitor ripple rating', b.cRating, max(p => p.outputRms).outputRms, 'A', true, 'ratings');
+  rating('Input capacitor ripple rating', b.cinRating, max(p => p.inputRms).inputRms, 'A', true, 'cinRating');
+  rating('Output capacitor voltage', b.cVoltage, b.vout, 'V', false, 'ratings');
+  rating('Input capacitor voltage', b.cinVoltage, b.vinMax, 'V', false, 'cinRating');
+  rating('Switch voltage (steady state)', b.switchVoltage, b.vout + (b.vf ?? 0), 'V', false, 'ic');
+  if (b.vf) rating('Diode reverse voltage (steady state)', b.diodeVoltage, b.vout, 'V', false, 'ic');
+  for (const [label, actual, required, selected, group] of [
+    ['Output capacitance', coutEffective, requiredOut, b.cout, undefined],
+    ['Input capacitance', cinEffective, requiredIn, b.cin, 'cin'],
   ] as const) {
     add(label, !ccm || !selected ? 'unknown' : actual >= required ? 'pass' : 'fail',
-      !ccm ? 'Outside the supported CCM range.' : !selected ? 'No capacitor value supplied.' : 'Effective ' + Number((actual * 1e6).toPrecision(4)) + ' µF; need ≥ ' + Number((required * 1e6).toPrecision(4)) + ' µF.');
+      !ccm ? 'Outside the supported CCM range.' : !selected ? 'No capacitor value supplied.' : 'Effective ' + Number((actual * 1e6).toPrecision(4)) + ' µF; need ≥ ' + Number((required * 1e6).toPrecision(4)) + ' µF.', group);
   }
   add('Total output ripple', !ccm || !b.dvTotal || !totalOut ? 'unknown' : totalOut.qout / coutEffective + totalOut.dvEsr <= b.dvTotal ? 'pass' : 'fail',
     !ccm ? 'Outside the supported CCM range.' : !b.dvTotal || !totalOut ? 'Enter a capacitor value and total ripple budget to check.' : 'Conservative sum of capacitive and ESR ripple.');
   const dutyHigh = points[0].d, dutyLow = points[points.length - 1].d;
   const on = dutyLow / b.fsMax, off = (1 - dutyHigh) / b.fsMax;
-  add('Maximum duty cycle', !b.maxDuty ? 'unknown' : dutyHigh <= b.maxDuty ? 'pass' : 'fail', !b.maxDuty ? 'IC limit not supplied.' : 'Required ' + Number((100 * dutyHigh).toPrecision(4)) + ' %; limit ' + b.maxDuty * 100 + ' %.');
-  add('Minimum on-time', !b.minOn ? 'unknown' : on >= b.minOn ? 'pass' : 'fail', !b.minOn ? 'IC limit not supplied.' : 'Shortest required pulse ' + Number((on * 1e9).toPrecision(4)) + ' ns.');
-  add('Minimum off-time', !b.minOff ? 'unknown' : off >= b.minOff ? 'pass' : 'fail', !b.minOff ? 'IC limit not supplied.' : 'Shortest required off-time ' + Number((off * 1e9).toPrecision(4)) + ' ns.');
+  add('Maximum duty cycle', !b.maxDuty ? 'unknown' : dutyHigh <= b.maxDuty ? 'pass' : 'fail', !b.maxDuty ? 'IC limit not supplied.' : 'Required ' + Number((100 * dutyHigh).toPrecision(4)) + ' %; limit ' + b.maxDuty * 100 + ' %.', 'ic');
+  add('Minimum on-time', !b.minOn ? 'unknown' : on >= b.minOn ? 'pass' : 'fail', !b.minOn ? 'IC limit not supplied.' : 'Shortest required pulse ' + Number((on * 1e9).toPrecision(4)) + ' ns.', 'ic');
+  add('Minimum off-time', !b.minOff ? 'unknown' : off >= b.minOff ? 'pass' : 'fail', !b.minOff ? 'IC limit not supplied.' : 'Shortest required off-time ' + Number((off * 1e9).toPrecision(4)) + ' ns.', 'ic');
   const pout = b.vout * b.iout, pin = pout / b.eff;
   // Use the complete sum at each point; do not add component losses to the efficiency estimate.
   const partialLoss = Math.max(...points.map(p => p.windingLoss + p.outputRms ** 2 * b.esr + p.inputRms ** 2 * b.cinEsr)) + b.iout * (b.vf ?? 0);

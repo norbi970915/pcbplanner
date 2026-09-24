@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ToolPage } from '../components/ToolPage';
-import { Big, Notes, NumField, Panel, Result, Section } from '../components/ui';
+import { Big, Check, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { analyseBoost, boostPoint, validateBoost, type BoostAnalysis, type BoostDesign, type BoostPoint } from '../lib/boostDesign';
 import { fmt, si } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
@@ -10,6 +10,8 @@ const DEFAULTS = {
   ltol: 20, isat: 0, irms: 0, dcr: 0, cout: 0, ctol: 10, cbias: 80, crating: 0, cv: 0, total: 0,
   cin: 0, cintol: 10, cinbias: 80, cinesr: 0, dvin: 30, cinmin: 0, cinrating: 0, cinv: 0,
   dmax: 0, ton: 0, toff: 0, vsw: 0, vd: 0, probe: 0,
+  // optional parts of the page; switching one off removes its inputs, its results and its checks
+  xcin: true, xrat: true, xic: true, xsweep: true, xwave: true,
 };
 
 function evaluateBoost(input: BoostDesign) {
@@ -26,22 +28,29 @@ export default function Boost() {
     fs: p.fs * 1e3, fsMax: (p.fsmax === 0 ? p.fs : p.fsmax) * 1e3, eff: p.eff / 100, rippleRatio: p.rr / 100,
     l: p.l * 1e-6, dvout: p.dv * 1e-3, esr: p.esr * 1e-3, ilim: p.ilim, vf: p.vf,
     lTol: p.ltol / 100, isat: p.isat, irms: p.irms, dcr: p.dcr * 1e-3,
-    cout: p.cout * 1e-6, cTol: p.ctol / 100, cBias: p.cbias / 100, cRating: p.crating, cVoltage: p.cv, dvTotal: p.total * 1e-3,
-    cin: p.cin * 1e-6, cinTol: p.cintol / 100, cinBias: p.cinbias / 100, cinEsr: p.cinesr * 1e-3,
-    dvin: p.dvin * 1e-3, cinDataMin: p.cinmin * 1e-6, cinRating: p.cinrating, cinVoltage: p.cinv,
-    maxDuty: p.dmax / 100, minOn: p.ton * 1e-9, minOff: p.toff * 1e-9, switchVoltage: p.vsw, diodeVoltage: p.vd,
+    cout: p.cout * 1e-6, cTol: p.ctol / 100, cBias: p.cbias / 100, dvTotal: p.total * 1e-3,
+    // a switched-off group contributes nothing: its values are read as “not supplied”
+    cin: p.xcin ? p.cin * 1e-6 : 0, cinTol: p.cintol / 100, cinBias: p.cinbias / 100, cinEsr: p.xcin ? p.cinesr * 1e-3 : 0,
+    dvin: p.dvin * 1e-3, cinDataMin: p.xcin ? p.cinmin * 1e-6 : 0,
+    cinRating: p.xcin && p.xrat ? p.cinrating : 0, cinVoltage: p.xcin && p.xrat ? p.cinv : 0,
+    cRating: p.xrat ? p.crating : 0, cVoltage: p.xrat ? p.cv : 0,
+    maxDuty: p.xic ? p.dmax / 100 : 0, minOn: p.xic ? p.ton * 1e-9 : 0, minOff: p.xic ? p.toff * 1e-9 : 0,
+    switchVoltage: p.xic ? p.vsw : 0, diodeVoltage: p.xic ? p.vd : 0,
   };
   const analysis = evaluateBoost(b);
   const { r, errors } = analysis;
-  const voltage = Math.max(b.vinMin, Math.min(b.vinMax, p.probe || p.vnom));
+  // the inspected voltage is set from the sweep; without the sweep the waveform shows nominal input
+  const voltage = Math.max(b.vinMin, Math.min(b.vinMax, (p.xsweep && p.probe) || p.vnom));
   const point = r ? boostPoint(b, r.lMin, voltage) : null;
   const notes: string[] = [];
   if (r && !r.ccm) notes.push('The input range includes boundary or discontinuous conduction at this load. CCM component results are withheld; increase inductance or use a converter-specific DCM model. Forced reverse-current operation is not modelled.');
   if (r && r.ccm && b.dvTotal > 0 && r.totalRequired === null) notes.push('ESR ripple alone meets or exceeds the total output-ripple budget. More capacitance cannot meet this budget with the entered ESR.');
   if (r && r.ccm && r.partialLoss > r.loss + 1e-9) notes.push('The entered winding, diode and capacitor losses exceed the loss budget implied by your efficiency estimate. Check the efficiency and component values.');
   const field = (label: string, k: keyof typeof DEFAULTS, unit: string, hint?: string, allowZero = false) =>
-    <NumField key={k} label={label} value={p[k]} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
+    <NumField key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
   const optional = '0 = not supplied; no pass is claimed.';
+  const toggle = (label: string, k: 'xcin' | 'xrat' | 'xic' | 'xsweep' | 'xwave', hint: string) =>
+    <Check key={k} label={label} checked={p[k]} onChange={v => set({ [k]: v })} hint={hint} />;
   const properties = <>
     <Section title="Input / Output">
       {field('Input voltage min.', 'vmin', 'V')}
@@ -73,31 +82,42 @@ export default function Boost() {
       {field('Bank ESR', 'esr', 'mΩ', 'Effective ESR of the complete parallel bank at the relevant frequency.', true)}
       {field('Total ripple budget', 'total', 'mV', '0 = skip. Checks conservative capacitive + ESR ripple; excludes ESL spikes.', true)}
     </Section>
-    <Section title="Input Capacitor" defaultOpen={false}>
+    <Section title="Extras">
+      <p className="pb-0.5 text-faint">Switch off anything this design does not need: its inputs, its results and its checks all disappear.</p>
+      {toggle('Input capacitor', 'xcin', 'Sizing, ripple and the input-capacitor checks.')}
+      {toggle('Capacitor ratings', 'xrat', 'Ripple-current and voltage ratings of the capacitor banks.')}
+      {toggle('IC timing / voltage limits', 'xic', 'Duty cycle, minimum on and off time, switch and diode voltage.')}
+      {toggle('Input-range sweep', 'xsweep', 'The plot across the input-voltage range.')}
+      {toggle('Current waveform', 'xwave', 'The inductor current waveform at the inspected voltage.')}
+    </Section>
+    {p.xcin && <Section title="Input Capacitor" defaultOpen={false}>
       {field('Input capacitive ripple', 'dvin', 'mV')}
       {field('Input capacitance used', 'cin', 'µF', 'Total nominal bank capacitance; 0 = sizing only.', true)}
       {field('Input capacitance tolerance', 'cintol', '%', undefined, true)}
       {field('Input capacitance retained', 'cinbias', '%', 'Retention at maximum input voltage and operating temperature, before tolerance.')}
       {field('Input bank ESR', 'cinesr', 'mΩ', undefined, true)}
       {field('Datasheet minimum Cin', 'cinmin', 'µF', 'Required effective capacitance. The larger of this and the ripple estimate is used.', true)}
-    </Section>
-    <Section title="Capacitor Ratings" defaultOpen={false}>
+    </Section>}
+    {p.xrat && <Section title="Capacitor Ratings" defaultOpen={false}>
       {field('Output bank ripple rating', 'crating', 'A', optional, true)}
       {field('Output voltage rating', 'cv', 'V', optional, true)}
-      {field('Input bank ripple rating', 'cinrating', 'A', optional, true)}
-      {field('Input voltage rating', 'cinv', 'V', optional, true)}
-    </Section>
-    <Section title="IC Timing / Voltage Limits" defaultOpen={false}>
+      {p.xcin && field('Input bank ripple rating', 'cinrating', 'A', optional, true)}
+      {p.xcin && field('Input voltage rating', 'cinv', 'V', optional, true)}
+    </Section>}
+    {p.xic && <Section title="IC Timing / Voltage Limits" defaultOpen={false}>
       {field('Maximum duty cycle', 'dmax', '%', optional, true)}
       {field('Minimum on-time', 'ton', 'ns', 'Use the worst-case (maximum specified) minimum on-time. ' + optional, true)}
       {field('Minimum off-time', 'toff', 'ns', 'Use the worst-case (maximum specified) minimum off-time. ' + optional, true)}
       {field('Switch voltage rating', 'vsw', 'V', 'Steady-state check only; allow additional headroom for ringing and transients. ' + optional, true)}
       {field('Diode reverse rating', 'vd', 'V', 'Checked when a nonzero diode forward voltage is supplied. ' + optional, true)}
-    </Section>
+    </Section>}
   </>;
   const current = (n: number) => r?.ccm ? fmt(n, 4) : '—';
   const cap = (n: number) => r?.ccm ? si(n, 'F', 4) : '—';
-  const failures = r?.checks.filter(c => c.state === 'fail').length ?? 0;
+  // checks belonging to a switched-off group are dropped, not shown as unchecked
+  const shown = { cin: p.xcin, ratings: p.xrat, cinRating: p.xcin && p.xrat, ic: p.xic };
+  const checks = r?.checks.filter(c => !c.group || shown[c.group]) ?? [];
+  const failures = checks.filter(c => c.state === 'fail').length;
   return <ToolPage title="Boost Converter Calculator"
     description="Size a boost power stage and check real inductors, capacitor banks and IC limits across the input-voltage range, with conduction-mode checks and current waveforms."
     properties={properties} onReset={reset} method={<Method />}
@@ -138,7 +158,7 @@ export default function Boost() {
             {b.dvTotal > 0 && <Result label="Effective C for total budget" value={!r.ccm ? '—' : r.totalRequired === null ? 'ESR exceeds budget' : si(Math.max(r.requiredOut, r.totalRequired), 'F', 4)} />}
           </tbody></table>
         </Panel>
-        <Panel title="Input Capacitor">
+        {p.xcin && <Panel title="Input Capacitor">
           <table className="tbl"><tbody>
             <Result label="Effective input capacitance needed" value={cap(r.requiredIn)} sub="Larger of triangular-ripple estimate and datasheet minimum." strong />
             <Result label="Nominal input bank needed" value={cap(r.requiredIn / ((1 - b.cinTol) * b.cinBias))} />
@@ -146,7 +166,7 @@ export default function Boost() {
             <Result label="Maximum input capacitor RMS" value={current(r.inputRms)} unit="A" />
             <Result label="Predicted input ripple (upper bound)" value={r.ccm && r.totalIn !== null ? fmt(r.totalIn * 1e3, 4) : '—'} unit="mV" sub="Selected bank: capacitive + ESR, assuming a source supplying the average current." />
           </tbody></table>
-        </Panel>
+        </Panel>}
         <Panel title="Duty Cycle and Power">
           <table className="tbl"><tbody>
             <Result label="Duty at minimum input" value={fmt(100 * r.dutyHigh, 4)} unit="%" />
@@ -165,10 +185,10 @@ export default function Boost() {
         <p className="px-2.5 py-2 text-muted">Pass means the supplied rating covers this preliminary steady-state estimate. Voltage checks exclude ringing, start-up and transients.
           {' '}Inductor saturation during faults needs the IC's maximum current limit and overshoot, not just the operating peak.</p>
         <table className="tbl"><thead><tr><th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>
-          {r.checks.map(c => <tr key={c.label}><td>{c.label}</td><td className={c.state === 'fail' ? 'text-[var(--err-line)]' : c.state === 'pass' ? 'text-ok' : 'text-faint'}>{c.state === 'unknown' ? 'Not checked' : c.state === 'pass' ? 'Pass' : 'Outside limit'}</td><td>{c.detail}</td></tr>)}
+          {checks.map(c => <tr key={c.label}><td>{c.label}</td><td className={c.state === 'fail' ? 'text-[var(--err-line)]' : c.state === 'pass' ? 'text-ok' : 'text-faint'}>{c.state === 'unknown' ? 'Not checked' : c.state === 'pass' ? 'Pass' : 'Outside limit'}</td><td>{c.detail}</td></tr>)}
         </tbody></table>
       </Panel>
-      <Panel title="Explore the Input Range">
+      {p.xsweep && <Panel title="Explore the Input Range">
         <div className="px-2.5 py-2">
           <label className="flex items-center gap-3">Inspect input voltage
             <input aria-label="Inspect input voltage" className="min-w-0 flex-1" type="range" min={b.vinMin} max={b.vinMax}
@@ -180,10 +200,10 @@ export default function Boost() {
         <p className="px-2.5 pb-2 text-muted">At {fmt(voltage)} V: {point.ccm ? `peak ${fmt(point.iSwMax)} A; valley ${fmt(point.valley)} A` : 'outside CCM'}.
           {' '}CCM boundary load {fmt(point.boundary)} A.
           {point.ccm && point.ceiling !== null ? ` Current-limit ceiling ${fmt(point.ceiling)} A (not a guaranteed output rating).` : ''}</p>
-      </Panel>
-      <Panel title="Inductor Current Waveform">
+      </Panel>}
+      {p.xwave && <Panel title="Inductor Current Waveform">
         {point.ccm ? <Waveform p={point} fs={b.fs} /> : <div className="px-2.5 py-2 text-muted">No CCM waveform is shown at this voltage: the predicted current reaches zero. A DCM or forced-PWM model is required.</div>}
-      </Panel>
+      </Panel>}
     </>}
   </ToolPage>;
 }
