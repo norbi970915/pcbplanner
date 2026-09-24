@@ -15,7 +15,7 @@ export default function About() {
         <div className="prose-doc px-5 py-4">
           <h1 className="text-[18px] font-semibold">About {APP_NAME}</h1>
           <p>
-            {APP_NAME} is PCB design software that runs entirely in your browser: {TOOLS.length} calculators covering impedance, stackups, trace loss, crosstalk, vias, thermal design,
+            {APP_NAME} is PCB design software that runs entirely in your browser: <strong>{TOOLS.length} calculators and design tools</strong> covering impedance, stackups, trace loss, crosstalk, vias, thermal design,
             power integrity and the rest of the numbers a board needs settled before it goes to fabrication.
           </p>
 
