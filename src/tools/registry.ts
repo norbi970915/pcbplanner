@@ -197,7 +197,7 @@ export const TOOLS: ToolDef[] = [
     title: 'Buck Converter Calculator',
     nav: 'Buck converter',
     group: 'Power supply',
-    summary: 'Step-down converter power stage: duty cycle, inductor and ripple current, peak switch current, input and output capacitors (TI SLVA477B).',
+    summary: 'Buck power-stage sizing with conduction-mode checks, real inductor and capacitor ratings, IC timing limits and current waveforms across the input range.',
     component: lazy(() => import('./Buck')),
   },
   {
