@@ -38,7 +38,7 @@
     <script>
       // apply the saved theme before first paint to avoid a flash
       try {
-        var s = JSON.parse(localStorage.getItem('pcbtk-settings') || '{}');
+        var s = JSON.parse(sessionStorage.getItem('pcbtk-settings') || '{}');
         var dark = s.theme !== 'light' && (s.theme !== 'system' || window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
       } catch (e) {}

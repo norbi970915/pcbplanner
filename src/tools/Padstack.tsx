@@ -163,9 +163,9 @@ export default function Padstack() {
                   <Result label="Finished hole" value={L(r.hole)} unit={unit} strong sub={`lead + ${fmt(r.allowance, 3)} mm (Level ${level})`} />
                   <Result label="Max finished hole" value={L(r.maxHole)} unit={unit} sub="finished hole + tolerance" />
                   <Result label="Drilled hole (assumed)" value={L(r.drill)} unit={unit} />
-                  <Result label="Pad, outer layers" value={L(r.padOuter)} unit={unit} strong sub={`max hole + 2 × ${fmt(r.arExt, 3)} + ${fmt(r.fa, 3)} mm`} />
+                  <Result label={rect ? "Pad, outer layers (min side)" : "Pad, outer layers"} value={L(r.padOuter)} unit={unit} strong sub={`max hole + 2 × ${fmt(r.arExt, 3)} + ${fmt(r.fa, 3)} mm`} />
                   <Result
-                    label="Pad, inner layers"
+                    label={rect ? "Pad, inner layers (min side)" : "Pad, inner layers"}
                     value={L(r.padInner)}
                     unit={unit}
                     strong
@@ -182,7 +182,7 @@ export default function Padstack() {
                   <Result label="External ring, worst case" value={L(r.ringExtWorst)} unit={unit} sub={`after max hole and fab allowance, min ${fmt(r.arExt, 3)} mm`} />
                   <Result label="Internal ring, nominal" value={L(r.ringIntNominal)} unit={unit} sub="(inner pad − drilled hole)/2" />
                   <Result label="Internal ring, worst case" value={L(r.ringIntWorst)} unit={unit} sub={`min ${fmt(r.arInt, 3)} mm`} />
-                  <Result label="Antipad (plane clearance)" value={L(r.antipad)} unit={unit} strong sub={p.ovAp ? 'override' : 'equal to the thermal OD'} />
+                  <Result label={rect ? "Antipad (min side)" : "Antipad (plane clearance)"} value={L(r.antipad)} unit={unit} strong sub={p.ovAp ? 'override' : 'equal to the thermal OD'} />
                   <Result label="Plane-to-drill gap" value={L(r.planeGap)} unit={unit} sub="(antipad − drilled hole)/2" />
                   <Result label="Thermal relief ID / OD" value={`${L(r.thermalId)} / ${L(r.thermalOd)}`} unit={unit} strong />
                   <Result label="Spoke width" value={`${p.spokes} × ${L(r.spokeWidth)}`} unit={unit} sub="60 % of the land diameter shared by the spokes, rounded up to 0.05 mm" />
@@ -192,7 +192,8 @@ export default function Padstack() {
             </Panel>
           </div>
           <Panel title="Padstack">
-            <PadstackDrawing r={r} spokes={p.spokes} fmtLen={(mm) => `${L(mm)} ${unit}`} />
+            <p className="px-3 pt-3 text-muted">Drilled holes stay round. For a rectangular lead, the preview uses square copper lands and a square plane antipad. Each side is the calculated minimum size, preserving the minimum annular ring and plane clearance. The thermal relief stays round.</p>
+            <PadstackDrawing r={r} spokes={p.spokes} fmtLen={(mm) => `${L(mm)} ${unit}`} square={rect} />
           </Panel>
         </>
       )}
@@ -201,31 +202,34 @@ export default function Padstack() {
 }
 
 type PadResult = ReturnType<typeof padstack>;
-
-function PadstackDrawing({ r, spokes, fmtLen }: { r: PadResult; spokes: number; fmtLen: (mm: number) => string }) {
+function PadstackDrawing({ r, spokes, fmtLen, square }: { r: PadResult; spokes: number; fmtLen: (mm: number) => string; square: boolean }) {
   const V = 200; // view size of each sub-drawing
   const c = V / 2;
   const span = Math.max(r.padOuter, r.padInner, r.antipad, r.thermalOd) * 1.35;
   const k = V / span;
   const R = (dMm: number) => (dMm / 2) * k;
   const bg = 'var(--sheet)';
+  const outline = (size: number, fill: string) => square
+    ? <rect x={c - size * k / 2} y={c - size * k / 2} width={size * k} height={size * k} fill={fill} />
+    : <circle cx={c} cy={c} r={R(size)} fill={fill} />;
+  const outlineLabel = (size: number) => square ? `${fmtLen(size)} x ${fmtLen(size)}` : fmtLen(size);
   const views = [
     {
       title: 'Outer layers',
-      sub: `pad ${fmtLen(r.padOuter)}, hole ${fmtLen(r.hole)}`,
+      sub: `pad ${outlineLabel(r.padOuter)}, hole ${fmtLen(r.hole)}`,
       body: (
         <>
-          <circle cx={c} cy={c} r={R(r.padOuter)} fill="var(--copper)" />
+          {outline(r.padOuter, 'var(--copper)')}
           <circle cx={c} cy={c} r={R(r.hole)} fill={bg} stroke="var(--ink)" strokeWidth={1} />
         </>
       ),
     },
     {
       title: 'Inner signal layers',
-      sub: `pad ${fmtLen(r.padInner)}, drill ${fmtLen(r.drill)}`,
+      sub: `pad ${outlineLabel(r.padInner)}, drill ${fmtLen(r.drill)}`,
       body: (
         <>
-          <circle cx={c} cy={c} r={R(r.padInner)} fill="var(--copper)" />
+          {outline(r.padInner, 'var(--copper)')}
           <circle cx={c} cy={c} r={R(r.drill)} fill={bg} stroke="var(--ink)" strokeWidth={1} />
         </>
       ),
@@ -255,11 +259,11 @@ function PadstackDrawing({ r, spokes, fmtLen }: { r: PadResult; spokes: number; 
     },
     {
       title: 'Plane, clearance',
-      sub: `antipad ${fmtLen(r.antipad)}`,
+      sub: `antipad ${outlineLabel(r.antipad)}`,
       body: (
         <>
           <rect x={4} y={4} width={V - 8} height={V - 8} fill="var(--copper)" opacity={0.85} />
-          <circle cx={c} cy={c} r={R(r.antipad)} fill={bg} />
+          {outline(r.antipad, bg)}
           <circle cx={c} cy={c} r={R(r.drill)} fill="none" stroke="var(--ink)" strokeWidth={1} strokeDasharray="3 2" />
         </>
       ),
@@ -336,6 +340,7 @@ export function Method() {
       </table>
       <p className="text-[12px] text-muted">All values in mm.</p>
       <h2>Lands</h2>
+      <p>For a rectangular lead, the preview uses square lands and a square plane antipad around a round hole. Both sides equal the calculated minimum land or antipad size. IPC-2221 permits non-circular land shapes, and IPC-7251 defines the annular ring at its narrowest point. A longer rectangular land is a separate design choice; no lead-aspect extension is calculated. The thermal relief remains round.</p>
       <p>IPC-2221 §9.1.1 gives the worst-case land-to-hole relationship:</p>
       <div className="eq">
         <span className="no">(1)</span>

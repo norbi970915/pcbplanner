@@ -15,7 +15,7 @@ const KEY = 'pcbtk-settings';
 
 function read(): { unit: PrefUnit; theme: Theme } {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+    const s = JSON.parse(sessionStorage.getItem(KEY) || '{}');
     return {
       unit: s.unit === 'mil' ? 'mil' : 'mm',
       theme: s.theme === 'light' || s.theme === 'system' ? s.theme : 'dark',
@@ -32,7 +32,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ unit, theme }));
+      sessionStorage.setItem(KEY, JSON.stringify({ unit, theme }));
     } catch {
       /* storage unavailable */
     }

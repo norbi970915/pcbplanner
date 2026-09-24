@@ -15,7 +15,7 @@ const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/guides', '/about', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/', '/tools', '/guides', '/about', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -79,7 +79,7 @@ const app = (name, url, description) => ({
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
 });
 
-// Home: rewrite dist/index.html itself with the tool index as content
+// Home: prerender the compact launchpad into dist/index.html
 const homeDescription = readFileSync('src/tools/Home.tsx', 'utf8').match(/useDocumentMeta\(\s*'[^']*',\s*'([^']*)'/)[1];
 const homeTitle = `PCB impedance, stackup and design calculators – ${APP}`;
 writeFileSync(
@@ -89,7 +89,7 @@ writeFileSync(
     title: homeTitle,
     description: homeDescription,
     h1: `${APP} – PCB design calculators`,
-    body: `<p>${esc(homeDescription)}</p><h2>Guides</h2><ul>${GUIDES.map((g) => `<li><a href="${g.path}">${esc(g.title)}</a> – ${esc(g.description)}</li>`).join('')}</ul>${toolNav}`,
+    raw: guideHtml['/'],
     jsonLd: {
       '@context': 'https://schema.org',
       '@graph': [
@@ -141,6 +141,22 @@ for (const tool of TOOLS) {
     }),
   );
 }
+writeFileSync(
+  'dist/tools.html',
+  page({
+    path: '/tools',
+    title: `PCB Design Calculators \u2013 ${APP}`,
+    description: 'Browse PCB design calculators by category: signal integrity, stackups, thermal design, power, components and electronics.',
+    raw: guideHtml['/tools'],
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'PCB Design Calculators',
+      url: `${SITE}/tools`,
+      hasPart: TOOLS.map((tool) => ({ '@type': 'WebApplication', name: tool.title, url: SITE + tool.path })),
+    },
+  }),
+);
 // About: the page text rendered into the HTML, so it reads without JavaScript
 writeFileSync(
   'dist/about.html',

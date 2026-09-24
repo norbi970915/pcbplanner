@@ -1,28 +1,26 @@
-import { useState } from 'react';
 import { ToolPage } from '../components/ToolPage';
 import { NumField, Panel, SelectField } from '../components/ui';
 import { C0, cToF, fmt, fToC, LEN_UNITS, si, type LenUnit } from '../lib/units';
+import { useUrlState } from '../state/useUrlState';
 
 const LENGTHS: LenUnit[] = ['mm', 'mil', 'in', 'um', 'cm', 'oz'];
+const DEFAULTS = { len: 1, lenU: 'mm', tc: 25, dbm: 0, r: 50, f: 100 };
 
 export default function Units() {
-  const [len, setLen] = useState(1);
-  const [lenU, setLenU] = useState<LenUnit>('mm');
-  const [tc, setTc] = useState(25);
-  const [dbm, setDbm] = useState(0);
-  const [r, setR] = useState(50);
-  const [f, setF] = useState(100);
+  const [p, set, reset] = useUrlState(DEFAULTS);
+  const lenU = LENGTHS.includes(p.lenU as LenUnit) ? p.lenU as LenUnit : 'mm';
+  const { len, tc, dbm, r, f } = p;
   const mm = len * LEN_UNITS[lenU].toMm;
   const w = Math.pow(10, dbm / 10) / 1000;
   const vrms = Math.sqrt(w * r);
 
   return (
-    <ToolPage title="Unit Converter" description="Quick conversions for PCB work: mm, mil, inch, µm and copper weight; temperature; dBm, watts and volts; frequency, period and free-space wavelength." properties={<p className="p-2 text-faint">The converters are in the document area.</p>} status="Unit converter">
+    <ToolPage title="Unit Converter" description="Quick conversions for PCB work: mm, mil, inch, µm and copper weight; temperature; dBm, watts and volts; frequency, period and free-space wavelength." properties={<p className="p-2 text-faint">The converters are in the document area.</p>} status="Unit converter" onReset={reset}>
       <div className="grid gap-3 md:grid-cols-2">
         <Panel title="Length and copper weight">
           <div className="space-y-[3px] border-b border-line p-2">
-            <NumField label="Value" value={len} onChange={setLen} allowZero unit="" />
-            <SelectField label="Unit" value={lenU} onChange={setLenU} options={LENGTHS.map((u) => ({ value: u, label: u === 'oz' ? 'oz/ft² (copper)' : LEN_UNITS[u].label }))} />
+            <NumField label="Value" value={len} onChange={(v) => set({ len: v })} allowZero unit="" />
+            <SelectField label="Unit" value={lenU} onChange={(v) => set({ lenU: v })} options={LENGTHS.map((u) => ({ value: u, label: u === 'oz' ? 'oz/ft² (copper)' : LEN_UNITS[u].label }))} />
           </div>
           <table className="tbl">
             <tbody>
@@ -37,7 +35,7 @@ export default function Units() {
         </Panel>
         <Panel title="Temperature">
           <div className="space-y-[3px] border-b border-line p-2">
-            <NumField label="Celsius" value={tc} onChange={setTc} unit="°C" allowNegative />
+            <NumField label="Celsius" value={tc} onChange={(v) => set({ tc: v })} unit="°C" allowNegative />
           </div>
           <table className="tbl">
             <tbody>
@@ -62,8 +60,8 @@ export default function Units() {
         </Panel>
         <Panel title="Power">
           <div className="space-y-[3px] border-b border-line p-2">
-            <NumField label="Power" value={dbm} onChange={setDbm} unit="dBm" allowNegative />
-            <NumField label="Load" value={r} onChange={setR} unit="Ω" />
+            <NumField label="Power" value={dbm} onChange={(v) => set({ dbm: v })} unit="dBm" allowNegative />
+            <NumField label="Load" value={r} onChange={(v) => set({ r: v })} unit="Ω" />
           </div>
           <table className="tbl">
             <tbody>
@@ -88,7 +86,7 @@ export default function Units() {
         </Panel>
         <Panel title="Frequency">
           <div className="space-y-[3px] border-b border-line p-2">
-            <NumField label="Frequency" value={f} onChange={setF} unit="MHz" />
+            <NumField label="Frequency" value={f} onChange={(v) => set({ f: v })} unit="MHz" />
           </div>
           <table className="tbl">
             <tbody>

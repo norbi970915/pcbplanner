@@ -1,6 +1,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
+import { GUIDES } from '../guides/registry';
+import { ANALYTICS_CONSENT_KEY, disableAnalytics, enableAnalytics, readAnalyticsChoice, saveAnalyticsChoice, type AnalyticsChoice } from '../lib/analytics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
@@ -12,7 +14,7 @@ const PANELS_KEY = 'pcbtk-panels';
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const v = JSON.parse(localStorage.getItem(key) || 'null');
+    const v = JSON.parse(sessionStorage.getItem(key) || 'null');
     return v ?? fallback;
   } catch {
     return fallback;
@@ -20,7 +22,7 @@ function readJson<T>(key: string, fallback: T): T {
 }
 function writeJson(key: string, v: unknown) {
   try {
-    localStorage.setItem(key, JSON.stringify(v));
+    sessionStorage.setItem(key, JSON.stringify(v));
   } catch {
     /* storage unavailable */
   }
@@ -67,7 +69,12 @@ export function Layout() {
   const { projects, activeId } = useProjects();
   const activeProject = projects.find((p) => p.id === activeId);
   const [saved, setSaved] = useState<string | null>(null);
+  const [analyticsChoice, setAnalyticsChoice] = useState<AnalyticsChoice | null>(readAnalyticsChoice);
+  const [consentOpen, setConsentOpen] = useState(() => readAnalyticsChoice() === null);
+  const consentButtonRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const lastPageView = useRef<string | null>(null);
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
   const actions = useRef<ToolActions | null>(null);
   const setActions = useCallback((a: ToolActions | null) => {
     actions.current = a;
@@ -76,7 +83,54 @@ export function Layout() {
 
   // keep a tab for every visited tool
   const path = loc.pathname;
-  const known = path === '/' || !!toolByPath(path);
+  useEffect(() => {
+    if (analyticsChoice === 'accepted') return;
+    disableAnalytics(analyticsChoice === 'declined');
+    lastPageView.current = null;
+  }, [analyticsChoice]);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== ANALYTICS_CONSENT_KEY && event.key !== null) return;
+      const choice = readAnalyticsChoice();
+      setAnalyticsChoice(choice);
+      setConsentOpen(choice === null);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  useEffect(() => {
+    if (consentOpen) consentButtonRef.current?.focus();
+  }, [consentOpen]);
+  useEffect(() => {
+    // Query parameters contain calculator inputs, and change while typing.
+    // Count route changes only; send a path-only location to Analytics.
+    if (analyticsChoice !== 'accepted' || !enableAnalytics()) return;
+    const timer = window.setTimeout(() => {
+      const pageLocation = window.location.origin + path;
+      if (lastPageView.current === pageLocation) return;
+      const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+      if (!gtag) return;
+      const title = toolByPath(path)?.title ?? GUIDES.find((guide) => guide.path === path)?.seoTitle
+        ?? (path === '/' ? 'PCB impedance, stackup and design calculators' : path === '/tools' ? 'All PCB Tools' : path === '/guides' ? 'PCB Design Guides' : path === '/about' ? `About ${APP_NAME}` : document.title);
+      const pageTitle = title.endsWith(` – ${APP_NAME}`) ? title : `${title} – ${APP_NAME}`;
+      let pageReferrer = lastPageView.current ?? document.referrer;
+      if (pageReferrer) {
+        try {
+          const referrer = new URL(pageReferrer);
+          if (referrer.origin === window.location.origin) pageReferrer = referrer.origin + referrer.pathname;
+        } catch { /* preserve a browser-supplied referrer we cannot parse */ }
+      }
+      gtag('set', { page_location: pageLocation, page_title: pageTitle });
+      gtag('event', 'page_view', {
+        page_location: pageLocation,
+        page_title: pageTitle,
+        page_referrer: pageReferrer,
+      });
+      lastPageView.current = pageLocation;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [path, analyticsChoice]);
+  const known = path === '/' || path === '/tools' || !!toolByPath(path);
   // article pages (guides) have no inputs: no Properties panel
   const isDoc = path === '/guides' || path.startsWith('/guides/');
   useEffect(() => {
@@ -118,8 +172,24 @@ export function Layout() {
     setTabs(next);
     if (p === path) navigate(next[Math.max(0, i - 1)] ?? '/');
   };
+  const chooseAnalytics = (choice: AnalyticsChoice) => {
+    if (choice === 'declined') disableAnalytics(true);
+    saveAnalyticsChoice(choice);
+    setAnalyticsChoice(choice);
+    setConsentOpen(false);
+  };
+  const tabId = (p: string) => `tool-tab-${p === '/' ? 'home' : p.slice(1).replaceAll('/', '-')}`;
+  const moveTabFocus = (current: string, key: string) => {
+    const index = tabs.indexOf(current);
+    const next = key === 'Home' ? tabs[0] : key === 'End' ? tabs[tabs.length - 1]
+      : key === 'ArrowLeft' ? tabs[(index - 1 + tabs.length) % tabs.length]
+        : tabs[(index + 1) % tabs.length];
+    tabRefs.current.get(next)?.focus();
+    navigate(next);
+  };
   const shell = useMemo(() => ({ propsEl, statusEl, headEl, setActions }), [propsEl, statusEl, headEl, setActions]);
-  const tabTitle = (p: string) => (p === '/' ? 'Home' : toolByPath(p)?.nav ?? p);
+  const keyboardTab = tabs.includes(path) ? path : tabs[tabs.length - 1];
+  const tabTitle = (p: string) => (p === '/' ? 'Home' : p === '/tools' ? 'All tools' : toolByPath(p)?.nav ?? p);
   const tabColor = (p: string) => (p === '/' ? '#8a8a8a' : GROUP_COLORS[toolByPath(p)?.group ?? ''] ?? '#8a8a8a');
 
   const menuProps = (name: string) => ({
@@ -189,6 +259,8 @@ export function Layout() {
             </Item>
           </Menu>
           <Menu {...menuProps('Tools')}>
+            <Item onClick={run(() => navigate('/tools'))}>Browse all tools...</Item>
+            <div className="menu-sep" />
             {GROUPS.map((g, gi) => (
               <div key={g}>
                 {gi > 0 && <div className="menu-sep" />}
@@ -205,6 +277,8 @@ export function Layout() {
             <Item onClick={run(() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' }))}>Method &amp; References</Item>
             <Item onClick={run(() => navigate('/guides'))}>Guides</Item>
             <Item onClick={run(() => navigate('/about'))}>About {APP_NAME}</Item>
+            <div className="menu-sep" />
+            <Item onClick={run(() => setConsentOpen(true))}>Analytics preferences</Item>
           </Menu>
           <Link to="/guides" className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}>
             Guides
@@ -218,17 +292,33 @@ export function Layout() {
             return (
               <div
                 key={t}
-                role="tab"
-                aria-selected={active}
-                className={`group flex h-[23px] shrink-0 cursor-pointer items-center gap-1.5 border border-b-0 pl-2 pr-1 ${
+                role="presentation"
+                className={`group flex h-[23px] shrink-0 items-center gap-1.5 border border-b-0 pr-1 ${
                   active ? 'border-line bg-[var(--tab-active)] text-ink' : 'border-transparent text-muted hover:bg-chrome-2'
                 }`}
                 style={active ? { boxShadow: `inset 0 2px 0 ${tabColor(t)}` } : undefined}
-                onClick={() => navigate(t)}
-                onAuxClick={(e) => e.button === 1 && closeTab(t)}
               >
-                <Swatch color={tabColor(t)} />
-                <span>{tabTitle(t)}</span>
+                <button
+                  ref={node => { if (node) tabRefs.current.set(t, node); else tabRefs.current.delete(t); }}
+                  type="button"
+                  role="tab"
+                  id={tabId(t)}
+                  aria-selected={active}
+                  aria-controls="tool-panel"
+                  tabIndex={t === keyboardTab ? 0 : -1}
+                  className="flex h-full items-center gap-1.5 pl-2 focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+                  onClick={() => navigate(t)}
+                  onAuxClick={event => { if (event.button === 1) closeTab(t); }}
+                  onKeyDown={event => {
+                    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                      event.preventDefault();
+                      moveTabFocus(t, event.key);
+                    }
+                  }}
+                >
+                  <Swatch color={tabColor(t)} />
+                  <span>{tabTitle(t)}</span>
+                </button>
                 <button
                   type="button"
                   aria-label={`Close ${tabTitle(t)}`}
@@ -248,9 +338,10 @@ export function Layout() {
         {/* workspace: on narrow screens one scrolling column (title, inputs, results); from lg up, docked panels */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
           {panels.tools && (
-            <aside className="hidden w-[200px] shrink-0 flex-col border-r border-line bg-panel lg:flex">
+            <aside className="hidden w-[224px] shrink-0 flex-col border-r border-line bg-panel lg:flex">
               <div className="flex h-[24px] items-center border-b border-line bg-panel-head px-2 font-semibold">Tools</div>
               <nav className="min-h-0 flex-1 overflow-y-auto py-1" aria-label="Tools">
+                <Link to="/tools" className={`mb-1 block px-2 py-[4px] font-semibold no-underline ${path === '/tools' ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>Browse all tools</Link>
                 {GROUPS.map((g) => (
                   <div key={g} className="mb-1">
                     <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
@@ -286,10 +377,10 @@ export function Layout() {
           {/* narrow screens: the tool's title goes above its inputs */}
           <div ref={setHeadEl} className="order-first shrink-0 bg-doc lg:hidden" />
 
-          {/* on narrow screens the properties panel sits above the document (not on Home, which has no inputs) */}
-          {panels.props && (
+          {/* on narrow screens, calculator inputs sit above their results */}
+          {panels.props && path !== '/' && path !== '/tools' && (
             <aside
-              className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : path === '/' ? 'hidden lg:flex' : 'flex lg:flex'}`}
+              className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
             >
               <div className="flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
                 <span>
@@ -306,7 +397,7 @@ export function Layout() {
             </aside>
           )}
 
-          <main ref={mainRef} className="min-w-0 shrink-0 bg-doc lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <main ref={mainRef} id="tool-panel" role={known ? 'tabpanel' : undefined} aria-labelledby={known ? tabId(path) : undefined} className="min-w-0 shrink-0 bg-doc lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <ErrorBoundary key={path}>
               <Suspense fallback={<div className="p-4 text-muted">Loading…</div>}>
                 <Outlet />
@@ -331,6 +422,19 @@ export function Layout() {
             Panels
           </button>
         </div>
+        {consentOpen && <aside role="region" aria-labelledby="analytics-consent-title" className="fixed inset-x-0 bottom-0 z-50 border-t border-line-strong bg-chrome px-4 py-3 shadow-[0_-6px_24px_#0008]">
+          <div className="mx-auto flex max-w-[1100px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-[75ch]">
+              <h2 id="analytics-consent-title" className="font-semibold text-ink">Site analytics</h2>
+              <p className="mt-1 text-muted">May we use Google Analytics to measure visits and pages viewed? It uses cookies. You can change your choice under Help &gt; Analytics preferences. <Link to="/about">How your data is used</Link>.</p>
+              {analyticsChoice && <p className="mt-1 text-faint">Current choice: {analyticsChoice === 'accepted' ? 'accepted' : 'declined'}.</p>}
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button ref={consentButtonRef} type="button" className="btn h-[30px] flex-1 sm:flex-none" onClick={() => chooseAnalytics('declined')}>Decline</button>
+              <button type="button" className="btn btn-primary h-[30px] flex-1 sm:flex-none" onClick={() => chooseAnalytics('accepted')}>Accept analytics</button>
+            </div>
+          </div>
+        </aside>}
       </div>
     </ShellContext.Provider>
   );

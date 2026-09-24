@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Sources } from '../components/Sources';
 import { ToolPage } from '../components/ToolPage';
 import { Big, LenField, Notes, NumField, Panel, Section, SelectField } from '../components/ui';
@@ -35,6 +36,7 @@ export default function TraceWidth() {
   let headline: { a: string; b: string; unit: string; label: string; la: string; lb: string } | null = null;
   const warnings: string[] = [];
   let tempNote = '';
+  let viaTargets: { label: string; current: number }[] = [];
 
   if (ok && std === 'ipc2221') {
     if (mode === 'width') {
@@ -56,6 +58,10 @@ export default function TraceWidth() {
       if (mode === 'current') {
         const ext = currentFor(aMil2, p.dT, IPC2221.kExternal);
         const int = currentFor(aMil2, p.dT, IPC2221.kInternal);
+        viaTargets = [
+          { label: 'External-layer capacity', current: ext },
+          { label: 'Internal-layer capacity', current: int },
+        ];
         const r = R(area, p.amb + p.dT);
         headline = { a: fmt(ext, 4), b: fmt(int, 4), unit: 'A', label: 'current', la: 'External layer current', lb: 'Internal layer current' };
         rows = [
@@ -102,6 +108,10 @@ export default function TraceWidth() {
       wMil = p.width / MM_PER_MIL;
       I = ipc2152Current(IPC2152_EXTERNAL, p.dT, wMil, tMil);
       const i21 = currentFor((p.width * p.t) / MIL2, p.dT, IPC2221.kExternal);
+      viaTargets = [
+        { label: 'IPC-2152 fit capacity', current: I },
+        { label: 'IPC-2221 external capacity', current: i21 },
+      ];
       headline = { a: fmt(I, 4), b: fmt(i21, 4), unit: 'A', label: 'current', la: 'IPC-2152 fit current', lb: 'IPC-2221 external current' };
       rows = [['Maximum current', `${fmt(I, 4)} A`, `${fmt(i21, 4)} A`]];
     } else {
@@ -121,6 +131,13 @@ export default function TraceWidth() {
     if (oz < 1.5) warnings.push('The external fit was derived from 2 oz and 3 oz data; for thinner copper treat it as an estimate.');
     warnings.push('IPC-2152 data: a single trace in still air on a board without copper planes (close to worst case). Nearby planes and copper pours lower the real temperature considerably.');
   }
+
+  if (ok && mode !== 'current') viaTargets = [{ label: 'Design current', current: p.current }];
+  const viaLink = (current: number) => {
+    const query = new URLSearchParams({ target: String(Number(current.toPrecision(7))), amb: String(p.amb), handoff: '1' });
+    if (mode !== 'temp') query.set('dT', String(p.dT));
+    return `/via?${query}`;
+  };
 
   const properties = (
     <>
@@ -198,6 +215,20 @@ export default function TraceWidth() {
         </table>
         {tempNote && <p className="px-2.5 py-1.5 text-faint">{tempNote}</p>}
       </Panel>
+      {viaTargets.length > 0 && <Panel title="Next step: size the vias">
+        <div className="space-y-2 px-3 py-3">
+          <p className="text-muted">Estimate how many plated through vias can carry this current between layers. Check the finished hole, plating and board thickness on the Via Calculator.</p>
+          <div className="flex flex-wrap gap-2">
+            {viaTargets.filter((target) => Number.isFinite(target.current) && target.current > 0).map((target) => (
+              <Link key={target.label} className="btn no-underline" to={viaLink(target.current)}>
+                {target.label}: {fmt(target.current, 4)} A → Via Calculator
+              </Link>
+            ))}
+          </div>
+          {mode === 'temp' && <p className="text-faint">The trace temperature rise is a result here; set the acceptable via rise on the Via Calculator.</p>}
+          {std === 'ipc2152' && <p className="text-faint">The Via Calculator uses an IPC-2221 barrel estimate, even when this trace result uses the IPC-2152 fit.</p>}
+        </div>
+      </Panel>}
     </ToolPage>
   );
 }

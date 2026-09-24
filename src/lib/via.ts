@@ -15,6 +15,11 @@ export interface ViaInput {
   z0: number; // impedance of the line the via sits in
 }
 
+/** First-pass count for identical vias assumed to share current equally. */
+export function parallelViaCount(targetA: number, capacityPerViaA: number): number {
+  return Math.ceil(targetA / capacityPerViaA);
+}
+
 export function via(i: ViaInput) {
   const dOut = i.holeMm + 2 * i.platingMm;
   const areaMm2 = (Math.PI / 4) * (dOut * dOut - i.holeMm * i.holeMm);

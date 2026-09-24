@@ -1,4 +1,4 @@
-// Build-time rendering of the guide articles and the About page to static HTML (used by scripts/prerender.mjs).
+// Build-time rendering of routed content pages to static HTML (used by scripts/prerender.mjs).
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import AcCouplingCaps from './AcCouplingCaps';
@@ -13,8 +13,12 @@ import DecouplingCapacitors from './DecouplingCapacitors';
 import PcieRouting from './PcieRouting';
 import Usb3Impedance from './Usb3Impedance';
 import About from '../pages/About';
+import Home from '../tools/Home';
+import ToolsIndex from '../tools/ToolsIndex';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
+  '/': Home,
+  '/tools': ToolsIndex,
   '/guides': GuidesIndex,
   '/guides/pcb-crosstalk-3w-rule': CrosstalkSpacing,
   '/guides/pcb-via-current-capacity': ViaCurrent,

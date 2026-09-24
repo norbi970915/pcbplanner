@@ -1,10 +1,10 @@
 import { ToolPage } from '../components/ToolPage';
-import { LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
-import { via } from '../lib/via';
+import { Big, LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
+import { parallelViaCount, via } from '../lib/via';
 import { fmt, si } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
-const DEFAULTS = { hole: 0.3, plating: 0.025, len: 1.6, pad: 0.6, antipad: 0.9, er: 4.3, dT: 10, amb: 25, z0: 50 };
+const DEFAULTS = { hole: 0.3, plating: 0.025, len: 1.6, pad: 0.6, antipad: 0.9, er: 4.3, dT: 10, amb: 25, z0: 50, target: 0 };
 
 export default function Via() {
   const [p, set, reset] = useUrlState(DEFAULTS);
@@ -15,7 +15,10 @@ export default function Via() {
   if (!(p.pad > p.hole)) errors.push('Pad diameter must be larger than the hole.');
   if (!(p.antipad > p.pad)) errors.push('Antipad (plane clearance) must be larger than the pad.');
   if (!(p.dT > 0)) errors.push('Temperature rise must be greater than 0.');
+  if (p.target < 0) errors.push('Target current cannot be negative.');
   const r = errors.length ? null : via({ holeMm: p.hole, platingMm: p.plating, lengthMm: p.len, padMm: p.pad, antipadMm: p.antipad, er: p.er, dTC: p.dT, ambientC: p.amb, z0: p.z0 });
+  const count = r && p.target > 0 ? parallelViaCount(p.target, r.currentInt) : null;
+  const externalCount = r && p.target > 0 ? parallelViaCount(p.target, r.currentExt) : null;
   const notes: string[] = [];
   if (r && r.aspectRatio > 10) notes.push(`Aspect ratio ${fmt(r.aspectRatio, 3)}:1 is above the ~10:1 many fabs accept for through holes.`);
 
@@ -30,6 +33,7 @@ export default function Via() {
         <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
       </Section>
       <Section title="Thermal / Electrical">
+        <NumField label="Target current" symbol="I" value={p.target} onChange={(v) => set({ target: v })} unit="A" allowZero hint="Enter a current to estimate a parallel-via count." />
         <NumField label="Temperature rise" symbol="ΔT" value={p.dT} onChange={(v) => set({ dT: v })} unit="°C" />
         <NumField label="Ambient" value={p.amb} onChange={(v) => set({ amb: v })} unit="°C" allowNegative />
         <NumField label="Line impedance" symbol="Z0" value={p.z0} onChange={(v) => set({ z0: v })} unit="Ω" />
@@ -43,11 +47,26 @@ export default function Via() {
       description="Plated through-hole via: current capacity, DC resistance, voltage drop, thermal resistance, parasitic capacitance and inductance, and the rise-time penalty on a high-speed line."
       onReset={reset}
       properties={properties}
-      status={r ? `Via: ${fmt(r.currentExt, 3)} A capacity, ${si(r.capPf * 1e-12, 'F', 3)}, ${si(r.indNh * 1e-9, 'H', 3)}` : 'Check the inputs'}
+      status={r ? `Via: ${count !== null ? `${count} suggested for ${fmt(p.target, 3)} A, ` : ''}${fmt(r.currentExt, 3)} A external-k estimate, ${si(r.capPf * 1e-12, 'F', 3)}, ${si(r.indNh * 1e-9, 'H', 3)}` : 'Check the inputs'}
       method={<Method />}
     >
       <Notes kind="error" items={errors} />
       <Notes items={notes} />
+      {r && <Panel title="Parallel-via estimate">
+        {count !== null && externalCount !== null ? <>
+          <div className="flex flex-wrap gap-8 px-2.5 py-2">
+            <Big label="Suggested starting count (internal k)" value={count} unit={count === 1 ? 'via' : 'vias'} />
+          </div>
+          <table className="tbl"><tbody>
+            <Result label="Target current" value={fmt(p.target, 4)} unit="A" />
+            <Result label="Current per via at suggested count" value={fmt(p.target / count, 4)} unit="A" />
+            <Result label="External-k comparison" value={externalCount} unit={externalCount === 1 ? 'via' : 'vias'} />
+            <Result label="Array DC resistance (equal sharing)" value={si(r.resistance / count, 'Ω')} />
+            <Result label="Array voltage drop at target current" value={si(p.target * r.resistance / count, 'V')} />
+          </tbody></table>
+          <p className="px-2.5 py-2 text-faint">First-pass estimate for identical vias sharing current equally. The IPC-2221 trace equation is applied to the barrel; IPC does not prescribe this via count. Verify plating, pad connections and current sharing in the actual layout.</p>
+        </> : <p className="px-2.5 py-2 text-muted">Enter a target current in Properties to see a starting via count for this geometry.</p>}
+      </Panel>}
       {r && (
         <div className="grid gap-3 xl:grid-cols-2">
           <Panel title="Current and Resistance">
@@ -88,8 +107,9 @@ export function Method() {
       <p>
         The barrel is a copper tube with inner diameter <i>d</i> (finished hole) and outer diameter <i>d</i> + 2<i>t</i>
         <sub>plating</sub>. Its cross-section goes into the IPC-2221 current formula with the external-layer constant, which is common practice. The internal constant is shown as a
-        conservative bound.
+        lower comparison estimate. Neither coefficient is a via-specific current rating.
       </p>
+      <p>For a target current, the first-pass count is ceil(target current / estimated current per via), using the lower internal-layer constant for the starting suggestion. It assumes equal sharing between identical vias. The external-layer count is shown for comparison. Via connections, nearby copper and heating need checking in the finished layout.</p>
       <p>The parasitic capacitance and inductance of a through via follow H. Johnson (dimensions in inches):</p>
       <div className="eq">
         <span className="no">(1)</span>
@@ -111,6 +131,7 @@ export function Method() {
       <ol>
         <li>H. Johnson, M. Graham, <i>High-Speed Digital Design</i>, Prentice Hall, 1993, ch. 7.</li>
         <li>IPC-2221B, Generic Standard on Printed Board Design, 2012.</li>
+        <li><a href="https://www.ti.com/lit/an/slva959b/slva959b.pdf" target="_blank" rel="noopener noreferrer">Texas Instruments, Best Practices for Board Layout of Motor Drivers</a>, section 3.1, via dimensions, quantity and layout.</li>
       </ol>
     </>
   );

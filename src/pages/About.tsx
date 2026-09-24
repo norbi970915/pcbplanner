@@ -39,10 +39,15 @@ export default function About() {
             number someone remembered.
           </p>
 
-          <h2>Your data stays in your browser</h2>
+          <h2>Saved work and analytics</h2>
           <p>
-            There is no account, no server-side calculation and no database. Every tool keeps its inputs in the page address, so any result is a link you can share or bookmark.
-            Projects and custom stackups are stored in your browser and can be exported to a file you keep. The site carries no analytics and no tracking scripts.
+            There is no account, no server-side calculation and no pcbplanner database. Every tool keeps its inputs in the page address, so any result is a link you can share or bookmark.
+            Projects and custom stackups are stored in your browser and can be exported to a file you keep.
+          </p>
+          <p>
+            With your permission, Google Analytics measures site visits and pages viewed. Google may receive your IP address, browser information and the page you visit, and may use
+            cookies for measurement. We do not use Analytics for advertising. Your choice is saved in this browser and you can change or withdraw it from Help &gt; Analytics preferences.
+            See <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">how Google uses information from sites using its services</a>.
           </p>
 
           <h2>Accuracy and limits</h2>

@@ -13,6 +13,22 @@ import { stackupStore, useStackups } from '../state/stackupStore';
 
 const TYPE_LABEL: Record<LayerKind, string> = { mask: 'Solder Mask', copper: 'Signal', dielectric: 'Dielectric' };
 const COLOR: Record<LayerKind, string> = { mask: 'var(--mask)', copper: 'var(--copper)', dielectric: 'var(--laminate)' };
+const SESSION = 'pcbplanner:stackup-manager:';
+const readSession = (key: string) => {
+  try { return sessionStorage.getItem(SESSION + key); } catch { return null; }
+};
+const writeSession = (key: string, value: string) => {
+  try { sessionStorage.setItem(SESSION + key, value); } catch { /* storage unavailable */ }
+};
+const clearSession = (key: string) => {
+  try { sessionStorage.removeItem(SESSION + key); } catch { /* storage unavailable */ }
+};
+function readDraft(current: Stackup): Stackup {
+  try {
+    const saved = JSON.parse(readSession(`draft:${current.id}`) || 'null');
+    return saved?.id === current.id && Array.isArray(saved.layers) ? saved as Stackup : current;
+  } catch { return current; }
+}
 /** Altium's default layer colours for the outer copper; inner layers use the copper colour. */
 const layerSwatch = (l: Layer, i: number, all: Layer[]) => {
   if (l.kind !== 'copper') return COLOR[l.kind];
@@ -88,15 +104,23 @@ export default function StackupTool() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { unit } = useSettings();
-  const id = params.get('id') ?? stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id;
+  const id = params.get('id') ?? readSession('selected') ?? stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id;
   const current = stackups.find((s) => s.id === id) ?? stackups[0];
-  const [draft, setDraft] = useState<Stackup>(current);
+  const [draft, setDraft] = useState<Stackup>(() => readDraft(current));
   useEffect(() => {
-    setDraft(current);
+    setDraft(readDraft(current));
   }, [current]);
+  useEffect(() => { writeSession('selected', current.id); }, [current.id]);
+  useEffect(() => {
+    if (draft.id !== current.id) return;
+    const key = `draft:${current.id}`;
+    if (JSON.stringify(draft) === JSON.stringify(current)) clearSession(key);
+    else writeSession(key, JSON.stringify(draft));
+  }, [current, draft]);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(current), [draft, current]);
-  const [tab, setTab] = useState<'stackup' | 'impedance'>('stackup');
+  const [tab, setTab] = useState<'stackup' | 'impedance'>(() => readSession('tab') === 'impedance' ? 'impedance' : 'stackup');
   const [sel, setSel] = useState<string | null>(null);
+  useEffect(() => { writeSession('tab', tab); }, [tab]);
   const setId = (v: string) => setParams({ id: v }, { replace: true });
 
   const update = (i: number, patch: Partial<Layer>) => setDraft((d) => ({ ...d, layers: d.layers.map((l, n) => (n === i ? { ...l, ...patch } : l)) }));
@@ -154,7 +178,14 @@ export default function StackupTool() {
   };
 
   // ---- impedance tab: widths for common targets on every signal layer ----
-  const [targets, setTargets] = useState({ se: 50, diff: 100, s: 0.127 });
+  const [targets, setTargets] = useState(() => {
+    try {
+      const saved = JSON.parse(readSession('targets') || 'null');
+      if (saved && [saved.se, saved.diff, saved.s].every((v) => typeof v === 'number' && Number.isFinite(v))) return saved as { se: number; diff: number; s: number };
+    } catch { /* use defaults */ }
+    return { se: 50, diff: 100, s: 0.127 };
+  });
+  useEffect(() => { writeSession('targets', JSON.stringify(targets)); }, [targets]);
   const [imp, setImp] = useState<Record<string, { se?: DesignResult | string; diff?: DesignResult | string }>>({});
   const impKey = JSON.stringify([draft.layers, targets]);
   useEffect(() => {

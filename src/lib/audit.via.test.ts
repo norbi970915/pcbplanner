@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { currentFor, IPC2221 } from './ipc2221';
-import { via } from './via';
+import { parallelViaCount, via } from './via';
 
 const IN = 25.4;
 
@@ -38,5 +38,11 @@ describe('audit: via (H. Johnson, High-Speed Digital Design, §7.4)', () => {
     const v = via({ holeMm: 0.3, platingMm: 0.025, lengthMm: 1.6, padMm: 0.6, antipadMm: 0.6, er: 4.3, dTC: 10, ambientC: 25, z0: 50 });
     expect(Number.isNaN(v.capPf)).toBe(true);
     expect(Number.isNaN(v.zVia)).toBe(true);
+  });
+
+  it('sizes parallel vias at and just above a capacity boundary', () => {
+    expect(parallelViaCount(3, 1)).toBe(3);
+    expect(parallelViaCount(3.0001, 1)).toBe(4);
+    expect(parallelViaCount(0.5, 1)).toBe(1);
   });
 });

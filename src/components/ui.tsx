@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { formatCopiedResult } from '../lib/copyResult';
 import { fromMm, LEN_UNITS, plain, toMm, type LenUnit } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { RESET_EVENT } from '../state/useUrlState';
@@ -270,16 +271,44 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   );
 }
 
+function CopyResultButton() {
+  const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  useEffect(() => {
+    if (status === 'idle') return;
+    const timer = setTimeout(() => setStatus('idle'), 1800);
+    return () => clearTimeout(timer);
+  }, [status]);
+  const copy = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const row = event.currentTarget.closest('[data-copy-result]');
+    const label = row?.querySelector('[data-copy-label]')?.textContent ?? '';
+    const value = row?.querySelector('[data-copy-value]')?.textContent ?? '';
+    const unit = row?.querySelector('[data-copy-unit]')?.textContent ?? '';
+    if (!label || !value) return;
+    try {
+      await navigator.clipboard.writeText(formatCopiedResult(label, value, unit));
+      setStatus('copied');
+    } catch {
+      setStatus('error');
+    }
+  };
+  const title = status === 'copied' ? 'Copied' : status === 'error' ? 'Could not copy' : 'Copy result';
+  return (
+    <button type="button" className="ml-1 inline-flex h-[18px] w-[18px] items-center justify-center align-middle text-faint hover:bg-hover hover:text-ink focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent" onClick={copy} title={title} aria-label={title}>
+      {status === 'copied' ? <span aria-hidden="true">✓</span> : status === 'error' ? <span aria-hidden="true" className="text-[var(--err-line)]">!</span> : <svg aria-hidden="true" width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"><rect x="7" y="7" width="10" height="11" rx="1" /><path d="M13 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg>}
+    </button>
+  );
+}
+
 /** Row of a result table: label | value | unit. */
 export function Result({ label, value, unit, strong, sub }: { label: ReactNode; value: ReactNode; unit?: ReactNode; strong?: boolean; sub?: ReactNode }) {
   return (
-    <tr>
+    <tr data-copy-result>
       <th scope="row" className="text-left font-normal">
-        {label}
+        <span data-copy-label>{label}</span>
         {sub && <div className="text-[11px] text-faint">{sub}</div>}
       </th>
-      <td className={`v ${strong ? 'font-semibold' : ''}`}>{value}</td>
-      <td className="w-[60px] text-muted">{unit}</td>
+      <td className={`v ${strong ? 'font-semibold' : ''}`}><span data-copy-value>{value}</span><CopyResultButton /></td>
+      <td className="w-[60px] text-muted"><span data-copy-unit>{unit}</span></td>
     </tr>
   );
 }
@@ -305,10 +334,10 @@ export function Notes({ items, kind = 'note' }: { items: string[]; kind?: 'note'
 /** Headline value in the document area. */
 export function Big({ label, value, unit, busy }: { label: ReactNode; value: ReactNode; unit: ReactNode; busy?: boolean }) {
   return (
-    <div className="min-w-[130px]">
-      <div className="text-muted">{label}</div>
+    <div className="min-w-[130px]" data-copy-result>
+      <div className="text-muted"><span data-copy-label>{label}</span><CopyResultButton /></div>
       <div className={`tnum text-[24px] font-semibold leading-tight ${busy ? 'opacity-60' : ''}`}>
-        {value} <span className="text-[13px] font-normal text-muted">{unit}</span>
+        <span data-copy-value>{value}</span> <span className="text-[13px] font-normal text-muted" data-copy-unit>{unit}</span>
       </div>
     </div>
   );
