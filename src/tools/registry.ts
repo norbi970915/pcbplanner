@@ -201,6 +201,14 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./Pdn')),
   },
   {
+    path: '/power-tree',
+    title: 'Power Tree Planner',
+    nav: 'Power tree',
+    group: 'Power supply',
+    summary: 'Budget source and regulator currents across cascaded rails and loads, estimate losses, check ratings and record power-up dependencies.',
+    component: lazy(() => import('./PowerTree')),
+  },
+  {
     path: '/buck-converter',
     title: 'Buck Converter Calculator',
     nav: 'Buck converter',

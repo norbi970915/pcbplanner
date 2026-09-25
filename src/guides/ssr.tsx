@@ -13,12 +13,14 @@ import DecouplingCapacitors from './DecouplingCapacitors';
 import PcieRouting from './PcieRouting';
 import Usb3Impedance from './Usb3Impedance';
 import About from '../pages/About';
+import Schematic from '../pages/Schematic';
 import Home from '../tools/Home';
 import ToolsIndex from '../tools/ToolsIndex';
 
 const PAGES: Record<string, () => React.JSX.Element> = {
   '/': Home,
   '/tools': ToolsIndex,
+  '/schematic': Schematic,
   '/guides': GuidesIndex,
   '/guides/pcb-crosstalk-3w-rule': CrosstalkSpacing,
   '/guides/pcb-via-current-capacity': ViaCurrent,

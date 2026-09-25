@@ -14,8 +14,9 @@ const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
+const { SCHEMATIC_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Schematic.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/', '/tools', '/guides', '/about', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -154,6 +155,24 @@ writeFileSync(
       name: 'PCB Design Calculators',
       url: `${SITE}/tools`,
       hasPart: TOOLS.map((tool) => ({ '@type': 'WebApplication', name: tool.title, url: SITE + tool.path })),
+    },
+  }),
+);
+writeFileSync(
+  'dist/schematic.html',
+  page({
+    path: '/schematic',
+    title: `Schematic Design Tools – ${APP}`,
+    description: SCHEMATIC_DESCRIPTION,
+    raw: guideHtml['/schematic'],
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Schematic Design Tools',
+      url: `${SITE}/schematic`,
+      description: SCHEMATIC_DESCRIPTION,
+      hasPart: ['/power-tree', '/buck-converter', '/boost-converter', '/ldo', '/feedback-divider', '/i2c-pullup', '/termination', '/crystal', '/rc-filter', '/current-sense-shunt', '/resistors', '/reactance', '/pdn']
+        .map((path) => ({ '@type': 'WebApplication', url: SITE + path })),
     },
   }),
 );

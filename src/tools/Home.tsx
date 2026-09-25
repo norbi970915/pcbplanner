@@ -13,7 +13,7 @@ const QUICK_TASKS = [
   { path: '/stackup-advisor', action: 'Choose a PCB stackup', detail: 'Filter by layers, thickness and routing needs' },
   { path: '/trace-width', action: 'Size a power trace', detail: 'Current, temperature rise and voltage drop' },
   { path: '/via', action: 'Check a via', detail: 'Current, resistance and parasitics' },
-  { path: '/buck-converter', action: 'Design a buck supply', detail: 'Inductor, capacitors and IC limits' },
+  { path: '/schematic', action: 'Plan a schematic', detail: 'Power tree, component values and interface checks' },
   { path: '/units', action: 'Convert units', detail: 'Copper weight, length, power and more' },
 ];
 const RECENT_GUIDES = [...GUIDES].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
@@ -47,8 +47,12 @@ export default function Home() {
     return () => window.removeEventListener('keydown', focusSearch);
   }, []);
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const matches = words.length ? TOOLS.filter(tool => {
+  const toolMatches = words.length ? TOOLS.filter(tool => {
     const text = `${tool.nav} ${tool.title} ${tool.group} ${tool.summary}`.toLowerCase();
+    return words.every(word => text.includes(word));
+  }) : [];
+  const guideMatches = words.length ? GUIDES.filter(guide => {
+    const text = `${guide.title} ${guide.seoTitle} ${guide.description}`.toLowerCase();
     return words.every(word => text.includes(word));
   }) : [];
 
@@ -60,7 +64,7 @@ export default function Home() {
           <h1 className="text-[18px] font-semibold">{APP_NAME}</h1>
           <p className="mt-1 max-w-[95ch] text-muted">PCB design calculators for stackups, signals, power and components. Inputs stay available while this app window is open, and result URLs are shareable. <Link to="/about">About pcbplanner</Link></p>
           <label className="mt-3 block max-w-[560px]">
-            <span className="mb-1 flex items-center justify-between font-semibold"><span>What do you need to calculate?</span><span className="hidden font-normal text-faint sm:inline">Press / to search</span></span>
+            <span className="mb-1 flex items-center justify-between font-semibold"><span>Find a tool or guide</span><span className="hidden font-normal text-faint sm:inline">Press / to search</span></span>
             <input ref={searchRef} className="fld w-full" style={{ height: 32 }} type="search" value={query} onChange={event => setQuery(event.target.value)}
               onKeyDown={event => { if (event.key === 'Escape') { setQuery(''); event.currentTarget.blur(); } }}
               placeholder="Try impedance, via current, USB, buck..." />
@@ -68,17 +72,33 @@ export default function Home() {
         </div>
       </section>
 
-      {words.length ? <section id="home-tool-results" className="mt-3 border border-line bg-sheet">
-        <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Search results</span><span role="status" aria-live="polite" className="font-normal text-muted">{matches.length} {matches.length === 1 ? 'tool' : 'tools'}</span></h2>
-        {matches.length ? <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
-          {matches.map(tool => <li key={tool.path} className="border-t border-line md:border-r">
-            <Link to={tool.path} className="block h-full px-3 py-2 no-underline hover:bg-hover">
-              <div className="font-semibold text-accent-ink">{tool.nav}</div>
-              <div className="text-faint">{tool.group}</div>
-              <div className="mt-0.5 line-clamp-2 text-muted">{tool.summary}</div>
-            </Link>
-          </li>)}
-        </ul> : <p className="px-3 py-3 text-muted">No matching tools. Try a broader term or <Link to="/tools">browse all tools</Link>.</p>}
+      {words.length ? <section id="home-search-results" className="mt-3 border border-line bg-sheet">
+        <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Search results</span><span role="status" aria-live="polite" className="font-normal text-muted">{toolMatches.length} {toolMatches.length === 1 ? 'tool' : 'tools'} · {guideMatches.length} {guideMatches.length === 1 ? 'guide' : 'guides'}</span></h2>
+        {toolMatches.length > 0 && <>
+          <h3 className="border-t border-line px-3 py-1.5 font-semibold">Tools</h3>
+          <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
+            {toolMatches.map(tool => <li key={tool.path} className="border-t border-line md:border-r">
+              <Link to={tool.path} className="block h-full px-3 py-2 no-underline hover:bg-hover">
+                <div className="font-semibold text-accent-ink">{tool.nav}</div>
+                <div className="text-faint">{tool.group}</div>
+                <div className="mt-0.5 line-clamp-2 text-muted">{tool.summary}</div>
+              </Link>
+            </li>)}
+          </ul>
+        </>}
+        {guideMatches.length > 0 && <>
+          <h3 className="border-t border-line px-3 py-1.5 font-semibold">Guides</h3>
+          <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
+            {guideMatches.map(guide => <li key={guide.path} className="border-t border-line md:border-r">
+              <Link to={guide.path} className="block h-full px-3 py-2 no-underline hover:bg-hover">
+                <div className="font-semibold text-accent-ink">{guide.title}</div>
+                <div className="text-faint">Guide · {guide.minutes} min read</div>
+                <div className="mt-0.5 line-clamp-2 text-muted">{guide.description}</div>
+              </Link>
+            </li>)}
+          </ul>
+        </>}
+        {!toolMatches.length && !guideMatches.length && <p className="px-3 py-3 text-muted">No matching tools or guides. Try a broader term, <Link to="/tools">browse all tools</Link> or <Link to="/guides">browse all guides</Link>.</p>}
       </section> : <>
         <section className="mt-3 border border-line bg-sheet">
           <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Quick access</span><Link to="/tools" className="font-normal">All {TOOLS.length} tools →</Link></h2>

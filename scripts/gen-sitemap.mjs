@@ -8,6 +8,7 @@ const guides = readFileSync('src/guides/registry.ts', 'utf8');
 const paths = [
   '/',
   '/tools',
+  '/schematic',
   ...[...registry.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1]),
   '/guides',
   ...[...guides.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1]),

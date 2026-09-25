@@ -283,6 +283,21 @@ input[type='radio'] {
   margin: 3px 0;
 }
 
+@media (max-width: 639px) {
+  .power-tree-fields > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .power-tree-fields > div > label {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .power-tree-fields > div > div {
+    justify-content: flex-start;
+  }
+}
+
 /* ---------- long-form help text ---------- */
 .prose-doc {
   font-size: 13px;

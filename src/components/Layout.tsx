@@ -119,7 +119,7 @@ export function Layout() {
       const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
       if (!gtag) return;
       const title = toolByPath(path)?.title ?? GUIDES.find((guide) => guide.path === path)?.seoTitle
-        ?? (path === '/' ? 'PCB impedance, stackup and design calculators' : path === '/tools' ? 'All PCB Tools' : path === '/guides' ? 'PCB Design Guides' : path === '/about' ? `About ${APP_NAME}` : document.title);
+        ?? (path === '/' ? 'PCB impedance, stackup and design calculators' : path === '/tools' ? 'All PCB Tools' : path === '/schematic' ? 'Schematic Design' : path === '/guides' ? 'PCB Design Guides' : path === '/about' ? `About ${APP_NAME}` : document.title);
       const pageTitle = title.endsWith(` – ${APP_NAME}`) ? title : `${title} – ${APP_NAME}`;
       let pageReferrer = lastPageView.current ?? document.referrer;
       if (pageReferrer) {
@@ -138,7 +138,7 @@ export function Layout() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [path, analyticsChoice]);
-  const known = path === '/' || path === '/tools' || !!toolByPath(path);
+  const known = path === '/' || path === '/tools' || path === '/schematic' || !!toolByPath(path);
   // article pages (guides) have no inputs: no Properties panel
   const isDoc = path === '/guides' || path.startsWith('/guides/');
   useEffect(() => {
@@ -197,7 +197,7 @@ export function Layout() {
   };
   const shell = useMemo(() => ({ propsEl, statusEl, headEl, setActions }), [propsEl, statusEl, headEl, setActions]);
   const keyboardTab = tabs.includes(path) ? path : tabs[tabs.length - 1];
-  const tabTitle = (p: string) => (p === '/' ? 'Home' : p === '/tools' ? 'All tools' : toolByPath(p)?.nav ?? p);
+  const tabTitle = (p: string) => (p === '/' ? 'Home' : p === '/tools' ? 'All tools' : p === '/schematic' ? 'Schematic design' : toolByPath(p)?.nav ?? p);
   const tabColor = (p: string) => (p === '/' ? '#8a8a8a' : GROUP_COLORS[toolByPath(p)?.group ?? ''] ?? '#8a8a8a');
 
   const menuProps = (name: string) => ({
@@ -268,6 +268,7 @@ export function Layout() {
           </Menu>
           <Menu {...menuProps('Tools')}>
             <Item onClick={run(() => navigate('/tools'))}>Browse all tools...</Item>
+            <Item onClick={run(() => navigate('/schematic'))}>Schematic design...</Item>
             <div className="menu-sep" />
             {GROUPS.map((g, gi) => (
               <div key={g}>
@@ -288,6 +289,9 @@ export function Layout() {
             <div className="menu-sep" />
             <Item onClick={run(() => setConsentOpen(true))}>Analytics preferences</Item>
           </Menu>
+          <Link to="/schematic" className={`hidden h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 sm:flex ${path === '/schematic' ? 'bg-sel' : ''}`}>
+            Schematic
+          </Link>
           <Link to="/guides" className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}>
             Guides
           </Link>
@@ -350,6 +354,7 @@ export function Layout() {
               <div className="flex h-[24px] items-center border-b border-line bg-panel-head px-2 font-semibold">Tools</div>
               <nav className="min-h-0 flex-1 overflow-y-auto py-1" aria-label="Tools">
                 <Link to="/tools" className={`mb-1 block px-2 py-[4px] font-semibold no-underline ${path === '/tools' ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>Browse all tools</Link>
+                <Link to="/schematic" className={`mb-1 block px-2 py-[4px] font-semibold no-underline ${path === '/schematic' ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>Schematic design</Link>
                 {GROUPS.map((g) => (
                   <div key={g} className="mb-1">
                     <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
@@ -386,7 +391,7 @@ export function Layout() {
           <div ref={setHeadEl} className="order-first shrink-0 bg-doc lg:hidden" />
 
           {/* on narrow screens, calculator inputs sit above their results */}
-          {panels.props && path !== '/' && path !== '/tools' && (
+          {panels.props && path !== '/' && path !== '/tools' && path !== '/schematic' && (
             <aside
               className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
             >

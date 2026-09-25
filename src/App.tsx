@@ -9,6 +9,7 @@ import { TOOLS } from './tools/registry';
 const GuidesIndex = lazy(() => import('./guides/GuidesIndex'));
 const ToolsIndex = lazy(() => import('./tools/ToolsIndex'));
 const About = lazy(() => import('./pages/About'));
+const Schematic = lazy(() => import('./pages/Schematic'));
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
               <Route key={t.path} path={t.path} element={<t.component />} />
             ))}
             <Route path="/tools" element={<ToolsIndex />} />
+            <Route path="/schematic" element={<Schematic />} />
             <Route path="/guides" element={<GuidesIndex />} />
             <Route path="/about" element={<About />} />
             {GUIDES.map((g) => (
