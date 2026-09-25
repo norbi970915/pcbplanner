@@ -14,6 +14,7 @@ for (const [name, size] of [
   ['icon-512.png', 512],
   ['apple-touch-icon.png', 180],
   ['favicon-32.png', 32],
+  ['favicon-96.png', 96],
 ]) {
   await page.setViewportSize({ width: size, height: size });
   await page.setContent(`<html><body style="margin:0;background:transparent"><img src="${dataUrl}" width="${size}" height="${size}" style="display:block"></body></html>`);

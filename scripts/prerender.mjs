@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 
 const SITE = 'https://www.pcbplanner.com';
-const APP = 'pcbplanner';
+const APP = 'PCB Planner';
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { TOOLS, GROUPS } = await vite.ssrLoadModule('/src/tools/registry.ts');

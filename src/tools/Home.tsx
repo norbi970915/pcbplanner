@@ -62,7 +62,7 @@ export default function Home() {
         <div className="flex h-[24px] items-center bg-panel-head px-2 font-semibold">Home</div>
         <div className="px-4 py-3">
           <h1 className="text-[18px] font-semibold">{APP_NAME}</h1>
-          <p className="mt-1 max-w-[95ch] text-muted">PCB design calculators for stackups, signals, power and components. Inputs stay available while this app window is open, and result URLs are shareable. <Link to="/about">About pcbplanner</Link></p>
+          <p className="mt-1 max-w-[95ch] text-muted">PCB design calculators for stackups, signals, power and components. Inputs stay available while this app window is open, and result URLs are shareable. <Link to="/about">About PCB Planner</Link></p>
           <label className="mt-3 block max-w-[560px]">
             <span className="mb-1 flex items-center justify-between font-semibold"><span>Find a tool or guide</span><span className="hidden font-normal text-faint sm:inline">Press / to search</span></span>
             <input ref={searchRef} className="fld w-full" style={{ height: 32 }} type="search" value={query} onChange={event => setQuery(event.target.value)}

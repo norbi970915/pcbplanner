@@ -4,7 +4,7 @@ import { PRESETS } from '../lib/stackups';
 import { TOOLS } from '../tools/registry';
 
 export const ABOUT_DESCRIPTION =
-  'How pcbplanner produces its numbers: a 2D electrostatic field solver for impedance and loss, manufacturer datasheets and published standards for every table, and everything running in your browser with no account and no database.';
+  'How PCB Planner produces its numbers: a 2D electrostatic field solver for impedance and loss, manufacturer datasheets and published standards for every table, and everything running in your browser with no account and no database.';
 
 export default function About() {
   useDocumentMeta(`About ${APP_NAME}`, ABOUT_DESCRIPTION);
