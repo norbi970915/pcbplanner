@@ -305,6 +305,22 @@ export const TOOLS: ToolDef[] = [
     component: lazy(() => import('./I2cPullup')),
   },
   {
+    path: '/logic-levels',
+    title: 'Logic-Level Compatibility Checker',
+    nav: 'Logic levels',
+    group: 'Electronics',
+    summary: 'Check worst-case VOH/VOL against VIH/VIL, static noise margins and receiver input-voltage limits.',
+    component: lazy(() => import('./LogicLevels')),
+  },
+  {
+    path: '/adc-input',
+    title: 'ADC Input Settling Checker',
+    nav: 'ADC input',
+    group: 'Electronics',
+    summary: 'Check source and RC filter settling into a SAR ADC sample capacitor during acquisition, with an optional filter-node recovery check.',
+    component: lazy(() => import('./AdcInput')),
+  },
+  {
     path: '/current-sense-shunt',
     title: 'Current-Sense Shunt Selector',
     nav: 'Current-sense shunt',

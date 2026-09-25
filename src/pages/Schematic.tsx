@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../components/ToolPage';
 
-export const SCHEMATIC_DESCRIPTION = 'Plan PCB schematic power rails and loads, then check regulators, interface pull-ups, filters, crystal capacitors and component values with connected design calculators.';
+export const SCHEMATIC_DESCRIPTION = 'Plan PCB schematic power rails and loads, then check logic-level compatibility, ADC input settling, pull-ups, filters and component values.';
 
 const SECTIONS = [
   {
@@ -20,6 +20,7 @@ const SECTIONS = [
     description: 'Check the small circuits around IC pins before choosing footprints.',
     tools: [
       { path: '/i2c-pullup', name: 'I²C pull-up', detail: 'Rise time, bus capacitance and resistor range' },
+      { path: '/logic-levels', name: 'Logic-level compatibility', detail: 'Worst-case HIGH/LOW margins and receiver voltage limits' },
       { path: '/termination', name: 'Signal termination', detail: 'Source and load termination with preferred resistor values' },
       { path: '/crystal', name: 'Crystal load capacitors', detail: 'Load capacitance and frequency offset' },
       { path: '/rc-filter', name: 'RC filters', detail: 'Cutoff, impedance and transient response' },
@@ -30,6 +31,7 @@ const SECTIONS = [
     description: 'Choose values and check power or sensing trade-offs.',
     tools: [
       { path: '/current-sense-shunt', name: 'Current-sense shunt', detail: 'Burden voltage, power and first-order error' },
+      { path: '/adc-input', name: 'ADC input settling', detail: 'Source impedance, RC filter and sample-capacitor acquisition' },
       { path: '/resistors', name: 'Resistor tools', detail: 'Dividers, parallel combinations and preferred values' },
       { path: '/reactance', name: 'Reactance and resonance', detail: 'Capacitor, inductor and LC behaviour' },
       { path: '/pdn', name: 'PDN impedance', detail: 'Target impedance and decoupling resonance' },

@@ -171,7 +171,7 @@ writeFileSync(
       name: 'Schematic Design Tools',
       url: `${SITE}/schematic`,
       description: SCHEMATIC_DESCRIPTION,
-      hasPart: ['/power-tree', '/buck-converter', '/boost-converter', '/ldo', '/feedback-divider', '/i2c-pullup', '/termination', '/crystal', '/rc-filter', '/current-sense-shunt', '/resistors', '/reactance', '/pdn']
+      hasPart: ['/power-tree', '/buck-converter', '/boost-converter', '/ldo', '/feedback-divider', '/i2c-pullup', '/logic-levels', '/termination', '/crystal', '/rc-filter', '/current-sense-shunt', '/adc-input', '/resistors', '/reactance', '/pdn']
         .map((path) => ({ '@type': 'WebApplication', url: SITE + path })),
     },
   }),

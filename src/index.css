@@ -284,16 +284,19 @@ input[type='radio'] {
 }
 
 @media (max-width: 639px) {
-  .power-tree-fields > div {
+  .power-tree-fields > div,
+  .logic-level-fields > div {
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
-  .power-tree-fields > div > label {
+  .power-tree-fields > div > label,
+  .logic-level-fields > div > label {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
   }
-  .power-tree-fields > div > div {
+  .power-tree-fields > div > div,
+  .logic-level-fields > div > div {
     justify-content: flex-start;
   }
 }
