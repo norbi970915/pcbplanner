@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CrossSection } from '../components/CrossSection';
 import { FieldMap } from '../components/FieldMap';
@@ -8,13 +8,14 @@ import { StackupPicker } from '../components/StackupPicker';
 import { microstripHJ, striplineAsym, striplineWheeler } from '../lib/closedform';
 import type { Accuracy, Geometry } from '../lib/fieldsolver';
 import { delayPsPerMm, lineLC, nextCoefficient } from '../lib/signal';
-import { runSolver, useFieldSolve } from '../lib/solverClient';
+import { runPooled, runSolver, useFieldSolve } from '../lib/solverClient';
 import { geometryForLayer, type Stackup } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
 import { PlyEditor } from '../components/PlyEditor';
 import { LAMINATES, laminateById } from '../data/laminates';
 import { averageDk, formatPlies, parsePlies, pliesThickness, slabsAbove, slabsBelow } from '../lib/plies';
 import { djordjevicSarkar } from '../lib/dielectric';
+import { impedanceToleranceCorners } from '../lib/impedanceTolerance';
 import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
 
@@ -42,6 +43,12 @@ const DEFAULTS = {
   mat: 'custom',
   mat2: 'custom',
   fq: 1,
+  tolEnabled: false,
+  tolW: 0,
+  tolH: 0,
+  tolDk: 0,
+  tolS: 0,
+  tolLimit: 10,
   dl: '', // stacked dielectric below the trace: "t:dk,…" from the plane up to the trace
   dl2: '', // stacked dielectric above the trace, from the trace outward
 };
@@ -135,6 +142,46 @@ export default function Impedance() {
   const { geom, errors } = useMemo(() => buildGeometry(p), [p]);
   const solveState = useFieldSolve(geom, { accuracy: acc, field: true, even: true });
   const r = geom ? solveState.result : null;
+  const tolerance = useMemo(() => {
+    if (!raw.tolEnabled || !geom) return { corners: null, error: null };
+    if (!(raw.target > 0) || !(raw.tolLimit >= 0 && raw.tolLimit < 100)) {
+      return { corners: null, error: 'Target impedance must be positive and the allowed tolerance must be from 0 to less than 100 %.' };
+    }
+    if (!(raw.tolW > 0 || raw.tolH > 0 || raw.tolDk > 0 || (geom.diff && raw.tolS > 0))) {
+      return { corners: null, error: 'Enter at least one non-zero fabrication variation to check.' };
+    }
+    try {
+      return { corners: impedanceToleranceCorners(geom, { widthMm: raw.tolW, heightPct: raw.tolH, dkPct: raw.tolDk, spacingMm: raw.tolS }), error: null };
+    } catch (error) {
+      return { corners: null, error: error instanceof Error ? error.message : 'Check the fabrication variations.' };
+    }
+  }, [geom, raw.tolEnabled, raw.target, raw.tolLimit, raw.tolW, raw.tolH, raw.tolDk, raw.tolS]);
+  const toleranceKey = JSON.stringify([tolerance.corners, acc]);
+  const [toleranceState, setToleranceState] = useState<{ key: string; values: number[]; error: string | null }>({ key: '', values: [], error: null });
+  const toleranceSeq = useRef(0);
+  useEffect(() => {
+    const sequence = ++toleranceSeq.current;
+    if (!tolerance.corners) return;
+    const corners = tolerance.corners;
+    const timer = setTimeout(() => {
+      void Promise.all(corners.map((corner) => runPooled({ type: 'solve', geom: corner, opts: { accuracy: acc, field: false, even: false } }))).then((responses) => {
+        if (sequence !== toleranceSeq.current) return;
+        const values = responses.map((response) => response.ok && response.result
+          ? (geom!.diff ? response.result.zdiff : response.result.se?.z) ?? NaN
+          : NaN);
+        const valid = values.every(Number.isFinite);
+        setToleranceState({
+          key: toleranceKey,
+          values: valid ? values : [],
+          error: valid ? null : 'A fabrication corner could not be solved. Reduce the variation or check the geometry.',
+        });
+      }).catch(() => {
+        if (sequence === toleranceSeq.current) setToleranceState({ key: toleranceKey, values: [], error: 'The fabrication corners could not be solved. Try again with smaller variations.' });
+      });
+    }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toleranceKey]);
 
   const z = r ? (diff ? r.zdiff : r.se?.z) : undefined;
   const eeff = r ? (diff ? r.odd?.eeff : r.se?.eeff) : undefined;
@@ -188,6 +235,12 @@ export default function Impedance() {
   const toUnit = (mm: number) => fromMm(mm, unit);
   const busy = solveState.busy || solving !== null;
   const dev = z && p.target > 0 ? (100 * (z - p.target)) / p.target : null;
+  const toleranceValues = toleranceState.key === toleranceKey && !busy && z ? [...toleranceState.values, z] : [];
+  const toleranceMin = toleranceValues.length ? Math.min(...toleranceValues) : null;
+  const toleranceMax = toleranceValues.length ? Math.max(...toleranceValues) : null;
+  const toleranceLowLimit = p.target * (1 - raw.tolLimit / 100);
+  const toleranceHighLimit = p.target * (1 + raw.tolLimit / 100);
+  const tolerancePass = toleranceMin !== null && toleranceMax !== null && toleranceMin >= toleranceLowLimit && toleranceMax <= toleranceHighLimit;
 
   const properties = (
     <>
@@ -311,6 +364,17 @@ export default function Impedance() {
         />
         <p className="text-faint">Normal agrees with a commercial 2D solver to within about 1 % on typical stackups. Use High to confirm a final design.</p>
       </Section>
+      <Section title="Fabrication Tolerance" defaultOpen={false}>
+        <Check label="Check impedance variation" checked={raw.tolEnabled} onChange={(tolEnabled) => set({ tolEnabled })} />
+        {raw.tolEnabled && <>
+          <LenField label="Trace width ±" value={raw.tolW} onChange={(tolW) => set({ tolW })} allowZero />
+          {diff && <LenField label="Pair spacing ±" value={raw.tolS} onChange={(tolS) => set({ tolS })} allowZero />}
+          <NumField label="Dielectric height ±" value={raw.tolH} onChange={(tolH) => set({ tolH })} unit="%" allowZero />
+          <NumField label="Dielectric Dk ±" value={raw.tolDk} onChange={(tolDk) => set({ tolDk })} unit="%" allowZero />
+          <NumField label="Allowed impedance ±" value={raw.tolLimit} onChange={(tolLimit) => set({ tolLimit })} unit="%" allowZero />
+          <p className="text-faint">Enter your fabricator's limits. A zero variation is ignored. Dielectric height scales every ply; Dk changes every dielectric by the entered percentage.</p>
+        </>}
+      </Section>
     </>
   );
 
@@ -402,6 +466,19 @@ export default function Impedance() {
           </div>
         </Panel>
       </div>
+      {raw.tolEnabled && <Panel title="Fabrication Tolerance Check" className="mt-3">
+        {tolerance.error ? <p className="px-3 py-3 text-muted">{tolerance.error}</p> : toleranceState.error && toleranceState.key === toleranceKey ? <p className="px-3 py-3 text-[var(--err-line)]">{toleranceState.error}</p> : toleranceMin === null || toleranceMax === null ? <p className="px-3 py-3 text-muted">Checking {tolerance.corners?.length ?? 0} fabrication corners…</p> : <>
+          <div className="flex flex-wrap gap-8 px-3 py-3">
+            <Big label="Estimated low" value={fmt(toleranceMin, 4)} unit="Ω" />
+            <Big label="Estimated high" value={fmt(toleranceMax, 4)} unit="Ω" />
+          </div>
+          <table className="tbl"><tbody>
+            <Result label="Allowed band" value={`${fmt(toleranceLowLimit, 4)}–${fmt(toleranceHighLimit, 4)} Ω`} sub={`${fmt(p.target, 4)} Ω ±${fmt(raw.tolLimit, 3)} %`} />
+            <Result label="Corner check" value={tolerancePass ? 'Within allowed band' : 'Outside allowed band'} strong sub={`${tolerance.corners?.length ?? 0} combinations of the entered endpoints`} />
+          </tbody></table>
+          <p className="px-3 py-2 text-faint">Screening estimate from the field solver at each endpoint combination. Copper thickness, etch, solder mask and coplanar gap stay fixed. Confirm limits and final impedance with your fabricator.</p>
+        </>}
+      </Panel>}
     </ToolPage>
   );
 }
@@ -462,6 +539,7 @@ export function Method() {
         Laminate εr depends on frequency and resin content, and etching changes the width, so fabricators quote impedance to ±10 % (±5 % on request).
       </p>
       <h3>Tips</h3>
+      <p>The optional fabrication tolerance check solves every combination of the entered trace-width, dielectric-height, Dk and pair-spacing endpoints. It reports the lowest and highest solved impedance against the allowed band around the target. It is an endpoint screening estimate, not a statistical yield or a fabrication guarantee; thickness, etch, mask and coplanar-gap variations are held fixed. Ask the fabricator for realistic variation limits. <a href="https://www.rogerscorp.com/blog/2017/the-role-of-pcb-materials-in-printed-circuit-impedance" target="_blank" rel="noreferrer">Rogers explains how material and geometry variation affect impedance</a>.</p>
       <ul>
         <li>Use the εr your fabricator quotes for the specific prepreg or core and the signal frequency, not the generic 4.5 for FR-4.</li>
         <li>Solder mask lowers the impedance of surface traces by a few ohms. Leave it switched on for outer layers.</li>
