@@ -11,6 +11,7 @@ import { evaluateInterface, freqLabel, interfaceLossRequest, rateLabel, type Che
 import type { LossRequest } from '../lib/solver.worker';
 import { runPooled, runSolver } from '../lib/solverClient';
 import { geometryForLayer, type Layer, type StackupGeometry } from '../lib/stackups';
+import { formatPlies } from '../lib/plies';
 import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { useStackups } from '../state/stackupStore';
@@ -187,6 +188,54 @@ export default function InterfaceRules() {
   if (!(p.len > 0)) errors.push('Route length must be greater than 0.');
   if (error) errors.push(error);
 
+  const handoff = sg && spec && line && !busy && !errors.length ? (() => {
+    const laminate = laminateById(p.mat) ?? LAMINATES[0];
+    const foil = FOILS.find((item) => item.id === p.foil) ?? FOILS[0];
+    const mask = maskById('psr4000bn');
+    const shared = new URLSearchParams({
+      type: sg.type, mode: spec.z.kind === 'diff' ? 'diff' : 'se',
+      w: String(line.w), s: String(line.s ?? p.sfix),
+      h: String(sg.h), er: String(sg.er), t: String(sg.t), etch: String(p.etch), acc: p.acc,
+      mat: 'custom',
+    });
+    if (sg.below && sg.below.length > 1) shared.set('dl', formatPlies(sg.below.map((ply) => ({ t: ply.t, dk: ply.er }))));
+    if (sg.h2 !== undefined) {
+      shared.set('h2', String(sg.h2));
+      shared.set('er2', String(sg.er2 ?? sg.er));
+      shared.set('mat2', 'custom');
+    }
+    if (sg.above && sg.above.length > 1) shared.set('dl2', formatPlies(sg.above.map((ply) => ({ t: ply.t, dk: ply.er }))));
+    if (sg.type === 'microstrip') {
+      shared.set('mask', sg.mask ? '1' : '0');
+      if (sg.mask) {
+        shared.set('c1', String(sg.mask.c1));
+        shared.set('c2', String(sg.mask.c2));
+        shared.set('erm', String(sg.mask.er));
+      }
+    }
+    const impedance = new URLSearchParams(shared);
+    impedance.set('target', String(spec.z.target));
+    impedance.set('fq', String(spec.nyquistGHz));
+    const loss = new URLSearchParams(shared);
+    loss.set('len', String(p.len));
+    loss.set('f', String(spec.nyquistGHz));
+    loss.set('fmax', String(Math.min(200, Math.max(20, spec.nyquistGHz * 2))));
+    loss.set('df', String(laminate.df));
+    loss.set('f0', String(laminate.fGHz));
+    loss.set('df2', String(laminate.df));
+    loss.set('f02', String(laminate.fGHz));
+    loss.set('foil', foil.id);
+    loss.set('rq', String(foil.rq));
+    if (sg.below && sg.below.length > 1) loss.set('dl', formatPlies(sg.below.map((ply) => ({ t: ply.t, dk: ply.er, df: laminate.df }))));
+    if (sg.above && sg.above.length > 1) loss.set('dl2', formatPlies(sg.above.map((ply) => ({ t: ply.t, dk: ply.er, df: laminate.df }))));
+    if (sg.mask && mask) {
+      loss.set('mmat', 'custom');
+      loss.set('dfm', String(mask.df));
+      loss.set('fm', String(mask.fGHz));
+    }
+    return { impedance: `/impedance?${impedance}`, loss: `/trace-loss?${loss}` };
+  })() : null;
+
   const properties = (
     <>
       <Section title="Interface">
@@ -345,6 +394,13 @@ export default function InterfaceRules() {
               </table>
             )}
           </Panel>
+          {handoff && <Panel title="Continue the Design" className="mt-3">
+            <div className="flex flex-wrap gap-2 px-3 py-3">
+              <Link className="btn no-underline" to={handoff.impedance}>Check this trace in Impedance</Link>
+              <Link className="btn no-underline" to={handoff.loss}>See this route in Trace Loss</Link>
+            </div>
+            <p className="px-3 pb-3 text-faint">Carries the solved width and spacing, stackup geometry, route length and Nyquist frequency. Check the laminate loss data and foil against your fab materials.</p>
+          </Panel>}
           <Panel title="Which layer to route it on" className="mt-3">
             {scan ? (
               <table className="tbl">

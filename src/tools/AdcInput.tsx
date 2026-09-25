@@ -32,6 +32,7 @@ export default function AdcInput() {
     ...(p.checkRecovery && result.recoveryPass === null ? ['No filter-node recovery calculation is needed when there is no shunt capacitor or the source is ideal.'] : []),
     'This is a first-order SAR ADC estimate for one worst-case voltage step. Confirm the input model and timing against the chosen ADC datasheet.',
   ] : [];
+  const rcLink = `/rc-filter?${new URLSearchParams({ kind: 'lowpass', mode: 'analyse', rs: String(sourceOhms), r: String(p.filterOhms), c: String(p.filterFarads) })}`;
 
   return <ToolPage title="ADC Input Settling Checker"
     description="Check whether a source, optional RC input filter and SAR ADC sampling capacitor settle within the acquisition window."
@@ -91,7 +92,7 @@ export default function AdcInput() {
       </Panel>
       <Panel title="Continue the Design">
         <div className="flex flex-wrap gap-2 px-3 py-3">
-          <Link className="btn no-underline" to="/rc-filter">Design the RC filter</Link>
+          <Link className="btn no-underline" to={p.filterOhms > 0 && p.filterFarads > 0 ? rcLink : '/rc-filter'}>{p.filterOhms > 0 && p.filterFarads > 0 ? 'Analyse this RC filter' : 'Design an RC filter'}</Link>
           <Link className="btn no-underline" to="/resistors">Choose divider resistors</Link>
           <Link className="btn no-underline" to="/power-tree">Check supply rails</Link>
         </div>

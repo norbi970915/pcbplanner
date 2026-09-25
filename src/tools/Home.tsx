@@ -63,6 +63,7 @@ export default function Home() {
         <div className="px-4 py-3">
           <h1 className="text-[18px] font-semibold">{APP_NAME}</h1>
           <p className="mt-1 max-w-[95ch] text-muted">PCB design calculators for stackups, signals, power and components. Inputs stay available while this app window is open, and result URLs are shareable. <Link to="/about">About PCB Planner</Link></p>
+          <p className="mt-2 text-muted">New here? <Link to="/impedance?type=microstrip&mode=se&mask=0&w=0.27&t=0.035&h=0.15&er=4.2&etch=0.0127&target=50">Try a 50 Ω microstrip example →</Link> with a ready-to-edit 0.27 mm trace over a 0.15 mm dielectric.</p>
           <label className="mt-3 block max-w-[560px]">
             <span className="mb-1 flex items-center justify-between font-semibold"><span>Find a tool or guide</span><span className="hidden font-normal text-faint sm:inline">Press / to search</span></span>
             <input ref={searchRef} className="fld w-full" style={{ height: 32 }} type="search" value={query} onChange={event => setQuery(event.target.value)}
