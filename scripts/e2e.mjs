@@ -79,8 +79,9 @@ function track(page) {
 }
 
 const PROPS = 'aside.order-first';
-// "∞ (ideal)" is a deliberate label for lossless LC results; any other ∞ is a failure
-const BAD_RE = /\bNaN\b|Infinity|\bundefined\b|\bnull\b|\[object|∞(?! \(ideal\))/;
+// "∞ (ideal)" is a deliberate label for lossless LC results, and ε∞ (high-frequency permittivity)
+// and "→ ∞" (a limit) are notation in the method text; any other ∞ is a failure
+const BAD_RE = /\bNaN\b|Infinity|\bundefined\b|\bnull\b|\[object|(?<!ε|→ )∞(?! \(ideal\))/;
 
 /** Text of the document area + status bar (+ properties panel labels and input values). */
 const scanText = (page) =>
