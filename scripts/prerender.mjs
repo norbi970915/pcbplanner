@@ -2,7 +2,8 @@
 // link previews get the right title, description, canonical URL, Open Graph tags, JSON-LD and
 // readable content without running JavaScript. React replaces the static content on load.
 // Netlify, Cloudflare Pages, GitHub Pages and `vite preview` all serve /impedance from impedance.html.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 
 const SITE = 'https://www.pcbplanner.com';
@@ -15,8 +16,9 @@ const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
 const { SCHEMATIC_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Schematic.tsx');
+const { NOT_FOUND_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/NotFound.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/404', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -38,6 +40,16 @@ function toolDescription(tool) {
 
 const template = readFileSync('dist/index.html', 'utf8');
 
+/** The page's own link-preview image from scripts/render-og.mjs, versioned by content; else the site image. */
+function ogImage(path) {
+  const file = `og/${path.slice(1).replace(/\//g, '-')}.png`;
+  if (!existsSync(`public/${file}`)) {
+    if (path !== '/' && path !== '/404') console.warn(`prerender: no preview image for ${path}, run scripts/render-og.mjs`);
+    return `${SITE}/og-image.png?v=3`;
+  }
+  return `${SITE}/${file}?v=${createHash('sha1').update(readFileSync(`public/${file}`)).digest('hex').slice(0, 8)}`;
+}
+
 function page({ path, title, description, h1, body, jsonLd, raw }) {
   const url = SITE + path;
   const set = (html, re, value) => {
@@ -53,6 +65,8 @@ function page({ path, title, description, h1, body, jsonLd, raw }) {
   html = set(html, /(<meta property="og:description" content=")[^"]*/, `$1${esc(description)}`);
   html = set(html, /(<meta name="twitter:title" content=")[^"]*/, `$1${esc(title)}`);
   html = set(html, /(<meta name="twitter:description" content=")[^"]*/, `$1${esc(description)}`);
+  html = set(html, /(<meta property="og:image" content=")[^"]*/, `$1${ogImage(path)}`);
+  html = set(html, /(<meta name="twitter:image" content=")[^"]*/, `$1${ogImage(path)}`);
   html = set(
     html,
     /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
@@ -122,14 +136,14 @@ for (const tool of TOOLS) {
     `dist${tool.path}.html`,
     page({
       path: tool.path,
-      title: `${tool.title} – ${APP}`,
+      title: `${tool.seoTitle ?? tool.title} – ${APP}`,
       description,
       h1: tool.title,
       body,
       jsonLd: {
         '@context': 'https://schema.org',
         '@graph': [
-          app(`${tool.title} – ${APP}`, url, description),
+          app(`${tool.seoTitle ?? tool.title} – ${APP}`, url, description),
           {
             '@type': 'BreadcrumbList',
             itemListElement: [
@@ -195,6 +209,21 @@ writeFileSync(
   }),
 );
 
+// 404: served by the host for unknown URLs (with a 404 status); not indexed and has no canonical URL
+writeFileSync(
+  'dist/404.html',
+  page({
+    path: '/404',
+    title: `Page not found – ${APP}`,
+    description: NOT_FOUND_DESCRIPTION,
+    raw: guideHtml['/404'],
+    jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: 'Page not found' },
+  })
+    .replace(/\s*<link rel="canonical"[^>]*>/, '')
+    .replace(/\s*<meta property="og:url"[^>]*>/, '')
+    .replace('<meta name="viewport"', '<meta name="robots" content="noindex" />\n    <meta name="viewport"'),
+);
+
 // Guides: index and articles, with the full article text rendered into the page
 mkdirSync('dist/guides', { recursive: true });
 const guidesDescription = 'Practical PCB design guides with worked examples: impedance, stackups, high-speed routing, crosstalk, via current, decoupling capacitors, cooling and conductor spacing.';
@@ -235,7 +264,7 @@ for (const g of GUIDES) {
             dateModified: g.date,
             url,
             mainEntityOfPage: url,
-            image: `${SITE}/og-image.png?v=3`,
+            image: ogImage(g.path),
             author: { '@type': 'Organization', name: APP, url: `${SITE}/` },
             publisher: { '@type': 'Organization', name: APP, url: `${SITE}/`, logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png?v=3` } },
           },
@@ -253,4 +282,4 @@ for (const g of GUIDES) {
   );
 }
 await vite.close();
-console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages, about`);
+console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages, about, 404`);

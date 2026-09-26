@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { GUIDES } from './guides/registry';
 import { SettingsProvider } from './state/settings';
@@ -10,6 +10,7 @@ const GuidesIndex = lazy(() => import('./guides/GuidesIndex'));
 const ToolsIndex = lazy(() => import('./tools/ToolsIndex'));
 const About = lazy(() => import('./pages/About'));
 const Schematic = lazy(() => import('./pages/Schematic'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ export default function App() {
             {GUIDES.map((g) => (
               <Route key={g.path} path={g.path} element={<g.component />} />
             ))}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </BrowserRouter>

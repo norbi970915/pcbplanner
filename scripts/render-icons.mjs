@@ -1,7 +1,7 @@
-// Renders public/favicon.svg to PNG icons and builds the social preview image.
+// Renders public/favicon.svg to PNG icons and favicon.ico, and builds the social preview image.
 // Usage: node scripts/render-icons.mjs   (needs Microsoft Edge)
 import { chromium } from 'playwright-core';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const svg = readFileSync(resolve('public/favicon.svg'), 'utf8');
@@ -20,6 +20,29 @@ for (const [name, size] of [
   await page.setContent(`<html><body style="margin:0;background:transparent"><img src="${dataUrl}" width="${size}" height="${size}" style="display:block"></body></html>`);
   await page.screenshot({ path: resolve('public', name), omitBackground: true });
 }
+
+// favicon.ico for clients that request it directly: 16, 32 and 48 px PNG images in an ICO container
+const ico = [];
+for (const size of [16, 32, 48]) {
+  await page.setViewportSize({ width: size, height: size });
+  await page.setContent(`<html><body style="margin:0;background:transparent"><img src="${dataUrl}" width="${size}" height="${size}" style="display:block"></body></html>`);
+  ico.push({ size, png: await page.screenshot({ omitBackground: true }) });
+}
+const header = Buffer.alloc(6 + 16 * ico.length);
+header.writeUInt16LE(1, 2); // type: icon
+header.writeUInt16LE(ico.length, 4);
+let offset = header.length;
+ico.forEach(({ size, png }, i) => {
+  const e = 6 + 16 * i;
+  header.writeUInt8(size, e); // width
+  header.writeUInt8(size, e + 1); // height
+  header.writeUInt16LE(1, e + 4); // colour planes
+  header.writeUInt16LE(32, e + 6); // bits per pixel
+  header.writeUInt32LE(png.length, e + 8);
+  header.writeUInt32LE(offset, e + 12);
+  offset += png.length;
+});
+writeFileSync(resolve('public', 'favicon.ico'), Buffer.concat([header, ...ico.map((x) => x.png)]));
 
 // 1200×630 social card
 await page.setViewportSize({ width: 1200, height: 630 });

@@ -13,6 +13,7 @@ import DecouplingCapacitors from './DecouplingCapacitors';
 import PcieRouting from './PcieRouting';
 import Usb3Impedance from './Usb3Impedance';
 import About from '../pages/About';
+import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
 import Home from '../tools/Home';
 import ToolsIndex from '../tools/ToolsIndex';
@@ -33,6 +34,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/ac-coupling-capacitors': AcCouplingCaps,
   '/guides/usb3-85-or-90-ohm': Usb3Impedance,
   '/about': About,
+  '/404': NotFound,
 };
 
 // every tool module, so its exported Method (formulas, explanation, references) can be rendered

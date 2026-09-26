@@ -1,13 +1,14 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
+import { lazyPage, type LazyPage } from '../lib/lazyPage';
 import { PRESETS } from '../lib/stackups';
 
 export interface ToolDef {
   path: string;
-  title: string;
+  title: string; // headline on the page and name in tool lists
+  seoTitle?: string; // title for search results and link previews, when it differs (under ~50 characters before the site name)
   nav: string;
   group: string;
   summary: string;
-  component: LazyExoticComponent<ComponentType>;
+  component: LazyPage;
 }
 
 /** Colour swatch per group, like layer colours in the PCB editor. */
@@ -27,10 +28,11 @@ export const TOOLS: ToolDef[] = [
   {
     path: '/impedance',
     title: 'Impedance Calculator',
+    seoTitle: 'PCB Impedance Calculator: Microstrip & Stripline',
     nav: 'Impedance',
     group: 'Signal integrity',
     summary: 'Single-ended and differential microstrip, coated and embedded microstrip, stripline and coplanar lines, solved with a 2D field solver.',
-    component: lazy(() => import('./Impedance')),
+    component: lazyPage(() => import('./Impedance')),
   },
   {
     path: '/timing',
@@ -38,7 +40,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Delay & timing',
     group: 'Signal integrity',
     summary: 'Propagation delay, length matching from skew, rise time to bandwidth, critical length and wavelength.',
-    component: lazy(() => import('./Timing')),
+    component: lazyPage(() => import('./Timing')),
   },
   {
     path: '/termination',
@@ -46,7 +48,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Termination',
     group: 'Signal integrity',
     summary: 'Source-series, single-ended load and differential load termination from trace impedance, with E-series values, reflection and resistor stress.',
-    component: lazy(() => import('./Termination')),
+    component: lazyPage(() => import('./Termination')),
   },
   {
     path: '/trace-loss',
@@ -54,7 +56,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Trace loss',
     group: 'Signal integrity',
     summary: 'Insertion loss in dB/in and over the full length: conductor loss with copper roughness and dielectric loss from the field solver, with laminate Dk/Df across frequency.',
-    component: lazy(() => import('./TraceLoss')),
+    component: lazyPage(() => import('./TraceLoss')),
   },
   {
     path: '/crosstalk',
@@ -62,15 +64,16 @@ export const TOOLS: ToolDef[] = [
     nav: 'Crosstalk',
     group: 'Signal integrity',
     summary: 'Near- and far-end crosstalk between parallel traces from the field solver, with a sweep over the spacing (3W rule check).',
-    component: lazy(() => import('./Crosstalk')),
+    component: lazyPage(() => import('./Crosstalk')),
   },
   {
     path: '/differential-via',
     title: 'Differential Via',
+    seoTitle: 'Differential Via Impedance Calculator',
     nav: 'Differential via',
     group: 'Signal integrity',
     summary: 'Via-pair differential impedance through the plane clearance from a 2D field solution, antipad sizing for a target, stub resonance and delay.',
-    component: lazy(() => import('./DiffVia')),
+    component: lazyPage(() => import('./DiffVia')),
   },
   {
     path: '/via-stitching',
@@ -78,7 +81,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Via stitching',
     group: 'Signal integrity',
     summary: 'Stitching and fence via pitch from the wavelength (λ/10, λ/20), via-grid cell resonance, leakage between vias and plane-pair cavity resonances.',
-    component: lazy(() => import('./ViaStitching')),
+    component: lazyPage(() => import('./ViaStitching')),
   },
   {
     path: '/interface-rules',
@@ -86,15 +89,16 @@ export const TOOLS: ToolDef[] = [
     nav: 'Interface rules',
     group: 'Signal integrity',
     summary: 'Impedance, skew, loss budget and length limits of PCIe, USB, Ethernet, HDMI, DDR and other interfaces, applied to a layer of your own stackup with the field solver.',
-    component: lazy(() => import('./InterfaceRules')),
+    component: lazyPage(() => import('./InterfaceRules')),
   },
   {
     path: '/stackup-advisor',
     title: 'Stackup Advisor',
+    seoTitle: 'PCB Stackup Finder by Thickness & Layer Count',
     nav: 'Stackup advisor',
     group: 'Stackup',
     summary: 'Find stackups by board thickness and layer count, with optional impedance requirements to rank candidates and solve trace widths.',
-    component: lazy(() => import('./StackupAdvisor')),
+    component: lazyPage(() => import('./StackupAdvisor')),
   },
   {
     path: '/stackup',
@@ -102,7 +106,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Layer stack manager',
     group: 'Stackup',
     summary: `${PRESETS.length} fab stackups from 2 to 12 layers, editable, with any signal layer sent to the impedance calculator.`,
-    component: lazy(() => import('./StackupTool')),
+    component: lazyPage(() => import('./StackupTool')),
   },
   {
     path: '/pcb-materials',
@@ -110,7 +114,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Materials (Dk/Df)',
     group: 'Stackup',
     summary: 'Datasheet Dk and Df of FR-4, low-loss and RF laminates (Isola, Panasonic, Rogers, Shengyi…) at any frequency, plus solder masks and copper foil roughness.',
-    component: lazy(() => import('./Materials')),
+    component: lazyPage(() => import('./Materials')),
   },
   {
     path: '/junction-temperature',
@@ -118,15 +122,16 @@ export const TOOLS: ToolDef[] = [
     nav: 'Junction temperature',
     group: 'Thermal',
     summary: 'Junction temperature from power and the thermal-resistance chain (θJA or θJC + θCS + θSA), and the maximum power for a Tj limit.',
-    component: lazy(() => import('./ThermalJunction')),
+    component: lazyPage(() => import('./ThermalJunction')),
   },
   {
     path: '/thermal-vias',
     title: 'Thermal Via Array',
+    seoTitle: 'PCB Thermal Via Calculator',
     nav: 'Thermal vias',
     group: 'Thermal',
     summary: 'Thermal resistance of a via array under a hot pad, with plugged or filled vias, and the temperature drop through the board.',
-    component: lazy(() => import('./ThermalVias')),
+    component: lazyPage(() => import('./ThermalVias')),
   },
   {
     path: '/copper-heat-spreading',
@@ -134,7 +139,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Copper heat spreading',
     group: 'Thermal',
     summary: 'How much copper a hot part needs: copper-pour thermal resistance by convection and radiation, junction temperature and the smallest pour for a Tj limit.',
-    component: lazy(() => import('./CopperSpreading')),
+    component: lazyPage(() => import('./CopperSpreading')),
   },
   {
     path: '/trace-width',
@@ -142,15 +147,16 @@ export const TOOLS: ToolDef[] = [
     nav: 'Trace width / current',
     group: 'Power & conductors',
     summary: 'IPC-2221: width for a current, current for a width, or temperature rise of a trace, with resistance, voltage drop and loss.',
-    component: lazy(() => import('./TraceWidth')),
+    component: lazyPage(() => import('./TraceWidth')),
   },
   {
     path: '/via',
     title: 'Via Calculator',
+    seoTitle: 'PCB Via Current & Resistance Calculator',
     nav: 'Via',
     group: 'Power & conductors',
     summary: 'Via current capacity, resistance, thermal resistance, capacitance, inductance and rise-time impact.',
-    component: lazy(() => import('./Via')),
+    component: lazyPage(() => import('./Via')),
   },
   {
     path: '/skin-effect',
@@ -158,15 +164,16 @@ export const TOOLS: ToolDef[] = [
     nav: 'Skin effect',
     group: 'Power & conductors',
     summary: 'Skin depth in copper and the AC resistance of a trace across frequency.',
-    component: lazy(() => import('./SkinEffect')),
+    component: lazyPage(() => import('./SkinEffect')),
   },
   {
     path: '/fusing',
     title: 'Fusing Current',
+    seoTitle: 'PCB Trace Fusing Current Calculator',
     nav: 'Fusing current',
     group: 'Power & conductors',
     summary: 'Current that melts a trace in a given time (Onderdonk), for fault and surge analysis.',
-    component: lazy(() => import('./Fusing')),
+    component: lazyPage(() => import('./Fusing')),
   },
   {
     path: '/wire-gauge',
@@ -174,7 +181,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Wire gauge / drop',
     group: 'Power & conductors',
     summary: 'AWG diameter, area and resistance, cable voltage drop and loss, the smallest gauge for a drop limit, and Preece fusing current.',
-    component: lazy(() => import('./WireGauge')),
+    component: lazyPage(() => import('./WireGauge')),
   },
   {
     path: '/conductor-spacing',
@@ -182,7 +189,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Conductor spacing',
     group: 'Power & conductors',
     summary: 'Minimum electrical clearance between conductors from IPC-2221 Table 6-1: internal, external, coated, high altitude, assemblies.',
-    component: lazy(() => import('./ConductorSpacing')),
+    component: lazyPage(() => import('./ConductorSpacing')),
   },
   {
     path: '/creepage-clearance',
@@ -190,7 +197,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Creepage & clearance',
     group: 'Power & conductors',
     summary: 'Minimum clearance and creepage per IEC 60664-1: impulse voltage from mains and overvoltage category, pollution degree, CTI material group, reinforced insulation, altitude.',
-    component: lazy(() => import('./CreepageClearance')),
+    component: lazyPage(() => import('./CreepageClearance')),
   },
   {
     path: '/pdn',
@@ -198,7 +205,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'PDN',
     group: 'Power integrity',
     summary: 'Target impedance, plane-pair capacitance, decoupling-capacitor resonance and the number of capacitors needed, with a log-log |Z|(f) plot.',
-    component: lazy(() => import('./Pdn')),
+    component: lazyPage(() => import('./Pdn')),
   },
   {
     path: '/power-tree',
@@ -206,7 +213,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Power tree',
     group: 'Power supply',
     summary: 'Budget source and regulator currents across cascaded rails and loads, estimate losses, check ratings and record power-up dependencies.',
-    component: lazy(() => import('./PowerTree')),
+    component: lazyPage(() => import('./PowerTree')),
   },
   {
     path: '/buck-converter',
@@ -214,7 +221,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Buck converter',
     group: 'Power supply',
     summary: 'Buck power-stage sizing with conduction-mode checks, real inductor and capacitor ratings, IC timing limits and current waveforms across the input range.',
-    component: lazy(() => import('./Buck')),
+    component: lazyPage(() => import('./Buck')),
   },
   {
     path: '/boost-converter',
@@ -222,7 +229,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Boost converter',
     group: 'Power supply',
     summary: 'Boost power-stage sizing with conduction-mode checks, real inductor and capacitor ratings, IC timing limits and current waveforms across the input range.',
-    component: lazy(() => import('./Boost')),
+    component: lazyPage(() => import('./Boost')),
   },
   {
     path: '/ldo',
@@ -230,7 +237,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'LDO dissipation',
     group: 'Power supply',
     summary: 'Linear regulator dissipation, junction temperature, efficiency and dropout headroom, with the maximum load for a Tj limit.',
-    component: lazy(() => import('./Ldo')),
+    component: lazyPage(() => import('./Ldo')),
   },
   {
     path: '/feedback-divider',
@@ -238,7 +245,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Feedback divider',
     group: 'Power supply',
     summary: 'Standard-value R1/R2 for adjustable regulators: the best E12/E24/E96 pairs, output error, FB bias current and worst case with tolerance.',
-    component: lazy(() => import('./FeedbackDivider')),
+    component: lazyPage(() => import('./FeedbackDivider')),
   },
   {
     path: '/planar-inductor',
@@ -246,7 +253,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Spiral inductor',
     group: 'Components',
     summary: 'Inductance of square, hexagonal, octagonal and circular PCB spirals (modified Wheeler and current-sheet models), with DC resistance and Q.',
-    component: lazy(() => import('./PlanarInductor')),
+    component: lazyPage(() => import('./PlanarInductor')),
   },
   {
     path: '/padstack',
@@ -254,7 +261,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Padstack',
     group: 'Components',
     summary: 'Plated through-hole sizing per IPC-7251 / IPC-2221 / IPC-2222: hole, outer and inner pads, antipad, thermal relief and annular ring for levels A/B/C.',
-    component: lazy(() => import('./Padstack')),
+    component: lazyPage(() => import('./Padstack')),
   },
   {
     path: '/bga-land',
@@ -262,7 +269,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'BGA land',
     group: 'Components',
     summary: 'IPC-7351 land diameter for collapsing and non-collapsing BGA balls, with tolerance and courtyard, and escape-routing capacity between lands.',
-    component: lazy(() => import('./BgaLand')),
+    component: lazyPage(() => import('./BgaLand')),
   },
   {
     path: '/ohms-law',
@@ -270,7 +277,7 @@ export const TOOLS: ToolDef[] = [
     nav: "Ohm's law",
     group: 'Electronics',
     summary: 'Enter any two of voltage, current, resistance and power to get the other two.',
-    component: lazy(() => import('./OhmsLaw')),
+    component: lazyPage(() => import('./OhmsLaw')),
   },
   {
     path: '/reactance',
@@ -278,7 +285,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Reactance & resonance',
     group: 'Electronics',
     summary: 'XL and XC at a frequency, LC resonance, the L or C for a target frequency, and series/parallel LC impedance with Q.',
-    component: lazy(() => import('./Reactance')),
+    component: lazyPage(() => import('./Reactance')),
   },
   {
     path: '/rc-filter',
@@ -286,7 +293,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'RC filters',
     group: 'Electronics',
     summary: 'Passive RC low-pass and high-pass filters with source/load resistance, standard component selection, tolerance bounds and interactive gain and phase plots.',
-    component: lazy(() => import('./RcFilter')),
+    component: lazyPage(() => import('./RcFilter')),
   },
   {
     path: '/crystal',
@@ -294,7 +301,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Crystal & ppm',
     group: 'Electronics',
     summary: 'Crystal load capacitors with the nearest E12/E24 values and resulting CL, plus frequency error ↔ ppm and clock drift.',
-    component: lazy(() => import('./Crystal')),
+    component: lazyPage(() => import('./Crystal')),
   },
   {
     path: '/i2c-pullup',
@@ -302,7 +309,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'I²C pull-up',
     group: 'Electronics',
     summary: 'Pull-up resistor range for Standard, Fast and Fast-mode Plus I²C from bus capacitance, rise time and device sink current.',
-    component: lazy(() => import('./I2cPullup')),
+    component: lazyPage(() => import('./I2cPullup')),
   },
   {
     path: '/logic-levels',
@@ -310,7 +317,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Logic levels',
     group: 'Electronics',
     summary: 'Check worst-case VOH/VOL against VIH/VIL, static noise margins and receiver input-voltage limits.',
-    component: lazy(() => import('./LogicLevels')),
+    component: lazyPage(() => import('./LogicLevels')),
   },
   {
     path: '/adc-input',
@@ -318,7 +325,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'ADC input',
     group: 'Electronics',
     summary: 'Check source and RC filter settling into a SAR ADC sample capacitor during acquisition, with an optional filter-node recovery check.',
-    component: lazy(() => import('./AdcInput')),
+    component: lazyPage(() => import('./AdcInput')),
   },
   {
     path: '/current-sense-shunt',
@@ -326,23 +333,25 @@ export const TOOLS: ToolDef[] = [
     nav: 'Current-sense shunt',
     group: 'Electronics',
     summary: 'Select a shunt from current range and voltage-drop budget, with power, tolerance, TCR and amplifier-offset checks.',
-    component: lazy(() => import('./CurrentShunt')),
+    component: lazyPage(() => import('./CurrentShunt')),
   },
   {
     path: '/resistors',
     title: 'Resistor Tools',
+    seoTitle: 'Voltage Divider & LED Resistor Calculator',
     nav: 'Resistor tools',
     group: 'Electronics',
     summary: 'Voltage divider with best E12/E24/E96 pairs, LED series resistor with power rating, and series/parallel R, C and L.',
-    component: lazy(() => import('./Resistors')),
+    component: lazyPage(() => import('./Resistors')),
   },
   {
     path: '/attenuator',
     title: 'Attenuator Pads',
+    seoTitle: 'Pi & T Attenuator Calculator',
     nav: 'Attenuator pads',
     group: 'Electronics',
     summary: 'Matched Pi, T and bridged-T pads with the nearest standard values, their actual loss and return loss, and resistor power.',
-    component: lazy(() => import('./Attenuator')),
+    component: lazyPage(() => import('./Attenuator')),
   },
   {
     path: '/projects',
@@ -350,7 +359,7 @@ export const TOOLS: ToolDef[] = [
     nav: 'Projects',
     group: 'Utilities',
     summary: 'Save the inputs of every calculator for a board under one name, reopen them later, and export or import them as a project file.',
-    component: lazy(() => import('./Projects')),
+    component: lazyPage(() => import('./Projects')),
   },
   {
     path: '/units',
@@ -358,15 +367,16 @@ export const TOOLS: ToolDef[] = [
     nav: 'Unit converter',
     group: 'Utilities',
     summary: 'Length, copper weight, temperature, power (dBm/W/V) and frequency/wavelength.',
-    component: lazy(() => import('./Units')),
+    component: lazyPage(() => import('./Units')),
   },
   {
     path: '/reference-charts',
     title: 'Reference Charts',
+    seoTitle: 'Drill Size, Tap Drill & AWG Charts',
     nav: 'Reference charts',
     group: 'Utilities',
     summary: 'Drill sizes (number, letter, fractional, metric), ISO metric and Unified threads with tap and clearance drills, and the AWG wire table.',
-    component: lazy(() => import('./ReferenceCharts')),
+    component: lazyPage(() => import('./ReferenceCharts')),
   },
 ];
 

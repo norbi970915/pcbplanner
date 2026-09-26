@@ -1,4 +1,4 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
+import { lazyPage, type LazyPage } from '../lib/lazyPage';
 
 export interface GuideDef {
   path: string;
@@ -8,7 +8,7 @@ export interface GuideDef {
   tools: string[]; // tools used in the guide; those tool pages link back to it
   date: string; // ISO date of publication
   minutes: number; // reading time
-  component: LazyExoticComponent<ComponentType>;
+  component: LazyPage;
 }
 
 export const GUIDES: GuideDef[] = [
@@ -21,7 +21,7 @@ export const GUIDES: GuideDef[] = [
       'What 3W means in edge-to-edge clearance, how the reference-plane distance changes crosstalk, and why coupled length and rise time matter. With reproducible field-solver examples.',
     date: '2026-09-23',
     minutes: 7,
-    component: lazy(() => import('./CrosstalkSpacing')),
+    component: lazyPage(() => import('./CrosstalkSpacing')),
   },
   {
     path: '/guides/pcb-via-current-capacity',
@@ -32,7 +32,7 @@ export const GUIDES: GuideDef[] = [
       'Resistance and current estimates for a 0.3 mm PCB via, the effect of barrel plating, and parallel-via counts for a 5 A rail. Assumptions, voltage drop and thermal limits explained.',
     date: '2026-09-23',
     minutes: 7,
-    component: lazy(() => import('./ViaCurrent')),
+    component: lazyPage(() => import('./ViaCurrent')),
   },
   {
     path: '/guides/decoupling-capacitor-values',
@@ -43,7 +43,7 @@ export const GUIDES: GuideDef[] = [
       'Compare 100 nF and 10 µF decoupling capacitors using mounted impedance, series resonance and antiresonance. Worked examples, DC bias, placement and a PDN target-impedance budget.',
     date: '2026-09-23',
     minutes: 8,
-    component: lazy(() => import('./DecouplingCapacitors')),
+    component: lazyPage(() => import('./DecouplingCapacitors')),
   },
   {
     path: '/guides/controlled-impedance',
@@ -54,7 +54,7 @@ export const GUIDES: GuideDef[] = [
       'What PCB trace impedance is, when a trace needs it, how microstrip and stripline differ, and why solder mask, etching and closed-form formulas shift the result by several ohms. With field-solver numbers.',
     date: '2026-09-22',
     minutes: 8,
-    component: lazy(() => import('./ControlledImpedance')),
+    component: lazyPage(() => import('./ControlledImpedance')),
   },
   {
     path: '/guides/choosing-a-pcb-stackup',
@@ -65,7 +65,7 @@ export const GUIDES: GuideDef[] = [
       'A practical guide to 4- and 6-layer PCB stackups: layer order, reference planes, and how the prepreg glass style under the outer layer sets your trace widths, from 0.12 mm to over 1 mm for 50 Ω.',
     date: '2026-09-22',
     minutes: 9,
-    component: lazy(() => import('./ChoosingStackup')),
+    component: lazyPage(() => import('./ChoosingStackup')),
   },
   {
     path: '/guides/pcie-gen3-routing',
@@ -76,7 +76,7 @@ export const GUIDES: GuideDef[] = [
       'Impedance, AC coupling, skew, loss budget, vias and the reference clock for PCIe Gen3 on a standard FR-4 six-layer board, with numbers for trace width and loss per inch at 4 GHz.',
     date: '2026-09-22',
     minutes: 10,
-    component: lazy(() => import('./PcieRouting')),
+    component: lazyPage(() => import('./PcieRouting')),
   },
   {
     path: '/guides/ac-coupling-capacitors',
@@ -87,7 +87,7 @@ export const GUIDES: GuideDef[] = [
       'Which high-speed links need a series AC coupling capacitor and which forbid one, the value each specification allows — PCIe, USB 3.2, SATA, SGMII, DisplayPort, HDMI, Ethernet — and why the package size matters more than the capacitance.',
     date: '2026-09-23',
     minutes: 7,
-    component: lazy(() => import('./AcCouplingCaps')),
+    component: lazyPage(() => import('./AcCouplingCaps')),
   },
   {
     path: '/guides/usb3-85-or-90-ohm',
@@ -98,7 +98,7 @@ export const GUIDES: GuideDef[] = [
       'USB 3.2 traces are designed to 90 Ω differential; 85 Ω is the mated Type-C connector target and the S-parameter reference. What each document says, and why the difference costs less return loss than your fabricator’s tolerance.',
     date: '2026-09-23',
     minutes: 6,
-    component: lazy(() => import('./Usb3Impedance')),
+    component: lazyPage(() => import('./Usb3Impedance')),
   },
   {
     path: '/guides/copper-area-for-cooling',
@@ -109,7 +109,7 @@ export const GUIDES: GuideDef[] = [
       'Why a hot SOT-223 or DPAK needs copper around it, how the thermal resistance falls with pour size and copper weight, why the returns diminish, and what datasheet θJA really means.',
     date: '2026-09-22',
     minutes: 7,
-    component: lazy(() => import('./CopperCooling')),
+    component: lazyPage(() => import('./CopperCooling')),
   },
   {
     path: '/guides/creepage-clearance-mains',
@@ -120,7 +120,7 @@ export const GUIDES: GuideDef[] = [
       'How to find the minimum PCB spacing for 230 V and 120 V mains: rated impulse voltage, clearance, creepage, pollution degree, material group, reinforced insulation and slots, with worked examples.',
     date: '2026-09-22',
     minutes: 8,
-    component: lazy(() => import('./CreepageMains')),
+    component: lazyPage(() => import('./CreepageMains')),
   },
 ];
 

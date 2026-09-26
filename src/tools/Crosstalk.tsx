@@ -96,21 +96,22 @@ export default function Crosstalk() {
       method={<Method />}
     >
       <Notes kind="error" items={ok ? (st.error ? [st.error] : []) : ['Check the inputs: all dimensions must be greater than 0 and εr at least 1.']} />
-      {x && st.result && (
+      {/* drawn with placeholders until the first solve finishes, so the page does not jump when results arrive */}
+      {ok && (
         <div className="grid gap-3 xl:grid-cols-2">
           <Panel title="Results">
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
-              <Big label="Near-end crosstalk (NEXT)" value={fmt(x.next * 1000, 4)} unit="mV" busy={st.busy} />
-              <Big label="Far-end crosstalk (FEXT)" value={fmt(Math.abs(x.fext) * 1000, 4)} unit="mV" busy={st.busy} />
+              <Big label="Near-end crosstalk (NEXT)" value={x ? fmt(x.next * 1000, 4) : '—'} unit="mV" busy={st.busy} />
+              <Big label="Far-end crosstalk (FEXT)" value={x ? fmt(Math.abs(x.fext) * 1000, 4) : '—'} unit="mV" busy={st.busy} />
             </div>
             <table className="tbl">
               <tbody>
-                <Result label="Backward coefficient Kb (saturated NEXT)" value={pct(x.kb)} strong />
-                <Result label="NEXT as % of aggressor" value={pct(x.next / p.v)} sub={x.saturated ? 'saturated: coupled length exceeds the rise-time length' : `grows with length until ${L(x.satLenMm)}`} />
-                <Result label="FEXT as % of aggressor" value={pct(Math.abs(x.fext) / p.v)} sub={x.fextSaturated ? 'saturated: modal delay difference exceeds the rise time (max V/2)' : p.type === 'stripline' && p.er === p.er2 ? 'homogeneous stripline: FEXT cancels' : 'grows linearly with the coupled length'} />
-                <Result label="Zeven / Zodd" value={`${fmt(st.result.even!.z, 4)} / ${fmt(st.result.odd!.z, 4)}`} unit="Ω" />
-                <Result label="εeff even / odd" value={`${fmt(st.result.even!.eeff, 4)} / ${fmt(st.result.odd!.eeff, 4)}`} />
-                <Result label="Coupled-section delay" value={fmt(x.td * 1e12, 4)} unit="ps" />
+                <Result label="Backward coefficient Kb (saturated NEXT)" value={x ? pct(x.kb) : '—'} strong />
+                <Result label="NEXT as % of aggressor" value={x ? pct(x.next / p.v) : '—'} sub={!x ? '\u00a0' : x.saturated ? 'saturated: coupled length exceeds the rise-time length' : `grows with length until ${L(x.satLenMm)}`} />
+                <Result label="FEXT as % of aggressor" value={x ? pct(Math.abs(x.fext) / p.v) : '—'} sub={!x ? '\u00a0' : x.fextSaturated ? 'saturated: modal delay difference exceeds the rise time (max V/2)' : p.type === 'stripline' && p.er === p.er2 ? 'homogeneous stripline: FEXT cancels' : 'grows linearly with the coupled length'} />
+                <Result label="Zeven / Zodd" value={x && st.result ? `${fmt(st.result.even!.z, 4)} / ${fmt(st.result.odd!.z, 4)}` : '—'} unit="Ω" />
+                <Result label="εeff even / odd" value={x && st.result ? `${fmt(st.result.even!.eeff, 4)} / ${fmt(st.result.odd!.eeff, 4)}` : '—'} />
+                <Result label="Coupled-section delay" value={x ? fmt(x.td * 1e12, 4) : '—'} unit="ps" />
               </tbody>
             </table>
           </Panel>

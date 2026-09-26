@@ -4,6 +4,7 @@ import { APP_NAME, SITE_URL } from '../config';
 import { Link, useLocation } from 'react-router-dom';
 import { guidesForTool } from '../guides/registry';
 import { useShell } from '../state/shell';
+import { toolByPath } from '../tools/registry';
 
 export function useDocumentMeta(title: string, description: string) {
   useEffect(() => {
@@ -54,9 +55,10 @@ export function ToolPage({
   children: ReactNode;
   method?: ReactNode;
 }) {
-  useDocumentMeta(title, description);
+  const { pathname } = useLocation();
+  useDocumentMeta(toolByPath(pathname)?.seoTitle ?? title, description);
   const { propsEl, statusEl, headEl, setActions } = useShell();
-  const related = guidesForTool(useLocation().pathname);
+  const related = guidesForTool(pathname);
   useEffect(() => {
     setActions({ reset: onReset });
     return () => setActions(null);

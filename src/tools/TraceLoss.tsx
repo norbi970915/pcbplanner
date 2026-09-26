@@ -415,18 +415,19 @@ export default function TraceLoss() {
             <Big label={`Over ${fmt(p.len, 4)} mm`} value={at ? fmt((at.alpha / IN_PER_M) * lenIn, 4) : '—'} unit="dB" busy={st.busy} />
             <Big label={diff ? 'Zdiff' : 'Z0'} value={at ? fmt(diff ? 2 * at.z : at.z, 4) : '—'} unit="Ω" busy={st.busy} />
           </div>
-          {at && res && (
+          {/* drawn with placeholders until the first solve finishes, so the page does not jump when results arrive */}
+          {req && (
             <table className="tbl">
               <tbody>
-                <Result label="Conductor loss" value={fmt(at.alphaC / IN_PER_M, 4)} unit="dB/in" sub={`${fmt((100 * at.alphaC) / at.alpha, 3)} % of the total`} />
-                <Result label="Dielectric loss" value={fmt(at.alphaD / IN_PER_M, 4)} unit="dB/in" sub={`${fmt((100 * at.alphaD) / at.alpha, 3)} % of the total`} />
-                <Result label="Total loss" value={fmt(at.alpha / 100, 4)} unit="dB/cm" strong />
-                <Result label="Remaining amplitude" value={`${fmt(100 * 10 ** (-((at.alpha / IN_PER_M) * lenIn) / 20), 3)} %`} sub={`after ${fmt(p.len, 4)} mm`} />
-                <Result label="Skin depth" value={fmt(at.skinUm, 4)} unit="µm" />
-                <Result label="Roughness factor K" value={fmt(at.rough, 4)} sub="multiplies the skin-effect resistance" />
-                <Result label={diff ? 'AC resistance per line' : 'AC resistance'} value={fmt(at.rPerM / 1000, 4)} unit="Ω/mm" sub={`trace + return path · DC ${fmt(res.rdc / 1000, 4)} Ω/mm (trace)`} />
-                <Result label="Effective εr" value={fmt(at.eeff, 4)} />
-                <Result label="Effective loss tangent" value={fmt(at.tanEff, 4)} sub="field-weighted over laminate, mask and air" />
+                <Result label="Conductor loss" value={at ? fmt(at.alphaC / IN_PER_M, 4) : '—'} unit="dB/in" sub={at ? `${fmt((100 * at.alphaC) / at.alpha, 3)} % of the total` : '\u00a0'} />
+                <Result label="Dielectric loss" value={at ? fmt(at.alphaD / IN_PER_M, 4) : '—'} unit="dB/in" sub={at ? `${fmt((100 * at.alphaD) / at.alpha, 3)} % of the total` : '\u00a0'} />
+                <Result label="Total loss" value={at ? fmt(at.alpha / 100, 4) : '—'} unit="dB/cm" strong />
+                <Result label="Remaining amplitude" value={at ? `${fmt(100 * 10 ** (-((at.alpha / IN_PER_M) * lenIn) / 20), 3)} %` : '—'} sub={`after ${fmt(p.len, 4)} mm`} />
+                <Result label="Skin depth" value={at ? fmt(at.skinUm, 4) : '—'} unit="µm" />
+                <Result label="Roughness factor K" value={at ? fmt(at.rough, 4) : '—'} sub="multiplies the skin-effect resistance" />
+                <Result label={diff ? 'AC resistance per line' : 'AC resistance'} value={at ? fmt(at.rPerM / 1000, 4) : '—'} unit="Ω/mm" sub={res ? `trace + return path · DC ${fmt(res.rdc / 1000, 4)} Ω/mm (trace)` : 'trace + return path'} />
+                <Result label="Effective εr" value={at ? fmt(at.eeff, 4) : '—'} />
+                <Result label="Effective loss tangent" value={at ? fmt(at.tanEff, 4) : '—'} sub="field-weighted over laminate, mask and air" />
               </tbody>
             </table>
           )}
@@ -455,12 +456,19 @@ export default function TraceLoss() {
           </div>
         </Panel>
       </div>
-      {sweep.length > 0 && (
+      {/* placeholders until the first sweep arrives (not after a failed solve) */}
+      {req && (sweep.length > 0 || !st.error) && (
         <Panel title="Loss versus Frequency" className="mt-3">
-          <LossPlot points={sweep} fMark={p.f * 1e9} />
+          {sweep.length > 0 ? (
+            <LossPlot points={sweep} fMark={p.f * 1e9} />
+          ) : (
+            <div className="px-2 py-2">
+              <div className="w-full max-w-[900px]" style={{ aspectRatio: '640 / 280' }} />
+            </div>
+          )}
         </Panel>
       )}
-      {sweep.length > 0 && (
+      {req && (sweep.length > 0 || !st.error) && (
         <Panel title="Table" className="mt-3">
           <table className="tbl">
             <thead>
@@ -474,6 +482,15 @@ export default function TraceLoss() {
               </tr>
             </thead>
             <tbody>
+              {sweep.length === 0 &&
+                rowFrequencies(p.fmax * 1e9).map((f) => (
+                  <tr key={f}>
+                    <td>{si(f, 'Hz', 3)}</td>
+                    <td className="v text-faint" colSpan={5}>
+                      solving…
+                    </td>
+                  </tr>
+                ))}
               {pickRows(sweep, p.fmax * 1e9).map((q) => (
                 <tr key={q.f}>
                   <td>{si(q.f, 'Hz', 3)}</td>
@@ -492,8 +509,21 @@ export default function TraceLoss() {
   );
 }
 
+/** The table's frequencies before the sweep is solved: the 1-2-5 steps up to the sweep limit, and the limit. */
+function rowFrequencies(fmax: number): number[] {
+  const out: number[] = [];
+  for (let d = 7; d <= 11; d++)
+    for (const m of [1, 2, 5]) {
+      const f = m * 10 ** d;
+      if (f <= fmax * 1.001) out.push(f);
+    }
+  if (!out.some((f) => Math.abs(Math.log(f / fmax)) < 0.02)) out.push(fmax);
+  return out;
+}
+
 /** Rows at round frequencies (1-2-5 steps) from the sweep. */
 function pickRows(pts: LossPoint[], fmax: number): LossPoint[] {
+  if (!pts.length) return [];
   const out: LossPoint[] = [];
   for (let d = 7; d <= 11; d++)
     for (const m of [1, 2, 5]) {
