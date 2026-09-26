@@ -47,6 +47,9 @@
   <url><loc>https://www.pcbplanner.com/units</loc><lastmod>2026-09-24</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/reference-charts</loc><lastmod>2026-09-22</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides</loc><lastmod>2026-09-26</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/guides/buck-converter-formulas</loc><lastmod>2026-09-26</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/guides/boost-converter-formulas</loc><lastmod>2026-09-26</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/guides/via-fence-spacing</loc><lastmod>2026-09-26</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/pcb-crosstalk-3w-rule</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/pcb-via-current-capacity</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/decoupling-capacitor-values</loc><lastmod>2026-09-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>

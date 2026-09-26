@@ -5,7 +5,7 @@ import { useShell } from '../state/shell';
 import { GUIDES } from './registry';
 
 export default function GuidesIndex() {
-  useDocumentMeta('PCB Design Guides', 'Practical PCB design guides with worked examples: impedance, stackups, high-speed routing, crosstalk, via current, decoupling capacitors, cooling and conductor spacing.');
+  useDocumentMeta('PCB Design Guides', 'Practical PCB design guides with worked examples: impedance, stackups, high-speed routing, crosstalk, via current and via fences, decoupling capacitors, buck and boost converters, cooling and conductor spacing.');
   const { statusEl } = useShell();
   return (
     <div className="p-3">

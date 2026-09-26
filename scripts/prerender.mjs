@@ -226,7 +226,7 @@ writeFileSync(
 
 // Guides: index and articles, with the full article text rendered into the page
 mkdirSync('dist/guides', { recursive: true });
-const guidesDescription = 'Practical PCB design guides with worked examples: impedance, stackups, high-speed routing, crosstalk, via current, decoupling capacitors, cooling and conductor spacing.';
+const guidesDescription = 'Practical PCB design guides with worked examples: impedance, stackups, high-speed routing, crosstalk, via current and via fences, decoupling capacitors, buck and boost converters, cooling and conductor spacing.';
 writeFileSync(
   'dist/guides.html',
   page({

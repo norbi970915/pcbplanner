@@ -11,7 +11,41 @@ export interface GuideDef {
   component: LazyPage;
 }
 
+// newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
+  {
+    path: '/guides/buck-converter-formulas',
+    title: 'Buck Converter Formulas: Duty Cycle, Inductor and Capacitors, Worked Through',
+    seoTitle: 'Buck Converter Formulas with a Worked Example',
+    tools: ['/buck-converter', '/feedback-divider', '/power-tree'],
+    description:
+      'The duty cycle, inductor, ripple current, peak current and capacitor equations for a buck converter, worked through for 12 V to 3.3 V at 2 A, with the worst-case input for each part.',
+    date: '2026-09-26',
+    minutes: 7,
+    component: lazyPage(() => import('./BuckFormulas')),
+  },
+  {
+    path: '/guides/boost-converter-formulas',
+    title: 'Boost Converter Formulas: Why the Inductor Carries More Current than the Load',
+    seoTitle: 'Boost Converter Formulas with a Worked Example',
+    tools: ['/boost-converter', '/feedback-divider', '/power-tree'],
+    description:
+      'Duty cycle, inductor current, peak switch current, maximum load and output capacitor equations for a boost converter, worked through for a Li-ion cell to 5 V at 1 A.',
+    date: '2026-09-26',
+    minutes: 7,
+    component: lazyPage(() => import('./BoostFormulas')),
+  },
+  {
+    path: '/guides/via-fence-spacing',
+    title: 'Via Fence and Stitching Via Spacing: From λ/20 to Millimetres',
+    seoTitle: 'Via Fence Spacing: λ/10, λ/20 and Via Pitch',
+    tools: ['/via-stitching', '/impedance', '/timing'],
+    description:
+      'How far apart to place via fence and stitching vias: the wavelength in the laminate, the λ/10 and λ/20 rules, via-grid cell resonance and leakage between vias, with a 5 GHz example.',
+    date: '2026-09-26',
+    minutes: 6,
+    component: lazyPage(() => import('./ViaFence')),
+  },
   {
     path: '/guides/pcb-crosstalk-3w-rule',
     title: 'PCB Crosstalk and the 3W Rule: How Much Spacing Is Enough?',

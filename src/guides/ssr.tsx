@@ -2,6 +2,8 @@
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import AcCouplingCaps from './AcCouplingCaps';
+import BoostFormulas from './BoostFormulas';
+import BuckFormulas from './BuckFormulas';
 import ChoosingStackup from './ChoosingStackup';
 import ControlledImpedance from './ControlledImpedance';
 import CopperCooling from './CopperCooling';
@@ -12,6 +14,7 @@ import ViaCurrent from './ViaCurrent';
 import DecouplingCapacitors from './DecouplingCapacitors';
 import PcieRouting from './PcieRouting';
 import Usb3Impedance from './Usb3Impedance';
+import ViaFence from './ViaFence';
 import About from '../pages/About';
 import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
@@ -23,6 +26,9 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/tools': ToolsIndex,
   '/schematic': Schematic,
   '/guides': GuidesIndex,
+  '/guides/buck-converter-formulas': BuckFormulas,
+  '/guides/boost-converter-formulas': BoostFormulas,
+  '/guides/via-fence-spacing': ViaFence,
   '/guides/pcb-crosstalk-3w-rule': CrosstalkSpacing,
   '/guides/pcb-via-current-capacity': ViaCurrent,
   '/guides/decoupling-capacitor-values': DecouplingCapacitors,
