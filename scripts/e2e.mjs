@@ -208,6 +208,8 @@ async function stepFields(page, route, container) {
   for (let i = 0; i < count; i++) {
     const inp = page.locator(INPUTS(container)).nth(i);
     if (!(await inp.count()) || !(await inp.isVisible()) || (await inp.isDisabled())) continue;
+    // marking codes (472, 104K) follow their own grammar, covered by the componentCodes unit tests
+    if ((await inp.getAttribute('data-field')) === 'code') continue;
     const label = await labelOf(inp);
     const tag = `3 field #${i} "${label}"`;
     const orig = await inp.inputValue();

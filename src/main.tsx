@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { guideByPath } from './guides/registry'
+import { registerServiceWorker } from './lib/pwa'
 import { toolByPath } from './tools/registry'
+
+registerServiceWorker()
 
 // fetch the first page's chunk before rendering, so React replaces the prerendered
 // HTML with the finished page in one step rather than an empty shell (layout shift)

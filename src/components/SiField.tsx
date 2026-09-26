@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { plain } from '../lib/units';
+import { RESET_EVENT } from '../state/useUrlState';
 
 const MULT: Record<string, number> = { p: 1e-12, n: 1e-9, µ: 1e-6, m: 1e-3, '': 1, k: 1e3, M: 1e6, G: 1e9 };
 export type SiPrefix = 'p' | 'n' | 'µ' | 'm' | '' | 'k' | 'M' | 'G';
@@ -53,6 +54,20 @@ export function SiField({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+  // Reset must also clear text the user typed that never parsed (the value did not change).
+  const latest = useRef({ value, prefixes, digits });
+  latest.current = { value, prefixes, digits };
+  useEffect(() => {
+    const onReset = () => {
+      const { value: v, prefixes: ps, digits: d } = latest.current;
+      emitted.current = v;
+      const p = pickPrefix(v, ps);
+      setPrefix(p);
+      setText(plain(v / MULT[p], d));
+    };
+    window.addEventListener(RESET_EVENT, onReset);
+    return () => window.removeEventListener(RESET_EVENT, onReset);
+  }, []);
   const id = useId();
   const n = Number.parseFloat(text);
   const bad = !Number.isFinite(n) || (!allowNegative && (allowZero ? n < 0 : n <= 0));

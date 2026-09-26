@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../components/ToolPage';
 import { APP_NAME } from '../config';
+import { NEWS } from '../data/news';
 import { PRESETS } from '../lib/stackups';
 import { useShell } from '../state/shell';
 import { GUIDES } from '../guides/registry';
@@ -18,6 +19,7 @@ const QUICK_TASKS = [
 ];
 const RECENT_GUIDES = [...GUIDES].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
 const HOME_SEARCH_KEY = 'pcbplanner:home-search';
+const newsDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function Home() {
   useDocumentMeta(
@@ -101,6 +103,22 @@ export default function Home() {
         </>}
         {!toolMatches.length && !guideMatches.length && <p className="px-3 py-3 text-muted">No matching tools or guides. Try a broader term, <Link to="/tools">browse all tools</Link> or <Link to="/guides">browse all guides</Link>.</p>}
       </section> : <>
+        <section className="mt-3 border border-line bg-sheet">
+          <h2 className="flex h-[24px] items-center bg-panel-head px-2 font-semibold">What's new</h2>
+          <ul>
+            {NEWS.slice(0, 3).map(item => <li key={item.title} className="border-t border-line px-3 py-2">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <time dateTime={item.date} className="text-faint">{newsDate(item.date)}</time>
+                <span className="font-semibold">{item.title}</span>
+              </div>
+              <p className="mt-0.5 max-w-[110ch] text-muted">
+                {item.text}
+                {item.links && <> {item.links.map((l, i) => <span key={l.to}>{i > 0 && ' · '}<Link to={l.to}>{l.label}</Link></span>)}</>}
+              </p>
+            </li>)}
+          </ul>
+        </section>
+
         <section className="mt-3 border border-line bg-sheet">
           <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Quick access</span><Link to="/tools" className="font-normal">All {TOOLS.length} tools →</Link></h2>
           <ul className="grid sm:grid-cols-2 xl:grid-cols-3">

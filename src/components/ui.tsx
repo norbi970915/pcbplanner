@@ -208,6 +208,45 @@ export function NumField({
   );
 }
 
+/** Free-text input, e.g. a marking code, in the same row layout as NumField. */
+export function TextField({
+  label,
+  value,
+  onChange,
+  invalid = false,
+  placeholder,
+  hint,
+  width = 120,
+}: {
+  label: ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  invalid?: boolean;
+  placeholder?: string;
+  hint?: string;
+  width?: number;
+}) {
+  const id = useId();
+  return (
+    <Row label={label} hint={hint} htmlFor={id}>
+      <input
+        id={id}
+        className="fld text-right"
+        style={{ width }}
+        value={value}
+        // only when invalid: an empty or partly typed code is not an error
+        aria-invalid={invalid || undefined}
+        placeholder={placeholder}
+        data-field="code"
+        spellCheck={false}
+        autoCapitalize="off"
+        autoComplete="off"
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </Row>
+  );
+}
+
 export function SelectField<T extends string>({
   label,
   value,

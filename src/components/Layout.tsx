@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
 import { GUIDES } from '../guides/registry';
 import { ANALYTICS_CONSENT_KEY, disableAnalytics, enableAnalytics, isAnalyticsHost, readAnalyticsChoice, saveAnalyticsChoice, type AnalyticsChoice } from '../lib/analytics';
+import { useInstall, useOnline } from '../lib/pwa';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
@@ -66,6 +67,8 @@ function Item({ children, onClick, checked, hint }: { children: ReactNode; onCli
 /* ------------------------------ layout ------------------------------ */
 export function Layout() {
   const { unit, setUnit, theme, setTheme } = useSettings();
+  const install = useInstall();
+  const online = useOnline();
   const loc = useLocation();
   const navigate = useNavigate();
   const [menu, setMenu] = useState<string | null>(null);
@@ -240,6 +243,12 @@ export function Layout() {
             <Item onClick={run(() => window.print())} hint="Ctrl+P">
               Print…
             </Item>
+            {install && (
+              <>
+                <div className="menu-sep" />
+                <Item onClick={run(install)}>Install as App…</Item>
+              </>
+            )}
           </Menu>
           <Menu {...menuProps('View')}>
             <Item checked={theme === 'dark'} onClick={run(() => setTheme('dark'))}>
@@ -422,6 +431,7 @@ export function Layout() {
         {/* status bar */}
         <div className="flex h-[22px] shrink-0 items-center gap-3 border-t border-line bg-chrome px-2 text-muted">
           <div ref={setStatusEl} className="min-w-0 flex-1 truncate" />
+          {!online && <span title="No network connection: the calculators keep working from the saved copy">Offline</span>}
           {(saved || activeProject) && (
             <Link to="/projects" className="hidden truncate text-muted no-underline hover:text-ink sm:inline" title="Projects">
               {saved ?? `Project: ${activeProject?.name}`}

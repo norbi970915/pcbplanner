@@ -30,6 +30,10 @@ function encode<T extends Record<string, Primitive>>(state: T, defaults: T): str
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(state)) {
     if (v === defaults[k]) continue;
+    // the URL keeps 7 significant digits, so a value that rounds to the default is the default
+    // (100 × 1e-9 typed as "100 n" is 1.0000000000000001e-7, not the default 1e-7)
+    const def = defaults[k];
+    if (typeof v === 'number' && typeof def === 'number' && Number(v.toPrecision(7)) === Number(def.toPrecision(7))) continue;
     if (typeof v === 'number') q.set(k, String(Number(v.toPrecision(7))));
     else if (typeof v === 'boolean') q.set(k, v ? '1' : '0');
     else q.set(k, v);
