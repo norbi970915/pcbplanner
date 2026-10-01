@@ -368,6 +368,14 @@ input[type='radio'] {
   margin: 0.4em 0 1em;
   font-size: 13px;
 }
+@media (max-width: 639px) {
+  /* Keep wide comparison tables inside guides and tool methods instead of widening the workspace. */
+  .prose-doc .tbl {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
 .guide .cite {
   font-size: 10px;
   margin-left: 1px;

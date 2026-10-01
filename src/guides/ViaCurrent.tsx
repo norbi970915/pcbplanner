@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Cite, Guide, TryIt } from './Guide';
 
 export default function ViaCurrent() {
@@ -7,6 +8,7 @@ export default function ViaCurrent() {
         { text: 'Texas Instruments SLVA959B, Best Practices for Board Layout of Motor Drivers, sections 3.1 and 3.2: via current guidance, parallel vias and placement.', url: 'https://www.ti.com/lit/an/slva959b/slva959b.pdf' },
         { text: 'pcbplanner Via Calculator, Method, formulas and references: finished-hole barrel geometry and the IPC-2221 cross-section estimate.', url: '/via#method' },
         { text: 'IPC, The Value of IPC-2152: measurements and the influence of the board construction on conductor temperature rise.', url: 'https://www.ipc.org/system/files/technical_resource/E7%26S22_03.pdf' },
+        { text: 'IPC-2152, table of contents: Appendix A.3.4 discusses vias and microvias, including via cross-section and temperature-gradient figures.', url: 'https://www.ipc.org/TOC/IPC-2152.pdf' },
       ]}
     >
       <p>
@@ -16,6 +18,18 @@ export default function ViaCurrent() {
       </p>
       <p>
         This guide works through that via and a 5 A layer transition, keeping the electrical calculation separate from the assumptions used to estimate heating.
+      </p>
+      <h2>Is this an IPC-2152 via-current rating?</h2>
+      <p>
+        <b>No.</b> IPC-2152 discusses vias in Appendix A.3.4, including cross-section and temperature-gradient figures. This calculator does not implement an
+        IPC-2152 via analysis. The <Link to="/via">Via Calculator</Link> applies the older IPC-2221 conductor equation to the plated-barrel area as a preliminary comparison.
+        Its suggested parallel-via count is not an IPC-2152-certified number. Use the barrel resistance for a voltage-drop check, then verify heating and current sharing on the
+        actual board when the limit matters. <Cite n={[2, 3, 4]} />
+      </p>
+      <p>
+        The electrical model uses the <b>finished hole</b> (after plating), because current flows through the copper barrel around it. Drill diameter is a separate
+        fabrication dimension; do not enter an unplated drill size as the finished diameter. The fabricator's minimum barrel plating matters more than the nominal surface
+        copper weight for this calculation.
       </p>
 
       <h2>The current flows through the copper barrel</h2>

@@ -25,7 +25,7 @@ export default function Via() {
   const properties = (
     <>
       <Section title="Geometry">
-        <LenField label="Finished hole" symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} />
+        <LenField label="Finished hole" symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} hint="Diameter after plating; do not use the larger production drill diameter." />
         <LenField label="Plating thickness" value={p.plating} onChange={(v) => set({ plating: v })} units={['um', 'mil', 'mm', 'oz']} />
         <LenField label="Via length" symbol="h" value={p.len} onChange={(v) => set({ len: v })} />
         <LenField label="Pad diameter" symbol="D1" value={p.pad} onChange={(v) => set({ pad: v })} />
@@ -64,7 +64,7 @@ export default function Via() {
             <Result label="Array DC resistance (equal sharing)" value={si(r.resistance / count, 'Ω')} />
             <Result label="Array voltage drop at target current" value={si(p.target * r.resistance / count, 'V')} />
           </tbody></table>
-          <p className="px-2.5 py-2 text-faint">First-pass estimate for identical vias sharing current equally. The IPC-2221 trace equation is applied to the barrel; IPC does not prescribe this via count. Verify plating, pad connections and current sharing in the actual layout.</p>
+          <p className="px-2.5 py-2 text-faint">First-pass estimate for identical vias sharing current equally. The IPC-2221 trace equation is applied to the barrel; this is not an IPC-2152 via rating or an IPC-prescribed via count. Verify plating, pad connections and current sharing in the actual layout.</p>
         </> : <p className="px-2.5 py-2 text-muted">Enter a target current in Properties to see a starting via count for this geometry.</p>}
       </Panel>}
       {r && (

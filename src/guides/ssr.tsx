@@ -13,6 +13,7 @@ import CrosstalkSpacing from './CrosstalkSpacing';
 import ViaCurrent from './ViaCurrent';
 import DecouplingCapacitors from './DecouplingCapacitors';
 import PcieRouting from './PcieRouting';
+import PcieGuidelines from './PcieGuidelines';
 import Usb3Impedance from './Usb3Impedance';
 import ViaFence from './ViaFence';
 import About from '../pages/About';
@@ -35,6 +36,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/controlled-impedance': ControlledImpedance,
   '/guides/choosing-a-pcb-stackup': ChoosingStackup,
   '/guides/pcie-gen3-routing': PcieRouting,
+  '/guides/pcie-routing-guidelines': PcieGuidelines,
   '/guides/copper-area-for-cooling': CopperCooling,
   '/guides/creepage-clearance-mains': CreepageMains,
   '/guides/ac-coupling-capacitors': AcCouplingCaps,

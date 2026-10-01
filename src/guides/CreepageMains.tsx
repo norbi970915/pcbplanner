@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Cite, Guide, TryIt } from './Guide';
 
 export default function CreepageMains() {
@@ -18,6 +19,13 @@ export default function CreepageMains() {
       <p>
         <b>Important:</b> your product standard (for example IEC 62368-1 for IT and audio/video equipment <Cite n={2} />) has the final word and can require more. Use this to design
         sensibly and to understand the numbers, not as a certification.
+      </p>
+      <h2>Which PCB clearance calculator should I use?</h2>
+      <p>
+        For a mains-connected or safety-isolation gap, start with the <Link to="/creepage-clearance">IEC 60664-1 creepage and clearance calculator</Link> and then check the
+        product standard. It needs the overvoltage category, pollution degree, working voltage, material group and altitude; entering only 230 V cannot determine a safe spacing.
+        For ordinary conductor-to-conductor spacing without a safety requirement, use the <Link to="/conductor-spacing">IPC-2221 conductor-spacing calculator</Link> instead.
+        Applying the smaller IPC spacing to a safety barrier is not a valid shortcut. <Cite n={[1, 4]} />
       </p>
 
       <h2>Clearance and creepage</h2>

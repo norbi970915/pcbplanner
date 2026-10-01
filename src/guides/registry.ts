@@ -14,6 +14,17 @@ export interface GuideDef {
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/pcie-routing-guidelines',
+    title: 'PCIe PCB Routing Guidelines: Impedance, Return Paths, Vias, Loss and Skew',
+    seoTitle: 'PCIe Routing Guidelines for Gen3, Gen4 & Gen5',
+    tools: ['/interface-rules', '/impedance', '/trace-loss', '/differential-via', '/timing', '/crosstalk'],
+    description:
+      'A practical PCIe Gen3–5 PCB routing checklist: choose differential impedance, preserve return paths, budget channel loss, control via stubs, place AC-coupling capacitors and check skew.',
+    date: '2026-10-01',
+    minutes: 8,
+    component: lazyPage(() => import('./PcieGuidelines')),
+  },
+  {
     path: '/guides/buck-converter-formulas',
     title: 'Buck Converter Formulas: Duty Cycle, Inductor and Capacitors, Worked Through',
     seoTitle: 'Buck Converter Formulas with a Worked Example',

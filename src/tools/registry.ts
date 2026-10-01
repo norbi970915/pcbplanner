@@ -264,6 +264,15 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./Padstack')),
   },
   {
+    path: '/smd-land-pattern',
+    title: 'Two-Terminal SMD Land Pattern Calculator',
+    seoTitle: 'SMD Resistor & Capacitor Footprint Calculator',
+    nav: 'SMD land pattern',
+    group: 'Components',
+    summary: 'Size the two copper pads, pitch, courtyard and solder-mask openings for a chip resistor or MLCC from the exact part dimensions and process tolerances.',
+    component: lazyPage(() => import('./SmdLand')),
+  },
+  {
     path: '/bga-land',
     title: 'BGA Land Pattern',
     nav: 'BGA land',

@@ -133,7 +133,7 @@ export default function Home() {
 
         <section className="mt-3">
           <h2 className="mb-2 font-semibold">Browse by category</h2>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {GROUPS.map(group => <Link key={group} to={`/tools?group=${encodeURIComponent(group)}`} className="flex min-h-[66px] items-center gap-2.5 border border-line bg-sheet px-3 py-2 no-underline hover:bg-hover">
               <span className="h-3 w-3 shrink-0 border border-black/30" style={{ background: GROUP_COLORS[group] }} />
               <span className="min-w-0 flex-1">

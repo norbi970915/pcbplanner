@@ -34,7 +34,7 @@ export function Group({ title, children }: { title?: string; children: ReactNode
 /** A titled sheet in the document area. */
 export function Panel({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`border border-line bg-sheet ${className}`}>
+    <section className={`min-w-0 border border-line bg-sheet ${className}`}>
       {title && (
         <div className="flex h-[24px] items-center justify-between gap-2 border-b border-line bg-panel-head px-2">
           <h2 className="font-semibold">{title}</h2>

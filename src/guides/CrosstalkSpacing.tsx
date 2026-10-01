@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Cite, Guide, TryIt } from './Guide';
 
 export default function CrosstalkSpacing() {
@@ -40,6 +41,11 @@ export default function CrosstalkSpacing() {
       <p>
         The Crosstalk Calculator takes <b>edge-to-edge spacing</b>. Its sweep row labelled 2 W is therefore the conventional 3W centre-pitch case. Entering 3 W in the spacing
         field tests a centre pitch of 4 W.
+      </p>
+      <p>
+        <b>What clearance should I enter in my PCB design rules?</b> If your two traces are each 0.15 mm wide and you intend the conventional 3W centre pitch, enter a
+        <b> 0.30 mm minimum copper-to-copper gap</b>. If the device guide explicitly asks for 3W <em>edge clearance</em>, enter 0.45 mm instead. The rule must name its measurement
+        convention; the number alone is ambiguous.
       </p>
 
       <h2>What NEXT and FEXT measure</h2>
@@ -125,6 +131,7 @@ export default function CrosstalkSpacing() {
         <li>If the margin is poor, try more clearance, a closer reference plane or a shorter shared run, then recheck impedance.</li>
       </ol>
       <TryIt to="/impedance">Check the trace impedance after changing the stackup</TryIt>
+      <p>Routing PCIe pairs? The <Link to="/guides/pcie-routing-guidelines">PCIe routing guide</Link> puts spacing alongside return paths, loss, vias and skew.</p>
     </Guide>
   );
 }
