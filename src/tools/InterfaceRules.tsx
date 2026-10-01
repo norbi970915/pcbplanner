@@ -398,8 +398,9 @@ export default function InterfaceRules() {
             <div className="flex flex-wrap gap-2 px-3 py-3">
               <Link className="btn no-underline" to={handoff.impedance}>Check this trace in Impedance</Link>
               <Link className="btn no-underline" to={handoff.loss}>See this route in Trace Loss</Link>
+              <Link className="btn no-underline" to={`/s-parameter-viewer?f=${spec.nyquistGHz}`}>Inspect a connector or via .s2p</Link>
             </div>
-            <p className="px-3 pb-3 text-faint">Carries the solved width and spacing, stackup geometry, route length and Nyquist frequency. Check the laminate loss data and foil against your fab materials.</p>
+            <p className="px-3 pb-3 text-faint">The impedance and trace-loss links carry the solved geometry and route length; the .s2p viewer carries the Nyquist frequency as its marker. Check the laminate loss data and foil against your fab materials.</p>
           </Panel>}
           <Panel title="Which layer to route it on" className="mt-3">
             {scan ? (

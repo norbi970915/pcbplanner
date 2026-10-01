@@ -92,6 +92,15 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./InterfaceRules')),
   },
   {
+    path: '/s-parameter-viewer',
+    title: 'S-Parameter Viewer (.s2p)',
+    seoTitle: 'S2P Viewer: Insertion & Return Loss',
+    nav: 'S-parameter viewer',
+    group: 'Signal integrity',
+    summary: 'Open a two-port Touchstone file in the browser to plot S21/S12 insertion loss and S11/S22 return loss, with a frequency marker.',
+    component: lazyPage(() => import('./SParameterViewer')),
+  },
+  {
     path: '/stackup-advisor',
     title: 'Stackup Advisor',
     seoTitle: 'PCB Stackup Finder by Thickness & Layer Count',
