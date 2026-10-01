@@ -79,9 +79,10 @@ function track(page) {
 }
 
 const PROPS = 'aside.order-first';
-// "∞ (ideal)" is a deliberate label for lossless LC results, and ε∞ (high-frequency permittivity)
-// and "→ ∞" (a limit) are notation in the method text; any other ∞ is a failure
-const BAD_RE = /\bNaN\b|Infinity|\bundefined\b|\bnull\b|\[object|(?<!ε|→ )∞(?! \(ideal\))/;
+// fmt() and si() print a non-finite number as "—", so a leaked Infinity shows up as the word
+// "Infinity" (String(Infinity)) and never as "∞". Every ∞ on the site is written on purpose:
+// a lossless LC, a perfect match (RL = ∞), A∞ and ε∞ notation, the Smith chart axis.
+const BAD_RE = /\bNaN\b|Infinity|\bundefined\b|\bnull\b|\[object/;
 
 /** Text of the document area + status bar (+ properties panel labels and input values). */
 const scanText = (page) =>
@@ -881,6 +882,8 @@ async function newCtx(browser, viewport = { width: 1600, height: 1000 }) {
   const ctx = await browser.newContext({ viewport });
   await ctx.addInitScript(() => {
     if (!localStorage.getItem('pcbtk-settings')) localStorage.setItem('pcbtk-settings', JSON.stringify({ unit: 'mm', theme: 'dark' }));
+    // answer the analytics banner up front: it covers the lower inputs and the status bar, and clicks behind it time out
+    if (!localStorage.getItem('pcbplanner:analytics-consent')) localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', updatedAt: '2026-01-01T00:00:00Z' }));
   });
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
   return ctx;

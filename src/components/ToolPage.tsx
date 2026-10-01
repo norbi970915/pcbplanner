@@ -4,7 +4,7 @@ import { APP_NAME, SITE_URL } from '../config';
 import { Link, useLocation } from 'react-router-dom';
 import { guidesForTool } from '../guides/registry';
 import { useShell } from '../state/shell';
-import { toolByPath } from '../tools/registry';
+import { relatedTools, toolByPath } from '../tools/registry';
 
 export function useDocumentMeta(title: string, description: string) {
   useEffect(() => {
@@ -59,6 +59,7 @@ export function ToolPage({
   useDocumentMeta(toolByPath(pathname)?.seoTitle ?? title, description);
   const { propsEl, statusEl, headEl, setActions } = useShell();
   const related = guidesForTool(pathname);
+  const relatedT = relatedTools(pathname);
   useEffect(() => {
     setActions({ reset: onReset });
     return () => setActions(null);
@@ -105,6 +106,18 @@ export function ToolPage({
             <span key={g.path}>
               {i > 0 && ' · '}
               <Link to={g.path}>{g.title}</Link>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {relatedT.length > 0 && (
+        <div className={`${related.length > 0 ? 'mt-2' : 'mt-4'} border border-line bg-sheet px-3 py-2`}>
+          <span className="font-semibold">Related tools: </span>
+          {relatedT.map((t, i) => (
+            <span key={t.path}>
+              {i > 0 && ' · '}
+              <Link to={t.path}>{t.title}</Link>
             </span>
           ))}
         </div>

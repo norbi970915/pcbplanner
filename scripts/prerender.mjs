@@ -10,7 +10,7 @@ const SITE = 'https://www.pcbplanner.com';
 const APP = 'PCB Planner';
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
-const { TOOLS, GROUPS } = await vite.ssrLoadModule('/src/tools/registry.ts');
+const { TOOLS, GROUPS, relatedTools } = await vite.ssrLoadModule('/src/tools/registry.ts');
 const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
@@ -118,6 +118,7 @@ writeFileSync(
 for (const tool of TOOLS) {
   const description = toolDescription(tool);
   const url = SITE + tool.path;
+  const cross = relatedTools(tool.path).filter((t) => t.group !== tool.group);
   const related = TOOLS.filter((t) => t.group === tool.group && t !== tool);
   // the tool's own method section (formulas, explanation, references), rendered on the server side
   const method = fileByPath[tool.path] ? renderToolMethod(fileByPath[tool.path]) : '';
@@ -126,6 +127,7 @@ for (const tool of TOOLS) {
     `<p>${esc(description)}</p>` +
     (method ? `<section><h2>Method, formulas and references</h2>${method}</section>` : '') +
     (guides.length ? `<h2>Related guides</h2><ul>${guides.map((g) => `<li><a href="${g.path}">${esc(g.title)}</a></li>`).join('')}</ul>` : '') +
+    (cross.length ? `<h2>Related tools</h2><ul>${cross.map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`).join('')}</ul>` : '') +
     (related.length
       ? `<h2>Related ${esc(tool.group.toLowerCase())} tools</h2><ul>${related
           .map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`)

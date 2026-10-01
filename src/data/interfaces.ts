@@ -387,7 +387,7 @@ export const INTERFACES: InterfaceSpec[] = [
     intraPairPs: 5,
     maxLenMm: 7500 * MIL,
     rules: [
-      { key: 'other', label: 'Signalling', req: '1.25 GBd, 8b/10b coded, so the clock content sits at 625 MHz. Differential output 150–400 mV, ±100 ppm.', normative: true, src: 0 },
+      { key: 'other', label: 'Signalling', req: '1.25 GBd, 8b/10b coded, so the clock content sits at 625 MHz. Differential output 150–400 mV.', normative: true, src: 0 },
       { key: 'z', label: 'Impedance', req: '100 Ω differential; the receiver input is 80–120 Ω.', src: 1 },
       { key: 'skew', label: 'Intra-pair skew', req: 'Under 5 ps between the two traces of a pair, which TI calls 30 mil on FR-4.', src: 1 },
       { key: 'skew', label: 'Pair-to-pair', req: 'The transmit pair does not have to match the receive pair. In six-wire mode the receive pair must match the clock pair within 5 ps.', src: 1 },

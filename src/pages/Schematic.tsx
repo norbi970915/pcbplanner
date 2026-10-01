@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../components/ToolPage';
 
-export const SCHEMATIC_DESCRIPTION = 'Plan PCB schematic power rails and loads, then check logic-level compatibility, ADC input settling, pull-ups, filters and component values.';
+export const SCHEMATIC_DESCRIPTION = 'Plan PCB schematic power rails and loads, then check logic-level compatibility, ADC input settling, pull-ups, filters, amplifiers, sensors, RF matching and component values.';
 
 const SECTIONS = [
   {
@@ -22,19 +22,32 @@ const SECTIONS = [
       { path: '/i2c-pullup', name: 'I²C pull-up', detail: 'Rise time, bus capacitance and resistor range' },
       { path: '/logic-levels', name: 'Logic-level compatibility', detail: 'Worst-case HIGH/LOW margins and receiver voltage limits' },
       { path: '/termination', name: 'Signal termination', detail: 'Source and load termination with preferred resistor values' },
-      { path: '/crystal', name: 'Crystal load capacitors', detail: 'Load capacitance and frequency offset' },
+      { path: '/crystal', name: 'Crystal load capacitors', detail: 'Load capacitors, pulling and a ppm budget against interface limits' },
+      { path: '/clock-jitter', name: 'Phase noise and jitter', detail: 'RMS jitter from a phase noise curve and the ADC SNR it allows' },
       { path: '/rc-filter', name: 'RC filters', detail: 'Cutoff, impedance and transient response' },
+      { path: '/active-filter', name: 'Active filters', detail: 'Sallen-Key and MFB stages to 8th order with standard values' },
     ],
   },
   {
     title: 'Components and measurement',
     description: 'Choose values and check power or sensing trade-offs.',
     tools: [
+      { path: '/op-amp-gain', name: 'Op-amp gain', detail: 'Gain, bandwidth, offset, noise and resistor pairs' },
+      { path: '/ntc-thermistor', name: 'NTC thermistor', detail: 'Divider into an ADC, °C per LSB and a lookup table' },
       { path: '/current-sense-shunt', name: 'Current-sense shunt', detail: 'Burden voltage, power and first-order error' },
       { path: '/adc-input', name: 'ADC input settling', detail: 'Source impedance, RC filter and sample-capacitor acquisition' },
       { path: '/resistors', name: 'Resistor tools', detail: 'Dividers, parallel combinations and preferred values' },
       { path: '/reactance', name: 'Reactance and resonance', detail: 'Capacitor, inductor and LC behaviour' },
       { path: '/pdn', name: 'PDN impedance', detail: 'Target impedance and decoupling resonance' },
+    ],
+  },
+  {
+    title: 'RF front end',
+    description: 'Match antennas and RF ports, then check the result.',
+    tools: [
+      { path: '/impedance-matching', name: 'L-network matching', detail: 'Two-part L and C match with a Smith chart and standard values' },
+      { path: '/vswr-calculator', name: 'VSWR and return loss', detail: 'Convert between VSWR, |Γ|, return loss and mismatch loss' },
+      { path: '/attenuator', name: 'Attenuator pads', detail: 'Pi and T pads with standard resistor values' },
     ],
   },
 ];

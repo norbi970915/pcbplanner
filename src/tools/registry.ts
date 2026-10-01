@@ -14,6 +14,7 @@ export interface ToolDef {
 /** Colour swatch per group, like layer colours in the PCB editor. */
 export const GROUP_COLORS: Record<string, string> = {
   'Signal integrity': '#3d8fe0',
+  RF: '#5fb0d8',
   Stackup: '#c9a227',
   Thermal: '#e0645a',
   'Power & conductors': '#d08a3c',
@@ -92,13 +93,57 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./InterfaceRules')),
   },
   {
+    path: '/clock-jitter',
+    title: 'Phase Noise to Jitter & Jitter Budget',
+    seoTitle: 'Phase Noise to Jitter Calculator & Jitter Budget',
+    nav: 'Phase noise & jitter',
+    group: 'Signal integrity',
+    summary: 'RMS phase jitter from an oscillator phase noise curve by exact segment integration, jitter-limited ADC SNR and ENOB, and total jitter at a BER from random and deterministic terms.',
+    component: lazyPage(() => import('./ClockJitter')),
+  },
+  {
     path: '/s-parameter-viewer',
-    title: 'S-Parameter Viewer (.s2p)',
-    seoTitle: 'S2P Viewer: Insertion & Return Loss',
+    title: 'S-Parameter Viewer (.s2p, .s4p)',
+    seoTitle: 'S2P & S4P Viewer: Mixed-Mode, TDR, Group Delay',
     nav: 'S-parameter viewer',
     group: 'Signal integrity',
-    summary: 'Open a two-port Touchstone file in the browser to plot S21/S12 insertion loss and S11/S22 return loss, with a frequency marker.',
+    summary: 'Open .s1p to .s16p Touchstone files in the browser: insertion and return loss, phase, group delay, mixed-mode SDD21/SCD21 for 4-ports, TDR impedance and interface loss budgets.',
     component: lazyPage(() => import('./SParameterViewer')),
+  },
+  {
+    path: '/vswr-calculator',
+    title: 'VSWR, Return Loss & Mismatch Loss Calculator',
+    seoTitle: 'VSWR to Return Loss & Mismatch Loss Calculator',
+    nav: 'VSWR & return loss',
+    group: 'RF',
+    summary: 'Convert between VSWR, |Γ|, return loss, mismatch loss and reflected power, find Γ of a complex load, and bound the mismatch uncertainty and cascaded VSWR of two ports.',
+    component: lazyPage(() => import('./Vswr')),
+  },
+  {
+    path: '/coax-impedance',
+    title: 'Coaxial Line Impedance Calculator',
+    seoTitle: 'Coax Impedance Calculator (incl. Offset Centre)',
+    nav: 'Coax impedance',
+    group: 'RF',
+    summary: 'Characteristic impedance of a coaxial line from D, d and εr, or the diameter for a target Z0, with offset centre conductor, delay, C and L per metre, TE11 cutoff and loss.',
+    component: lazyPage(() => import('./CoaxImpedance')),
+  },
+  {
+    path: '/impedance-matching',
+    title: 'L-Network Impedance Matching & Smith Chart',
+    seoTitle: 'L-Network Impedance Matching Calculator',
+    nav: 'L-network matching',
+    group: 'RF',
+    summary: 'Two-element L-section matching of a complex load: every low-pass and high-pass solution with L and C values, node Q, swept return loss, bandwidth, nearest E-series parts and a Smith chart.',
+    component: lazyPage(() => import('./ImpedanceMatching')),
+  },
+  {
+    path: '/quarter-wave-transformer',
+    title: 'Quarter-Wave Transformer & Stub Calculator',
+    nav: 'Quarter-wave & stubs',
+    group: 'RF',
+    summary: 'Single and multisection binomial or Chebyshev λ/4 transformers with exact response and bandwidth, open and short stubs, and single-stub matching, with physical lengths and trace widths.',
+    component: lazyPage(() => import('./QuarterWave')),
   },
   {
     path: '/stackup-advisor',
@@ -338,11 +383,30 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./RcFilter')),
   },
   {
+    path: '/active-filter',
+    title: 'Active Filter Designer',
+    seoTitle: 'Sallen-Key & MFB Active Filter Calculator',
+    nav: 'Active filters',
+    group: 'Electronics',
+    summary: 'Sallen-Key and MFB low-pass and high-pass filters to 8th order (Butterworth, Bessel, Chebyshev): component values, standard-value response, and op amp GBW and slew-rate requirements.',
+    component: lazyPage(() => import('./ActiveFilter')),
+  },
+  {
+    path: '/op-amp-gain',
+    title: 'Op-Amp Gain Calculator',
+    seoTitle: 'Op-Amp Gain, Bandwidth, Offset & Noise Calculator',
+    nav: 'Op-amp gain',
+    group: 'Electronics',
+    summary: 'Inverting, non-inverting, difference and summing stages: noise gain, bandwidth, output swing, DC offset, noise and resistor tolerance, with standard-value pairs for a target gain.',
+    component: lazyPage(() => import('./OpAmpGain')),
+  },
+  {
     path: '/crystal',
-    title: 'Crystal Load Capacitors & PPM',
+    title: 'Crystal Load Capacitors & PPM Budget',
+    seoTitle: 'Crystal Load Capacitor & PPM Budget Calculator',
     nav: 'Crystal & ppm',
     group: 'Electronics',
-    summary: 'Crystal load capacitors with the nearest E12/E24 values and resulting CL, plus frequency error ↔ ppm and clock drift.',
+    summary: 'Crystal load capacitors with the nearest E12/E24 values and the pulling they cause, a ppm frequency budget checked against USB, Ethernet, PCIe and SATA clock tolerances, and ppm ↔ frequency error and drift.',
     component: lazyPage(() => import('./Crystal')),
   },
   {
@@ -376,6 +440,15 @@ export const TOOLS: ToolDef[] = [
     group: 'Electronics',
     summary: 'Check source and RC filter settling into a SAR ADC sample capacitor during acquisition, with an optional filter-node recovery check.',
     component: lazyPage(() => import('./AdcInput')),
+  },
+  {
+    path: '/ntc-thermistor',
+    title: 'NTC Thermistor Calculator',
+    seoTitle: 'NTC Thermistor Calculator: Beta, Steinhart–Hart & ADC',
+    nav: 'NTC thermistor',
+    group: 'Electronics',
+    summary: 'Beta and Steinhart–Hart models with coefficient fitting, a thermistor divider into an ADC with °C/LSB, series-resistor choice, self-heating, tolerance error and a CSV or C lookup table.',
+    component: lazyPage(() => import('./NtcThermistor')),
   },
   {
     path: '/current-sense-shunt',
@@ -429,6 +502,28 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./ReferenceCharts')),
   },
 ];
+
+/** Tools in other groups (or not obviously related) that a tool page links to under "Related tools". */
+export const RELATED: Record<string, string[]> = {
+  '/vswr-calculator': ['/attenuator', '/impedance-matching', '/coax-impedance', '/s-parameter-viewer'],
+  '/coax-impedance': ['/vswr-calculator', '/timing', '/skin-effect', '/impedance'],
+  '/impedance-matching': ['/quarter-wave-transformer', '/vswr-calculator', '/reactance', '/s-parameter-viewer'],
+  '/quarter-wave-transformer': ['/impedance-matching', '/impedance', '/timing', '/differential-via'],
+  '/s-parameter-viewer': ['/vswr-calculator', '/trace-loss', '/interface-rules'],
+  '/attenuator': ['/vswr-calculator', '/impedance-matching'],
+  '/reactance': ['/impedance-matching', '/active-filter'],
+  '/rc-filter': ['/active-filter', '/adc-input'],
+  '/active-filter': ['/rc-filter', '/op-amp-gain', '/adc-input'],
+  '/op-amp-gain': ['/active-filter', '/resistors', '/current-sense-shunt', '/adc-input'],
+  '/ntc-thermistor': ['/adc-input', '/resistors', '/rc-filter'],
+  '/adc-input': ['/ntc-thermistor', '/active-filter', '/op-amp-gain', '/clock-jitter'],
+  '/clock-jitter': ['/crystal', '/adc-input', '/interface-rules'],
+  '/crystal': ['/clock-jitter'],
+  '/current-sense-shunt': ['/op-amp-gain'],
+  '/resistors': ['/op-amp-gain', '/ntc-thermistor'],
+};
+
+export const relatedTools = (p: string) => (RELATED[p] ?? []).map(toolByPath).filter((t): t is ToolDef => !!t);
 
 export const GROUPS = [...new Set(TOOLS.map((t) => t.group))];
 export const toolByPath = (p: string) => TOOLS.find((t) => t.path === p);
