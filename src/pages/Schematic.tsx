@@ -12,6 +12,7 @@ const SECTIONS = [
       { path: '/buck-converter', name: 'Buck converter', detail: 'Inductor, capacitors, current limits and operating range' },
       { path: '/boost-converter', name: 'Boost converter', detail: 'Power stage, ratings and operating limits' },
       { path: '/ldo', name: 'LDO dissipation', detail: 'Dropout headroom and thermal loss' },
+      { path: '/emi-filter', name: 'EMI filter designer', detail: 'LC, π and ferrite-bead filters with loaded attenuation and resonance damping' },
       { path: '/feedback-divider', name: 'Feedback divider', detail: 'Output voltage and resistor choice' },
     ],
   },
