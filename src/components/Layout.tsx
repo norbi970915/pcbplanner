@@ -6,6 +6,7 @@ import { GUIDES } from '../guides/registry';
 import { ANALYTICS_CONSENT_KEY, disableAnalytics, enableAnalytics, isAnalyticsHost, readAnalyticsChoice, saveAnalyticsChoice, type AnalyticsChoice } from '../lib/analytics';
 import { useInstall, useOnline } from '../lib/pwa';
 import { ErrorBoundary } from './ErrorBoundary';
+import { CategoryIcon } from './CategoryIcon';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
 import { projectStore, useProjects } from '../state/projectStore';
@@ -282,7 +283,7 @@ export function Layout() {
             {GROUPS.map((g, gi) => (
               <div key={g}>
                 {gi > 0 && <div className="menu-sep" />}
-                <div className="px-3 py-0.5 text-[11px] text-faint">{g}</div>
+                <div className="flex items-center gap-1.5 px-3 py-0.5 text-[11px] text-faint"><CategoryIcon group={g} color={GROUP_COLORS[g]} size={14} />{g}</div>
                 {TOOLS.filter((t) => t.group === g).map((t) => (
                   <Item key={t.path} onClick={run(() => navigate(t.path))}>
                     {t.nav}
@@ -368,14 +369,14 @@ export function Layout() {
                   <div key={g} className="mb-1">
                     <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
                       <span className="text-[9px] text-muted">▼</span>
-                      <Swatch color={GROUP_COLORS[g]} />
+                      <CategoryIcon group={g} color={GROUP_COLORS[g]} size={14} />
                       {g}
                     </div>
                     {TOOLS.filter((t) => t.group === g).map((t) => (
                       <Link
                         key={t.path}
                         to={t.path}
-                        className={`block py-[3px] pl-[34px] pr-2 no-underline ${t.path === path ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}
+                        className={`block py-[3px] pl-[39px] pr-2 no-underline ${t.path === path ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}
                       >
                         {t.nav}
                       </Link>
@@ -385,10 +386,10 @@ export function Layout() {
                 <div className="mb-1">
                   <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
                     <span className="text-[9px] text-muted">▼</span>
-                    <Swatch color="#8a8a8a" />
+                    <CategoryIcon group="Guides" color="#8a8a8a" size={14} />
                     Guides
                   </div>
-                  <Link to="/guides" className={`block py-[3px] pl-[34px] pr-2 no-underline ${isDoc ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>
+                  <Link to="/guides" className={`block py-[3px] pl-[39px] pr-2 no-underline ${isDoc ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>
                     All guides
                   </Link>
                 </div>

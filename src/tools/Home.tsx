@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { useDocumentMeta } from '../components/ToolPage';
 import { APP_NAME } from '../config';
 import { NEWS } from '../data/news';
@@ -135,7 +136,7 @@ export default function Home() {
           <h2 className="mb-2 font-semibold">Browse by category</h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {GROUPS.map(group => <Link key={group} to={`/tools?group=${encodeURIComponent(group)}`} className="flex min-h-[66px] items-center gap-2.5 border border-line bg-sheet px-3 py-2 no-underline hover:bg-hover">
-              <span className="h-3 w-3 shrink-0 border border-black/30" style={{ background: GROUP_COLORS[group] }} />
+              <CategoryIcon group={group} color={GROUP_COLORS[group]} size={22} />
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-accent-ink">{group}</span>
                 <span className="block truncate text-muted">{TOOLS.filter(tool => tool.group === group).slice(0, 3).map(tool => tool.nav).join(' / ')}</span>

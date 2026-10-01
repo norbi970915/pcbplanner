@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { useDocumentMeta } from '../components/ToolPage';
 import { useShell } from '../state/shell';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
@@ -21,7 +22,7 @@ export default function ToolsIndex() {
         <nav aria-label="Tool categories" className="mt-3 flex flex-wrap gap-1.5">
           <Link to="/tools" className={`btn no-underline ${selected ? '' : 'btn-primary'}`}>All tools</Link>
           {GROUPS.map(group => <Link key={group} to={`/tools?group=${encodeURIComponent(group)}`} className={`btn no-underline ${selected === group ? 'btn-primary' : ''}`}>
-            <span className="h-[9px] w-[9px] border border-black/30" style={{ background: GROUP_COLORS[group] }} />{group}
+            <CategoryIcon group={group} color={GROUP_COLORS[group]} size={14} />{group}
           </Link>)}
         </nav>
       </div>
@@ -29,7 +30,7 @@ export default function ToolsIndex() {
     <div className="mt-3 grid gap-3 xl:grid-cols-2">
       {groups.map(group => <section key={group} className="min-w-0 border border-line bg-sheet">
         <h2 className="flex h-[24px] items-center gap-1.5 bg-panel-head px-2 font-semibold">
-          <span className="h-[9px] w-[9px] border border-black/30" style={{ background: GROUP_COLORS[group] }} />{group}
+          <CategoryIcon group={group} color={GROUP_COLORS[group]} size={14} />{group}
           <span className="ml-auto font-normal text-faint">{TOOLS.filter(tool => tool.group === group).length} tools</span>
         </h2>
         <ul>{TOOLS.filter(tool => tool.group === group).map(tool => <li key={tool.path} className="border-t border-line">
