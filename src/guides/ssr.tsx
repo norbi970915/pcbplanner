@@ -16,6 +16,12 @@ import PcieRouting from './PcieRouting';
 import PcieGuidelines from './PcieGuidelines';
 import Usb3Impedance from './Usb3Impedance';
 import ViaFence from './ViaFence';
+import VswrReturnLoss from './VswrReturnLoss';
+import CoaxImpedanceFormula from './CoaxImpedanceFormula';
+import LNetworkMatching from './LNetworkMatching';
+import QuarterWaveMatching from './QuarterWaveMatching';
+import SParametersExplained from './SParametersExplained';
+import PhaseNoiseJitter from './PhaseNoiseJitter';
 import About from '../pages/About';
 import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
@@ -27,6 +33,12 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/tools': ToolsIndex,
   '/schematic': Schematic,
   '/guides': GuidesIndex,
+  '/guides/vswr-return-loss-explained': VswrReturnLoss,
+  '/guides/coax-impedance-formula': CoaxImpedanceFormula,
+  '/guides/l-network-impedance-matching': LNetworkMatching,
+  '/guides/quarter-wave-impedance-transformer': QuarterWaveMatching,
+  '/guides/s-parameters-s11-s21': SParametersExplained,
+  '/guides/phase-noise-to-jitter': PhaseNoiseJitter,
   '/guides/buck-converter-formulas': BuckFormulas,
   '/guides/boost-converter-formulas': BoostFormulas,
   '/guides/via-fence-spacing': ViaFence,
