@@ -588,7 +588,7 @@ export function Method() {
           </ol>
           <p>
             Every prepreg and core ply becomes its own dielectric layer with thickness, Dk, Df and material. Plane layers are exported as signal layers; change them to planes in Altium
-            if you use negative planes. The file follows the published .stackupx structure but could not be tested in Altium here.
+            if you use negative planes.
           </p>
           <h3>Fusion 360 Electronics and EAGLE</h3>
           <ol>
