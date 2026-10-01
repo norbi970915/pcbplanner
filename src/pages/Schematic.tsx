@@ -21,6 +21,7 @@ const SECTIONS = [
     tools: [
       { path: '/i2c-pullup', name: 'I²C pull-up', detail: 'Rise time, bus capacitance and resistor range' },
       { path: '/logic-levels', name: 'Logic-level compatibility', detail: 'Worst-case HIGH/LOW margins and receiver voltage limits' },
+      { path: '/comparator-hysteresis', name: 'Comparator hysteresis', detail: 'Rising/falling thresholds, standard resistors and accuracy bounds' },
       { path: '/termination', name: 'Signal termination', detail: 'Source and load termination with preferred resistor values' },
       { path: '/crystal', name: 'Crystal load capacitors', detail: 'Load capacitors, pulling and a ppm budget against interface limits' },
       { path: '/clock-jitter', name: 'Phase noise and jitter', detail: 'RMS jitter from a phase noise curve and the ADC SNR it allows' },
@@ -35,7 +36,7 @@ const SECTIONS = [
       { path: '/op-amp-gain', name: 'Op-amp gain', detail: 'Gain, bandwidth, offset, noise and resistor pairs' },
       { path: '/ntc-thermistor', name: 'NTC thermistor', detail: 'Divider into an ADC, °C per LSB and a lookup table' },
       { path: '/current-sense-shunt', name: 'Current-sense shunt', detail: 'Burden voltage, power and first-order error' },
-      { path: '/adc-input', name: 'ADC input settling', detail: 'Source impedance, RC filter and sample-capacitor acquisition' },
+      { path: '/adc-input', name: 'ADC input settling and accuracy', detail: 'Acquisition, recovery and an optional offset/gain/reference/INL budget' },
       { path: '/resistors', name: 'Resistor tools', detail: 'Dividers, parallel combinations and preferred values' },
       { path: '/reactance', name: 'Reactance and resonance', detail: 'Capacitor, inductor and LC behaviour' },
       { path: '/pdn', name: 'PDN impedance', detail: 'Target impedance and decoupling resonance' },

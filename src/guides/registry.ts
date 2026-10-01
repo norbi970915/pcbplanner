@@ -1,6 +1,6 @@
 import { lazyPage, type LazyPage } from '../lib/lazyPage';
 
-export const GUIDE_CATEGORIES = ['RF & Measurement', 'Signal Integrity & Interfaces', 'PCB Layout & Safety', 'Power & Thermal'] as const;
+export const GUIDE_CATEGORIES = ['RF & Measurement', 'Signal Integrity & Interfaces', 'PCB Layout & Safety', 'Power & Thermal', 'Schematic & Components'] as const;
 export type GuideCategory = typeof GUIDE_CATEGORIES[number];
 
 export interface GuideDef {
@@ -17,6 +17,51 @@ export interface GuideDef {
 
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
+  {
+    path: '/guides/rc-filter-design',
+    title: 'RC Filter Design: Choosing R and C for Low-Pass and High-Pass Filters',
+    seoTitle: 'RC Filter Design: Low-Pass & High-Pass',
+    description: 'Choose RC filter values with worked low-pass and high-pass examples, source/load resistance, tolerance bounds and a settling check before an ADC.',
+    tools: ['/rc-filter', '/adc-input', '/active-filter'],
+    date: '2026-10-01', minutes: 7, category: 'Schematic & Components',
+    component: lazyPage(() => import('./RcFilterDesign')),
+  },
+  {
+    path: '/guides/ldo-efficiency-power-dissipation',
+    title: 'LDO Efficiency, Power Dissipation and Dropout: A Worked Thermal Check',
+    seoTitle: 'LDO Efficiency & Power Dissipation',
+    description: 'Calculate linear regulator efficiency, ground-current loss, junction temperature and dropout headroom, with a 5 V to 3.3 V example and a buck comparison.',
+    tools: ['/ldo', '/power-tree', '/copper-heat-spreading', '/junction-temperature'],
+    date: '2026-10-01', minutes: 6, category: 'Power & Thermal',
+    component: lazyPage(() => import('./LdoEfficiency')),
+  },
+  {
+    path: '/guides/i2c-pullup-resistor-calculation',
+    title: 'I²C Pull-up Resistors: When 4.7 kΩ Works and When It Does Not',
+    seoTitle: 'I2C Pull-up Resistor Calculation & Bus Capacitance',
+    description: 'Calculate I²C pull-up minimum and maximum resistance from sink current and rise time, estimate bus capacitance, and include parallel module pull-ups.',
+    tools: ['/i2c-pullup', '/impedance', '/logic-levels'],
+    date: '2026-10-01', minutes: 7, category: 'Schematic & Components',
+    component: lazyPage(() => import('./I2cPullupGuide')),
+  },
+  {
+    path: '/guides/crystal-load-capacitors-ppm',
+    title: 'Crystal Load Capacitors and PPM Budget: From Picofarads to Clock Error',
+    seoTitle: 'Crystal Load Capacitors & PPM Budget',
+    description: 'Calculate equal crystal load capacitors, account for stray capacitance and standard values, and budget initial, temperature, aging and load-pulling error.',
+    tools: ['/crystal', '/clock-jitter', '/interface-rules'],
+    date: '2026-10-01', minutes: 7, category: 'Schematic & Components',
+    component: lazyPage(() => import('./CrystalLoadGuide')),
+  },
+  {
+    path: '/guides/s4p-differential-s-parameters',
+    title: 'Reading S4P Files: Differential Loss, Return Loss and Mode Conversion',
+    seoTitle: 'S4P Files: SDD21, SDD11 & Mode Conversion',
+    description: 'Choose the correct port pairing in a four-port Touchstone file, read SDD21 and SCD21, and try a downloadable synthetic differential-channel example.',
+    tools: ['/s-parameter-viewer', '/interface-rules', '/trace-loss', '/vswr-calculator'],
+    date: '2026-10-01', minutes: 7, category: 'RF & Measurement',
+    component: lazyPage(() => import('./DifferentialSParameters')),
+  },
   {
     path: '/guides/vswr-return-loss-explained',
     title: 'VSWR, Return Loss and Reflected Power: What the Numbers Mean',

@@ -22,6 +22,11 @@ import LNetworkMatching from './LNetworkMatching';
 import QuarterWaveMatching from './QuarterWaveMatching';
 import SParametersExplained from './SParametersExplained';
 import PhaseNoiseJitter from './PhaseNoiseJitter';
+import RcFilterDesign from './RcFilterDesign';
+import LdoEfficiency from './LdoEfficiency';
+import I2cPullupGuide from './I2cPullupGuide';
+import CrystalLoadGuide from './CrystalLoadGuide';
+import DifferentialSParameters from './DifferentialSParameters';
 import About from '../pages/About';
 import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
@@ -33,6 +38,11 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/tools': ToolsIndex,
   '/schematic': Schematic,
   '/guides': GuidesIndex,
+  '/guides/rc-filter-design': RcFilterDesign,
+  '/guides/ldo-efficiency-power-dissipation': LdoEfficiency,
+  '/guides/i2c-pullup-resistor-calculation': I2cPullupGuide,
+  '/guides/crystal-load-capacitors-ppm': CrystalLoadGuide,
+  '/guides/s4p-differential-s-parameters': DifferentialSParameters,
   '/guides/vswr-return-loss-explained': VswrReturnLoss,
   '/guides/coax-impedance-formula': CoaxImpedanceFormula,
   '/guides/l-network-impedance-matching': LNetworkMatching,

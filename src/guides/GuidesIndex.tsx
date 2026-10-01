@@ -5,7 +5,7 @@ import { useShell } from '../state/shell';
 import { GUIDE_CATEGORIES, GUIDES, type GuideCategory } from './registry';
 
 export default function GuidesIndex() {
-  useDocumentMeta('PCB Design Guides', 'Sourced PCB and electronics guides with worked examples for RF matching, VSWR, coax impedance, S-parameters, phase noise, PCIe routing, stackups, power supplies and more.');
+  useDocumentMeta('PCB Design Guides', 'Sourced PCB and electronics guides with worked examples for RF, S-parameters, PCIe routing, stackups, power supplies, RC filters, I²C pull-ups and crystal clocks.');
   const { statusEl } = useShell();
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
