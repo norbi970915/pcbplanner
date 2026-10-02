@@ -1,9 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { useDocumentMeta } from '../components/ToolPage';
 import { APP_NAME } from '../config';
+import {
+  Search,
+  ArrowRight,
+  X,
+  BookOpen,
+  Check,
+  ExternalLink,
+  ChevronRight,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader } from '../components/shadcn/card';
+import { Button } from '../components/shadcn/button';
+import { Input } from '../components/shadcn/input';
+import { Badge } from '../components/shadcn/badge';
 import { NEWS } from '../data/news';
 import { PRESETS } from '../lib/stackups';
 import { useShell } from '../state/shell';
@@ -11,17 +24,68 @@ import { GUIDES } from '../guides/registry';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
 
 const QUICK_TASKS = [
-  { path: '/impedance', action: 'Calculate trace impedance', detail: 'Single-ended and differential traces' },
-  { path: '/stackup-advisor', action: 'Choose a PCB stackup', detail: 'Filter by layers, thickness and routing needs' },
-  { path: '/trace-width', action: 'Size a power trace', detail: 'Current, temperature rise and voltage drop' },
-  { path: '/via', action: 'Check a via', detail: 'Current, resistance and parasitics' },
-  { path: '/schematic', action: 'Plan a schematic', detail: 'Power tree, component values and interface checks' },
-  { path: '/units', action: 'Convert units', detail: 'Copper weight, length, power and more' },
+  {
+    path: '/impedance',
+    action: 'Calculate trace impedance',
+    detail: 'Single-ended and differential traces',
+    group: 'Signal integrity',
+  },
+  {
+    path: '/stackup-advisor',
+    action: 'Choose a PCB stackup',
+    detail: 'Layers, thickness and routing needs',
+    group: 'Stackup',
+  },
+  {
+    path: '/trace-width',
+    action: 'Size a power trace',
+    detail: 'Current, temperature rise and voltage drop',
+    group: 'Power & conductors',
+  },
+  {
+    path: '/via',
+    action: 'Check a via',
+    detail: 'Current, resistance and parasitics',
+    group: 'Components',
+  },
+  {
+    path: '/schematic',
+    action: 'Plan a schematic',
+    detail: 'Power tree, values and interface checks',
+    group: 'Electronics',
+  },
+  {
+    path: '/units',
+    action: 'Convert units',
+    detail: 'Copper weight, length, power and more',
+    group: 'Utilities',
+  },
 ];
-const RECENT_GUIDES = [...GUIDES].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+const RECENT_GUIDES = [...GUIDES]
+  .sort((a, b) => b.date.localeCompare(a.date))
+  .slice(0, 3);
 const HOME_SEARCH_KEY = 'pcbplanner:home-search';
-const newsDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const newsDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 
+function Heading({
+  children,
+  action,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <CardHeader className="section-heading">
+      <h2>{children}</h2>
+      {action}
+    </CardHeader>
+  );
+}
 export default function Home() {
   useDocumentMeta(
     'PCB impedance, stackup and design calculators',
@@ -29,20 +93,32 @@ export default function Home() {
   );
   const { statusEl } = useShell();
   const [query, setQuery] = useState(() => {
-    try { return sessionStorage.getItem(HOME_SEARCH_KEY) ?? ''; } catch { return ''; }
+    try {
+      return sessionStorage.getItem(HOME_SEARCH_KEY) ?? '';
+    } catch {
+      return '';
+    }
   });
   const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     try {
       if (query) sessionStorage.setItem(HOME_SEARCH_KEY, query);
       else sessionStorage.removeItem(HOME_SEARCH_KEY);
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   }, [query]);
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
-      if (event.key !== '/' || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (event.key !== '/' || event.ctrlKey || event.altKey || event.metaKey)
+        return;
       const target = event.target;
-      if (target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      )
+        return;
       event.preventDefault();
       searchRef.current?.focus();
     };
@@ -50,116 +126,325 @@ export default function Home() {
     return () => window.removeEventListener('keydown', focusSearch);
   }, []);
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const toolMatches = words.length ? TOOLS.filter(tool => {
-    const text = `${tool.nav} ${tool.title} ${tool.group} ${tool.summary}`.toLowerCase();
-    return words.every(word => text.includes(word));
-  }) : [];
-  const guideMatches = words.length ? GUIDES.filter(guide => {
-    const text = `${guide.title} ${guide.seoTitle} ${guide.description}`.toLowerCase();
-    return words.every(word => text.includes(word));
-  }) : [];
+  const toolMatches = words.length
+    ? TOOLS.filter((tool) => {
+        const text =
+          `${tool.nav} ${tool.title} ${tool.group} ${tool.summary}`.toLowerCase();
+        return words.every((word) => text.includes(word));
+      })
+    : [];
+  const guideMatches = words.length
+    ? GUIDES.filter((guide) => {
+        const text =
+          `${guide.title} ${guide.seoTitle} ${guide.description}`.toLowerCase();
+        return words.every((word) => text.includes(word));
+      })
+    : [];
 
   return (
-    <div className="p-3">
-      <section className="border border-line bg-sheet">
-        <div className="flex h-[24px] items-center bg-panel-head px-2 font-semibold">Home</div>
-        <div className="px-4 py-3">
-          <h1 className="text-[18px] font-semibold">{APP_NAME}</h1>
-          <p className="mt-1 max-w-[95ch] text-muted">PCB design calculators for stackups, signals, power and components. Inputs stay available while this app window is open, and result URLs are shareable. <Link to="/about">About PCB Planner</Link></p>
-          <p className="mt-2 text-muted">New here? <Link to="/impedance?type=microstrip&mode=se&mask=0&w=0.27&t=0.035&h=0.15&er=4.2&etch=0.0127&target=50">Try a 50 Ω microstrip example →</Link> with a ready-to-edit 0.27 mm trace over a 0.15 mm dielectric.</p>
-          <label className="mt-3 block max-w-[560px]">
-            <span className="mb-1 flex items-center justify-between font-semibold"><span>Find a tool or guide</span><span className="hidden font-normal text-faint sm:inline">Press / to search</span></span>
-            <input ref={searchRef} className="fld w-full" style={{ height: 32 }} type="search" value={query} onChange={event => setQuery(event.target.value)}
-              onKeyDown={event => { if (event.key === 'Escape') { setQuery(''); event.currentTarget.blur(); } }}
-              placeholder="Try impedance, via current, USB, buck..." />
-          </label>
-        </div>
-      </section>
-
-      {words.length ? <section id="home-search-results" className="mt-3 border border-line bg-sheet">
-        <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Search results</span><span role="status" aria-live="polite" className="font-normal text-muted">{toolMatches.length} {toolMatches.length === 1 ? 'tool' : 'tools'} · {guideMatches.length} {guideMatches.length === 1 ? 'guide' : 'guides'}</span></h2>
-        {toolMatches.length > 0 && <>
-          <h3 className="border-t border-line px-3 py-1.5 font-semibold">Tools</h3>
-          <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
-            {toolMatches.map(tool => <li key={tool.path} className="border-t border-line md:border-r">
-              <Link to={tool.path} className="block h-full px-3 py-2 no-underline hover:bg-hover">
-                <div className="font-semibold text-accent-ink">{tool.nav}</div>
-                <div className="text-faint">{tool.group}</div>
-                <div className="mt-0.5 line-clamp-2 text-muted">{tool.summary}</div>
-              </Link>
-            </li>)}
-          </ul>
-        </>}
-        {guideMatches.length > 0 && <>
-          <h3 className="border-t border-line px-3 py-1.5 font-semibold">Guides</h3>
-          <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
-            {guideMatches.map(guide => <li key={guide.path} className="border-t border-line md:border-r">
-              <Link to={guide.path} className="block h-full px-3 py-2 no-underline hover:bg-hover">
-                <div className="font-semibold text-accent-ink">{guide.title}</div>
-                <div className="text-faint">Guide · {guide.minutes} min read</div>
-                <div className="mt-0.5 line-clamp-2 text-muted">{guide.description}</div>
-              </Link>
-            </li>)}
-          </ul>
-        </>}
-        {!toolMatches.length && !guideMatches.length && <p className="px-3 py-3 text-muted">No matching tools or guides. Try a broader term, <Link to="/tools">browse all tools</Link> or <Link to="/guides">browse all guides</Link>.</p>}
-      </section> : <>
-        <section className="mt-3 border border-line bg-sheet">
-          <h2 className="flex h-[24px] items-center bg-panel-head px-2 font-semibold">What's new</h2>
-          <ul>
-            {NEWS.slice(0, 3).map(item => <li key={item.title} className="border-t border-line px-3 py-2">
-              <div className="flex flex-wrap items-baseline gap-x-2">
-                <time dateTime={item.date} className="text-faint">{newsDate(item.date)}</time>
-                <span className="font-semibold">{item.title}</span>
+    <>
+      <div className="home-content">
+        <Card className="welcome-card">
+          <Heading
+            action={
+              <Badge variant="outline" className="quiet-badge">
+                Overview
+              </Badge>
+            }
+          >
+            Home
+          </Heading>
+          <CardContent className="welcome-content">
+            <div className="welcome-top">
+              <div>
+                <div className="eyebrow">YOUR PCB DESIGN WORKBENCH</div>
+                <h1>
+                  {APP_NAME}
+                  <span className="title-dot">.</span>
+                </h1>
               </div>
-              <p className="mt-0.5 max-w-[110ch] text-muted">
-                {item.text}
-                {item.links && <> {item.links.map((l, i) => <span key={l.to}>{i > 0 && ' · '}<Link to={l.to}>{l.label}</Link></span>)}</>}
-              </p>
-            </li>)}
-          </ul>
-        </section>
-
-        <section className="mt-3 border border-line bg-sheet">
-          <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Quick access</span><Link to="/tools" className="font-normal">All {TOOLS.length} tools →</Link></h2>
-          <ul className="grid sm:grid-cols-2 xl:grid-cols-3">
-            {QUICK_TASKS.map(task => <li key={task.path} className="border-t border-line sm:border-r">
-              <Link to={task.path} className="block h-full px-3 py-2.5 no-underline hover:bg-hover">
-                <div className="font-semibold text-accent-ink">{task.action}</div>
-                <div className="mt-0.5 text-muted">{task.detail}</div>
+              <div className="welcome-stats">
+                <span>
+                  <strong>{TOOLS.length}</strong> tools
+                </span>
+                <span>
+                  <strong>{PRESETS.length}</strong> stackups
+                </span>
+              </div>
+            </div>
+            <p className="intro">
+              PCB design calculators for stackups, signals, power and
+              components. Inputs stay available while the app window is open,
+              and result URLs are shareable.{' '}
+              <Link to="/about">
+                About PCB Planner <ExternalLink size={11} />
               </Link>
-            </li>)}
-          </ul>
-        </section>
-
-        <section className="mt-3">
-          <h2 className="mb-2 font-semibold">Browse by category</h2>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {GROUPS.map(group => <Link key={group} to={`/tools?group=${encodeURIComponent(group)}`} className="flex min-h-[66px] items-center gap-2.5 border border-line bg-sheet px-3 py-2 no-underline hover:bg-hover">
-              <CategoryIcon group={group} color={GROUP_COLORS[group]} size={22} />
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-accent-ink">{group}</span>
-                <span className="block truncate text-muted">{TOOLS.filter(tool => tool.group === group).slice(0, 3).map(tool => tool.nav).join(' / ')}</span>
+            </p>
+            <p className="starter">
+              <span className="starter-mark">↳</span> New here?{' '}
+              <Link to="/impedance?type=microstrip&mode=se&mask=0&w=0.27&t=0.035&h=0.15&er=4.2&etch=0.0127&target=50">
+                Try a 50 Ω microstrip example <ArrowRight size={13} />
+              </Link>
+              <span className="starter-detail">
+                0.27 mm trace · 0.15 mm dielectric
               </span>
-              <span className="text-faint">{TOOLS.filter(tool => tool.group === group).length}</span>
-            </Link>)}
-          </div>
-        </section>
-
-        <section className="mt-3 border border-line bg-sheet">
-          <h2 className="flex h-[24px] items-center justify-between bg-panel-head px-2 font-semibold"><span>Recent guides</span><Link to="/guides" className="font-normal">All guides →</Link></h2>
-          <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
-            {RECENT_GUIDES.map(guide => <li key={guide.path} className="border-t border-line md:border-r">
-              <Link to={guide.path} className="block h-full px-3 py-2 no-underline hover:bg-hover">
-                <div className="font-semibold text-accent-ink">{guide.title}</div>
-                <div className="mt-0.5 line-clamp-2 text-muted">{guide.description}</div>
-                <div className="mt-0.5 text-faint">{guide.minutes} min read</div>
-              </Link>
-            </li>)}
-          </ul>
-        </section>
-      </>}
-      {statusEl && createPortal(<span>{TOOLS.length} tools · {PRESETS.length} stackups</span>, statusEl)}
-    </div>
+            </p>
+            <div className="search-label">
+              <label htmlFor="home-search">Find a tool or guide</label>
+              <span>
+                Press <kbd>/</kbd> to search
+              </span>
+            </div>
+            <div className="search-box">
+              <Search size={18} />
+              <Input
+                id="home-search"
+                ref={searchRef}
+                type="search"
+                autoComplete="off"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setQuery('');
+                    e.currentTarget.blur();
+                  }
+                }}
+                placeholder="Try impedance, via current, USB, buck…"
+                aria-controls={words.length ? 'search-results' : undefined}
+              />
+              {query && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="clear-search"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setQuery('');
+                    searchRef.current?.focus();
+                  }}
+                >
+                  <X size={14} />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        {words.length ? (
+          <Card id="search-results">
+            <Heading
+              action={
+                <span className="section-meta" role="status" aria-live="polite">
+                  {toolMatches.length} tools · {guideMatches.length} guides
+                </span>
+              }
+            >
+              Search results
+            </Heading>
+            {!toolMatches.length && !guideMatches.length && (
+              <div className="empty-state">
+                <Search size={28} />
+                <h3>No matching tools or guides</h3>
+                <p>
+                  Try a broader term, or{' '}
+                  <Link to="/tools">browse all tools</Link>.
+                </p>
+                <Button variant="outline" onClick={() => setQuery('')}>
+                  Clear search
+                </Button>
+              </div>
+            )}
+            {toolMatches.length > 0 && (
+              <>
+                <h3 className="result-heading">Tools</h3>
+                <div className="result-grid">
+                  {toolMatches.map((t) => (
+                    <Link className="result-item" to={t.path} key={t.path}>
+                      <div className="result-title">
+                        <CategoryIcon
+                          group={t.group}
+                          color={GROUP_COLORS[t.group]}
+                        />
+                        <h4>{t.nav}</h4>
+                        <ArrowRight size={14} />
+                      </div>
+                      <span className="result-type">{t.group}</span>
+                      <p>{t.summary}</p>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+            {guideMatches.length > 0 && (
+              <>
+                <h3 className="result-heading">Guides</h3>
+                <div className="result-grid">
+                  {guideMatches.map((g) => (
+                    <Link className="result-item" to={g.path} key={g.path}>
+                      <div className="result-title">
+                        <BookOpen size={16} />
+                        <h4>{g.title}</h4>
+                        <ArrowRight size={14} />
+                      </div>
+                      <span className="result-type">
+                        Guide · {g.minutes} min read
+                      </span>
+                      <p>{g.description}</p>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </Card>
+        ) : (
+          <>
+            <Card className="news-card">
+              <Heading
+                action={<span className="section-meta">Latest update</span>}
+              >
+                What's new
+              </Heading>
+              {NEWS.slice(0, 3).map((item) => (
+                <div className="news-item" key={item.title}>
+                  <div className="news-icon">
+                    <Check size={17} />
+                  </div>
+                  <div>
+                    <div className="news-title">
+                      <h3>{item.title}</h3>
+                      <time dateTime={item.date}>{newsDate(item.date)}</time>
+                    </div>
+                    <p>
+                      {item.text}
+                      {'links' in item &&
+                        item.links?.map((link) => (
+                          <Fragment key={link.to}>
+                            {' '}
+                            <Link to={link.to}>{link.label}</Link>
+                          </Fragment>
+                        ))}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </Card>
+            <Card>
+              <Heading
+                action={
+                  <Link className="section-link" to="/tools">
+                    All {TOOLS.length} tools <ArrowRight size={13} />
+                  </Link>
+                }
+              >
+                Quick access
+              </Heading>
+              <div className="quick-grid">
+                {QUICK_TASKS.map((task) => (
+                  <Link className="quick-task" to={task.path} key={task.path}>
+                    <div className="task-icon">
+                      <CategoryIcon
+                        group={task.group}
+                        color={GROUP_COLORS[task.group]}
+                        size={20}
+                      />
+                    </div>
+                    <div className="task-text">
+                      <h3>{task.action}</h3>
+                      <p>{task.detail}</p>
+                    </div>
+                    <ArrowRight size={15} />
+                  </Link>
+                ))}
+              </div>
+            </Card>
+            <section
+              className="categories-section"
+              aria-labelledby="categories-heading"
+            >
+              <div className="outside-heading">
+                <h2 id="categories-heading">Browse by category</h2>
+                <span className="section-meta">
+                  {GROUPS.length} disciplines
+                </span>
+              </div>
+              <div className="category-grid">
+                {GROUPS.map((group) => {
+                  const entries = TOOLS.filter((t) => t.group === group);
+                  return (
+                    <Card className="category-card" key={group}>
+                      <Link
+                        className="category-link"
+                        to={'/tools?group=' + encodeURIComponent(group)}
+                      >
+                        <div className="category-icon">
+                          <CategoryIcon
+                            group={group}
+                            color={GROUP_COLORS[group]}
+                            size={21}
+                          />
+                        </div>
+                        <div className="category-text">
+                          <h3>{group}</h3>
+                          <p>
+                            {entries
+                              .slice(0, 3)
+                              .map((t) => t.nav)
+                              .join(' / ')}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="category-count">
+                          {entries.length}
+                        </Badge>
+                        <ChevronRight size={13} />
+                      </Link>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+            <Card>
+              <Heading
+                action={
+                  <Link className="section-link" to="/guides">
+                    All guides <ArrowRight size={13} />
+                  </Link>
+                }
+              >
+                Recent guides
+              </Heading>
+              <div className="guide-grid">
+                {RECENT_GUIDES.map((g) => (
+                  <Link className="guide-card" key={g.path} to={g.path}>
+                    <div className="guide-category">
+                      <BookOpen size={14} />
+                      <span>{g.category}</span>
+                    </div>
+                    <h3>{g.title}</h3>
+                    <p>{g.description}</p>
+                    <div className="guide-footer">
+                      <span>{g.minutes} min read</span>
+                      <ArrowRight size={15} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          </>
+        )}
+        <div className="content-footer">
+          <span>PCB Planner · Engineering tools, in your browser.</span>
+          <Link to="/about">
+            About <ExternalLink size={11} />
+          </Link>
+        </div>
+      </div>
+      {statusEl &&
+        createPortal(
+          <span>
+            {TOOLS.length} tools · {PRESETS.length} stackups
+          </span>,
+          statusEl,
+        )}
+    </>
   );
 }

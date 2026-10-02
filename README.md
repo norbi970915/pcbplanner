@@ -1,6 +1,6 @@
 # pcbplanner
 
-Browser-based calculators for PCB design with an Altium Designer–style interface: menu bar, document tabs, a Tools panel, a Properties panel for the inputs, and a status bar. Built with Vite, React, TypeScript and Tailwind CSS.
+Browser-based calculators for PCB design with a compact shadcn/ui workbench: menu bar, document tabs, a Tools panel, a Properties panel for the inputs, and a status bar. Built with Vite, React, TypeScript, Tailwind CSS and shadcn/ui. The original category colors and PCB material colors are preserved.
 
 ## Tools
 
@@ -17,6 +17,12 @@ Browser-based calculators for PCB design with an Altium Designer–style interfa
 | Utilities | Unit converter, Reference charts |
 
 Every tool keeps its inputs in the URL, so any result can be shared as a link.
+
+## Interface
+
+Shared components live in src/components/shadcn/. Workbench layout and page styles are in src/styles/workbench.css; dark/light theme and material colors are in src/index.css. The desktop app keeps docked tools and properties, and phones have an accessible tools drawer. The existing calculator, URL state, projects and offline behavior are retained.
+
+Run node scripts/audit-ui.mjs after starting the production preview to check all routes at desktop and phone sizes, theme switching, search, calculator reset, projects and mobile navigation. Screenshots and the report are saved under dist-check/redesign/.
 
 ## Field solver
 

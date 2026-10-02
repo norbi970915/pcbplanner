@@ -1,28 +1,57 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Card, CardHeader, CardContent } from './shadcn/card';
+import { Input } from './shadcn/input';
+import { Button } from './shadcn/button';
 import { formatCopiedResult } from '../lib/copyResult';
 import { fromMm, LEN_UNITS, plain, toMm, type LenUnit } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { RESET_EVENT } from '../state/useUrlState';
 
 /** Collapsible section of the Properties panel (▾ Title). */
-export function Section({ title, children, defaultOpen = true, right }: { title: string; children: ReactNode; defaultOpen?: boolean; right?: ReactNode }) {
+export function Section({
+  title,
+  children,
+  defaultOpen = true,
+  right,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  right?: ReactNode;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="border-b border-line">
-      <div className="flex h-[24px] items-center bg-panel-head pr-2">
-        <button type="button" className="flex h-full flex-1 items-center gap-1 pl-1.5 text-left font-semibold" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          <span className={`inline-block w-3 text-[9px] text-muted transition-transform ${open ? '' : '-rotate-90'}`}>▼</span>
+    <section className="properties-section border-b border-line">
+      <div className="properties-section-heading flex items-center bg-panel-head pr-2">
+        <Button
+          variant="ghost"
+          type="button"
+          className="properties-toggle flex h-full flex-1 items-center gap-1.5 px-3 text-left font-semibold"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span
+            className={`inline-block w-3 text-[9px] text-muted transition-transform ${open ? '' : '-rotate-90'}`}
+          >
+            ▼
+          </span>
           {title}
-        </button>
+        </Button>
         {right}
       </div>
-      {open && <div className="space-y-[3px] px-2 py-1.5">{children}</div>}
+      {open && <div className="space-y-1 px-3 py-3">{children}</div>}
     </section>
   );
 }
 
 /** Small caption inside a section. */
-export function Group({ title, children }: { title?: string; children: ReactNode }) {
+export function Group({
+  title,
+  children,
+}: {
+  title?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-[3px] pt-0.5">
       {title && <div className="pt-1 text-[11px] text-faint">{title}</div>}
@@ -32,27 +61,58 @@ export function Group({ title, children }: { title?: string; children: ReactNode
 }
 
 /** A titled sheet in the document area. */
-export function Panel({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
+export function Panel({
+  title,
+  right,
+  children,
+  className = '',
+}: {
+  title?: ReactNode;
+  right?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className={`min-w-0 border border-line bg-sheet ${className}`}>
+    <Card className={`min-w-0 border border-line bg-sheet ${className}`}>
       {title && (
-        <div className="flex h-[24px] items-center justify-between gap-2 border-b border-line bg-panel-head px-2">
+        <CardHeader className="section-heading">
           <h2 className="font-semibold">{title}</h2>
           {right}
-        </div>
+        </CardHeader>
       )}
       {/* wide tables scroll sideways inside the panel on narrow screens */}
-      <div className="overflow-x-auto">{children}</div>
-    </section>
+      <CardContent className="panel-content overflow-x-auto p-0">
+        {children}
+      </CardContent>
+    </Card>
   );
 }
 
-function Row({ label, symbol, hint, htmlFor, children }: { label: ReactNode; symbol?: ReactNode; hint?: string; htmlFor?: string; children: ReactNode }) {
+function Row({
+  label,
+  symbol,
+  hint,
+  htmlFor,
+  children,
+}: {
+  label: ReactNode;
+  symbol?: ReactNode;
+  hint?: string;
+  htmlFor?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2" title={hint}>
+    <div
+      className="grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+      title={hint}
+    >
       <label htmlFor={htmlFor} className="truncate text-muted">
         {label}
-        {symbol && <span className="ml-1 font-[Cambria,serif] italic text-faint">{symbol}</span>}
+        {symbol && (
+          <span className="ml-1 font-[Cambria,serif] italic text-faint">
+            {symbol}
+          </span>
+        )}
       </label>
       <div className="flex items-center gap-1">{children}</div>
     </div>
@@ -107,7 +167,9 @@ export function LenField({
   // copper-thickness fields list 'oz' first and keep it regardless of the global unit
   const followsPref = units[0] !== 'oz' && units.includes(pref);
   const [unit, setUnit] = useState<LenUnit>(followsPref ? pref : units[0]);
-  const { text, setText, emitted } = useSyncedText(value, (v) => plain(fromMm(v, unit), 5));
+  const { text, setText, emitted } = useSyncedText(value, (v) =>
+    plain(fromMm(v, unit), 5),
+  );
   // global unit switch: change the unit AND convert the displayed number
   useEffect(() => {
     if (followsPref && pref !== unit) {
@@ -121,7 +183,7 @@ export function LenField({
   const bad = !Number.isFinite(n) || (allowZero ? n < min : n <= min);
   return (
     <Row label={label} symbol={symbol} hint={hint} htmlFor={id}>
-      <input
+      <Input
         id={id}
         className="fld w-[84px] text-right"
         inputMode="decimal"
@@ -184,10 +246,11 @@ export function NumField({
   const { text, setText, emitted } = useSyncedText(value, (v) => plain(v, 6));
   const id = useId();
   const n = Number.parseFloat(text);
-  const bad = !Number.isFinite(n) || (!allowNegative && (allowZero ? n < min : n <= min));
+  const bad =
+    !Number.isFinite(n) || (!allowNegative && (allowZero ? n < min : n <= min));
   return (
     <Row label={label} symbol={symbol} hint={hint} htmlFor={id}>
-      <input
+      <Input
         id={id}
         className="fld text-right"
         style={{ width }}
@@ -229,7 +292,7 @@ export function TextField({
   const id = useId();
   return (
     <Row label={label} hint={hint} htmlFor={id}>
-      <input
+      <Input
         id={id}
         className="fld text-right"
         style={{ width }}
@@ -269,7 +332,13 @@ export function SelectField<T extends string>({
   );
   return (
     <Row label={label} htmlFor={id}>
-      <select id={id} className="fld" style={{ width }} value={value} onChange={(e) => onChange(e.target.value as T)}>
+      <select
+        id={id}
+        className="fld"
+        style={{ width }}
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+      >
         {groups.length > 1
           ? groups.map((g) => (
               <optgroup key={g} label={g}>
@@ -282,18 +351,49 @@ export function SelectField<T extends string>({
   );
 }
 
-export function Check({ label, checked, onChange, hint }: { label: ReactNode; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+export function Check({
+  label,
+  checked,
+  onChange,
+  hint,
+}: {
+  label: ReactNode;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  hint?: string;
+}) {
   return (
-    <label className="flex min-h-[22px] cursor-pointer items-center gap-2" title={hint}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label
+      className="flex min-h-[22px] cursor-pointer items-center gap-2"
+      title={hint}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       {label}
     </label>
   );
 }
 
-export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
+export function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+  label: string;
+}) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex border border-[var(--field-line)] bg-field">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="segmented inline-flex border border-[var(--field-line)] bg-field"
+    >
       {options.map((o) => (
         <button
           key={o.value}
@@ -324,39 +424,101 @@ function CopyResultButton() {
     const unit = row?.querySelector('[data-copy-unit]')?.textContent ?? '';
     if (!label || !value) return;
     try {
-      await navigator.clipboard.writeText(formatCopiedResult(label, value, unit));
+      await navigator.clipboard.writeText(
+        formatCopiedResult(label, value, unit),
+      );
       setStatus('copied');
     } catch {
       setStatus('error');
     }
   };
-  const title = status === 'copied' ? 'Copied' : status === 'error' ? 'Could not copy' : 'Copy result';
+  const title =
+    status === 'copied'
+      ? 'Copied'
+      : status === 'error'
+        ? 'Could not copy'
+        : 'Copy result';
   return (
-    <button type="button" className="ml-1 inline-flex h-[18px] w-[18px] items-center justify-center align-middle text-faint hover:bg-hover hover:text-ink focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent" onClick={copy} title={title} aria-label={title}>
-      {status === 'copied' ? <span aria-hidden="true">✓</span> : status === 'error' ? <span aria-hidden="true" className="text-[var(--err-line)]">!</span> : <svg aria-hidden="true" width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"><rect x="7" y="7" width="10" height="11" rx="1" /><path d="M13 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg>}
+    <button
+      type="button"
+      className="ml-1 inline-flex h-[18px] w-[18px] items-center justify-center align-middle text-faint hover:bg-hover hover:text-ink focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent"
+      onClick={copy}
+      title={title}
+      aria-label={title}
+    >
+      {status === 'copied' ? (
+        <span aria-hidden="true">✓</span>
+      ) : status === 'error' ? (
+        <span aria-hidden="true" className="text-[var(--err-line)]">
+          !
+        </span>
+      ) : (
+        <svg
+          aria-hidden="true"
+          width="13"
+          height="13"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        >
+          <rect x="7" y="7" width="10" height="11" rx="1" />
+          <path d="M13 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+        </svg>
+      )}
     </button>
   );
 }
 
 /** Row of a result table: label | value | unit. */
-export function Result({ label, value, unit, strong, sub }: { label: ReactNode; value: ReactNode; unit?: ReactNode; strong?: boolean; sub?: ReactNode }) {
+export function Result({
+  label,
+  value,
+  unit,
+  strong,
+  sub,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  unit?: ReactNode;
+  strong?: boolean;
+  sub?: ReactNode;
+}) {
   return (
     <tr data-copy-result>
       <th scope="row" className="text-left font-normal">
         <span data-copy-label>{label}</span>
         {sub && <div className="text-[11px] text-faint">{sub}</div>}
       </th>
-      <td className={`v ${strong ? 'font-semibold' : ''}`}><span data-copy-value>{value}</span><CopyResultButton /></td>
-      <td className="w-[60px] text-muted"><span data-copy-unit>{unit}</span></td>
+      <td className={`v ${strong ? 'font-semibold' : ''}`}>
+        <span data-copy-value>{value}</span>
+        <CopyResultButton />
+      </td>
+      <td className="w-[60px] text-muted">
+        <span data-copy-unit>{unit}</span>
+      </td>
     </tr>
   );
 }
 
-export function Notes({ items, kind = 'note' }: { items: string[]; kind?: 'note' | 'error' }) {
+export function Notes({
+  items,
+  kind = 'note',
+}: {
+  items: string[];
+  kind?: 'note' | 'error';
+}) {
   if (!items.length) return null;
-  const cls = kind === 'error' ? 'border-[var(--err-line)] bg-[var(--err-bg)]' : 'border-[var(--note-line)] bg-[var(--note-bg)]';
+  const cls =
+    kind === 'error'
+      ? 'border-[var(--err-line)] bg-[var(--err-bg)]'
+      : 'border-[var(--note-line)] bg-[var(--note-bg)]';
   return (
-    <div className={`border-l-[3px] px-2.5 py-1.5 ${cls}`} role={kind === 'error' ? 'alert' : undefined}>
+    <div
+      className={`border-l-[3px] px-2.5 py-1.5 ${cls}`}
+      role={kind === 'error' ? 'alert' : undefined}
+    >
       {items.length === 1 ? (
         items[0]
       ) : (
@@ -371,12 +533,30 @@ export function Notes({ items, kind = 'note' }: { items: string[]; kind?: 'note'
 }
 
 /** Headline value in the document area. */
-export function Big({ label, value, unit, busy }: { label: ReactNode; value: ReactNode; unit: ReactNode; busy?: boolean }) {
+export function Big({
+  label,
+  value,
+  unit,
+  busy,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  unit: ReactNode;
+  busy?: boolean;
+}) {
   return (
-    <div className="min-w-[130px]" data-copy-result>
-      <div className="text-muted"><span data-copy-label>{label}</span><CopyResultButton /></div>
-      <div className={`tnum text-[24px] font-semibold leading-tight ${busy ? 'opacity-60' : ''}`}>
-        <span data-copy-value>{value}</span> <span className="text-[13px] font-normal text-muted" data-copy-unit>{unit}</span>
+    <div className="headline-result min-w-[130px]" data-copy-result>
+      <div className="text-muted">
+        <span data-copy-label>{label}</span>
+        <CopyResultButton />
+      </div>
+      <div
+        className={`tnum text-[24px] font-semibold leading-tight ${busy ? 'opacity-60' : ''}`}
+      >
+        <span data-copy-value>{value}</span>{' '}
+        <span className="text-[13px] font-normal text-muted" data-copy-unit>
+          {unit}
+        </span>
       </div>
     </div>
   );

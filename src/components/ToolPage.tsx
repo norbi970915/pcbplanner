@@ -1,10 +1,12 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { Button } from './shadcn/button';
+import { CategoryIcon } from './CategoryIcon';
 import { APP_NAME, SITE_URL } from '../config';
 import { Link, useLocation } from 'react-router-dom';
 import { guidesForTool } from '../guides/registry';
 import { useShell } from '../state/shell';
-import { relatedTools, toolByPath } from '../tools/registry';
+import { GROUP_COLORS, relatedTools, toolByPath } from '../tools/registry';
 
 export function useDocumentMeta(title: string, description: string) {
   useEffect(() => {
@@ -25,11 +27,21 @@ export function useDocumentMeta(title: string, description: string) {
     }
     const url = SITE_URL + window.location.pathname;
     canon.setAttribute('href', url);
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${title} – ${APP_NAME}`);
-    document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
-    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', `${title} – ${APP_NAME}`);
-    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', description);
+    document
+      .querySelector('meta[property="og:url"]')
+      ?.setAttribute('content', url);
+    document
+      .querySelector('meta[property="og:title"]')
+      ?.setAttribute('content', `${title} – ${APP_NAME}`);
+    document
+      .querySelector('meta[property="og:description"]')
+      ?.setAttribute('content', description);
+    document
+      .querySelector('meta[name="twitter:title"]')
+      ?.setAttribute('content', `${title} – ${APP_NAME}`);
+    document
+      .querySelector('meta[name="twitter:description"]')
+      ?.setAttribute('content', description);
   }, [title, description]);
 }
 
@@ -60,6 +72,7 @@ export function ToolPage({
   const { propsEl, statusEl, headEl, setActions } = useShell();
   const related = guidesForTool(pathname);
   const relatedT = relatedTools(pathname);
+  const tool = toolByPath(pathname);
   useEffect(() => {
     setActions({ reset: onReset });
     return () => setActions(null);
@@ -67,41 +80,73 @@ export function ToolPage({
 
   // narrow screens: the header is shown above the inputs (Layout slot), so it is hidden here
   const mobileHead = (
-    <div className="flex items-start justify-between gap-2 px-3 pb-2 pt-3">
+    <div className="tool-heading mobile-tool-heading flex items-start justify-between gap-3 px-4 pb-4 pt-4">
       <div className="min-w-0">
-        <div className="text-[16px] font-semibold" role="heading" aria-level={1}>
+        <div
+          className="tool-title flex items-center gap-2.5 font-semibold"
+          role="heading"
+          aria-level={1}
+        >
+          {tool && (
+            <CategoryIcon
+              group={tool.group}
+              color={GROUP_COLORS[tool.group]}
+              size={23}
+            />
+          )}
           {title}
         </div>
         <p className="text-muted">{description}</p>
       </div>
       {onReset && (
-        <button className="btn" onClick={onReset}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="reset-button"
+          onClick={onReset}
+        >
           Reset
-        </button>
+        </Button>
       )}
     </div>
   );
 
   return (
-    <div className="p-3">
+    <div className="document-page tool-page">
       {headEl && createPortal(mobileHead, headEl)}
-      <div className="mb-2.5 hidden flex-wrap items-end justify-between gap-2 lg:flex">
+      <div className="tool-heading mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
         <div className="min-w-0">
-          <h1 className="text-[15px] font-semibold">{title}</h1>
+          <h1 className="tool-title flex items-center gap-2.5 font-semibold">
+            {tool && (
+              <CategoryIcon
+                group={tool.group}
+                color={GROUP_COLORS[tool.group]}
+                size={24}
+              />
+            )}
+            {title}
+          </h1>
           <p className="max-w-[95ch] text-muted">{description}</p>
         </div>
         {onReset && (
-          <button className="btn" onClick={onReset}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="reset-button"
+            onClick={onReset}
+          >
             Reset
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-4">{children}</div>
 
       {related.length > 0 && (
         <div className="mt-4 border border-line bg-sheet px-3 py-2">
-          <span className="font-semibold">Related {related.length > 1 ? 'guides' : 'guide'}: </span>
+          <span className="font-semibold">
+            Related {related.length > 1 ? 'guides' : 'guide'}:{' '}
+          </span>
           {related.map((g, i) => (
             <span key={g.path}>
               {i > 0 && ' · '}
@@ -112,7 +157,9 @@ export function ToolPage({
       )}
 
       {relatedT.length > 0 && (
-        <div className={`${related.length > 0 ? 'mt-2' : 'mt-4'} border border-line bg-sheet px-3 py-2`}>
+        <div
+          className={`${related.length > 0 ? 'mt-2' : 'mt-4'} border border-line bg-sheet px-3 py-2`}
+        >
           <span className="font-semibold">Related tools: </span>
           {relatedT.map((t, i) => (
             <span key={t.path}>
@@ -125,7 +172,9 @@ export function ToolPage({
 
       {method && (
         <details id="method" className="mt-4 border border-line bg-sheet" open>
-          <summary className="flex h-[24px] cursor-pointer select-none items-center bg-panel-head px-2 font-semibold">Method, formulas and references</summary>
+          <summary className="method-heading flex cursor-pointer select-none items-center bg-panel-head px-2 font-semibold">
+            Method, formulas and references
+          </summary>
           <div className="prose-doc px-4 py-3">{method}</div>
         </details>
       )}

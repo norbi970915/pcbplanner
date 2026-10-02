@@ -1,9 +1,44 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Analytics, type BeforeSendEvent } from '@vercel/analytics/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
+import { Home, PanelLeft, Sun, Moon } from 'lucide-react';
+import { Button } from './shadcn/button';
+import { Badge } from './shadcn/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+} from './shadcn/dropdown-menu';
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from './shadcn/sheet';
+import { ToolsNavigation } from './ToolsNavigation';
 import { GUIDES } from '../guides/registry';
-import { ANALYTICS_CONSENT_KEY, disableAnalytics, enableAnalytics, isAnalyticsHost, readAnalyticsChoice, saveAnalyticsChoice, type AnalyticsChoice } from '../lib/analytics';
+import {
+  ANALYTICS_CONSENT_KEY,
+  disableAnalytics,
+  enableAnalytics,
+  isAnalyticsHost,
+  readAnalyticsChoice,
+  saveAnalyticsChoice,
+  type AnalyticsChoice,
+} from '../lib/analytics';
 import { useInstall, useOnline } from '../lib/pwa';
 import { ErrorBoundary } from './ErrorBoundary';
 import { CategoryIcon } from './CategoryIcon';
@@ -19,7 +54,9 @@ function beforeVercelSend(event: BeforeSendEvent): BeforeSendEvent | null {
   try {
     const url = new URL(event.url, window.location.origin);
     return { ...event, url: url.origin + url.pathname };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -38,33 +75,69 @@ function writeJson(key: string, v: unknown) {
   }
 }
 
-const Swatch = ({ color }: { color: string }) => <span className="inline-block h-[9px] w-[9px] shrink-0 border border-black/30" style={{ background: color }} />;
+const Swatch = ({ color }: { color: string }) => (
+  <span
+    className="inline-block h-[9px] w-[9px] shrink-0 border border-black/30"
+    style={{ background: color }}
+  />
+);
 
 /* ------------------------------ menu bar ------------------------------ */
-function Menu({ label, open, onOpen, onHover, children }: { label: string; open: boolean; onOpen: () => void; onHover: () => void; children: ReactNode }) {
+function Menu({
+  label,
+  open,
+  onOpenChange,
+  onHover,
+  children,
+}: {
+  label: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onHover: () => void;
+  children: ReactNode;
+}) {
   return (
-    <div className="relative">
-      <button type="button" className={`h-[26px] px-2.5 ${open ? 'bg-sel' : 'hover:bg-chrome-2'}`} onClick={onOpen} onMouseEnter={onHover} aria-haspopup="menu" aria-expanded={open}>
-        {label}
-      </button>
-      {open && (
-        <div className="menu left-0 top-[26px]" role="menu">
-          {children}
-        </div>
-      )}
-    </div>
+    <DropdownMenu open={open} onOpenChange={onOpenChange} modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="menu-trigger" onMouseEnter={onHover}>
+          {label}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        className="application-menu"
+        align="start"
+        sideOffset={7}
+      >
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
-function Item({ children, onClick, checked, hint }: { children: ReactNode; onClick: () => void; checked?: boolean; hint?: string }) {
-  return (
-    <button type="button" role="menuitem" className="menu-item relative" onClick={onClick}>
-      {checked !== undefined && <span className="absolute left-2 text-accent-ink">{checked ? '✓' : ''}</span>}
+function Item({
+  children,
+  onClick,
+  checked,
+  hint,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  checked?: boolean;
+  hint?: string;
+}) {
+  const content = (
+    <>
       <span>{children}</span>
-      {hint && <span className="text-faint">{hint}</span>}
-    </button>
+      {hint && <span className="menu-hint">{hint}</span>}
+    </>
+  );
+  return checked === undefined ? (
+    <DropdownMenuItem onSelect={onClick}>{content}</DropdownMenuItem>
+  ) : (
+    <DropdownMenuCheckboxItem checked={checked} onSelect={onClick}>
+      {content}
+    </DropdownMenuCheckboxItem>
   );
 }
-
 /* ------------------------------ layout ------------------------------ */
 export function Layout() {
   const { unit, setUnit, theme, setTheme } = useSettings();
@@ -73,16 +146,24 @@ export function Layout() {
   const loc = useLocation();
   const navigate = useNavigate();
   const [menu, setMenu] = useState<string | null>(null);
-  const [panels, setPanels] = useState(() => readJson(PANELS_KEY, { tools: true, props: true }));
-  const [tabs, setTabs] = useState<string[]>(() => readJson(TABS_KEY, ['/', '/impedance']));
+  const [mobileTools, setMobileTools] = useState(false);
+  const [panels, setPanels] = useState(() =>
+    readJson(PANELS_KEY, { tools: true, props: true }),
+  );
+  const [tabs, setTabs] = useState<string[]>(() =>
+    readJson(TABS_KEY, ['/', '/impedance']),
+  );
   const [propsEl, setPropsEl] = useState<HTMLElement | null>(null);
   const [statusEl, setStatusEl] = useState<HTMLElement | null>(null);
   const [headEl, setHeadEl] = useState<HTMLElement | null>(null);
   const { projects, activeId } = useProjects();
   const activeProject = projects.find((p) => p.id === activeId);
   const [saved, setSaved] = useState<string | null>(null);
-  const [analyticsChoice, setAnalyticsChoice] = useState<AnalyticsChoice | null>(readAnalyticsChoice);
-  const [consentOpen, setConsentOpen] = useState(() => readAnalyticsChoice() === null);
+  const [analyticsChoice, setAnalyticsChoice] =
+    useState<AnalyticsChoice | null>(readAnalyticsChoice);
+  const [consentOpen, setConsentOpen] = useState(
+    () => readAnalyticsChoice() === null,
+  );
   const consentButtonRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const lastPageView = useRef<string | null>(null);
@@ -120,17 +201,35 @@ export function Layout() {
     const timer = window.setTimeout(() => {
       const pageLocation = window.location.origin + path;
       if (lastPageView.current === pageLocation) return;
-      const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+      const gtag = (window as Window & { gtag?: (...args: unknown[]) => void })
+        .gtag;
       if (!gtag) return;
-      const title = toolByPath(path)?.title ?? GUIDES.find((guide) => guide.path === path)?.seoTitle
-        ?? (path === '/' ? 'PCB impedance, stackup and design calculators' : path === '/tools' ? 'All PCB Tools' : path === '/schematic' ? 'Schematic Design' : path === '/guides' ? 'PCB Design Guides' : path === '/about' ? `About ${APP_NAME}` : document.title);
-      const pageTitle = title.endsWith(` – ${APP_NAME}`) ? title : `${title} – ${APP_NAME}`;
+      const title =
+        toolByPath(path)?.title ??
+        GUIDES.find((guide) => guide.path === path)?.seoTitle ??
+        (path === '/'
+          ? 'PCB impedance, stackup and design calculators'
+          : path === '/tools'
+            ? 'All PCB Tools'
+            : path === '/schematic'
+              ? 'Schematic Design'
+              : path === '/guides'
+                ? 'PCB Design Guides'
+                : path === '/about'
+                  ? `About ${APP_NAME}`
+                  : document.title);
+      const pageTitle = title.endsWith(` – ${APP_NAME}`)
+        ? title
+        : `${title} – ${APP_NAME}`;
       let pageReferrer = lastPageView.current ?? document.referrer;
       if (pageReferrer) {
         try {
           const referrer = new URL(pageReferrer);
-          if (referrer.origin === window.location.origin) pageReferrer = referrer.origin + referrer.pathname;
-        } catch { /* preserve a browser-supplied referrer we cannot parse */ }
+          if (referrer.origin === window.location.origin)
+            pageReferrer = referrer.origin + referrer.pathname;
+        } catch {
+          /* preserve a browser-supplied referrer we cannot parse */
+        }
       }
       gtag('set', { page_location: pageLocation, page_title: pageTitle });
       gtag('event', 'page_view', {
@@ -142,7 +241,11 @@ export function Layout() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [path, analyticsChoice]);
-  const known = path === '/' || path === '/tools' || path === '/schematic' || !!toolByPath(path);
+  const known =
+    path === '/' ||
+    path === '/tools' ||
+    path === '/schematic' ||
+    !!toolByPath(path);
   // article pages (guides) have no inputs: no Properties panel
   const isDoc = path === '/guides' || path.startsWith('/guides/');
   useEffect(() => {
@@ -158,21 +261,6 @@ export function Layout() {
   useEffect(() => {
     writeJson(PANELS_KEY, panels);
   }, [panels]);
-
-  // close menus on outside click / Escape
-  useEffect(() => {
-    if (!menu) return;
-    const onDown = (e: MouseEvent) => {
-      if (barRef.current && !barRef.current.contains(e.target as Node)) setMenu(null);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(null);
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [menu]);
 
   const run = (fn: () => void) => () => {
     setMenu(null);
@@ -190,43 +278,97 @@ export function Layout() {
     setAnalyticsChoice(choice);
     setConsentOpen(false);
   };
-  const tabId = (p: string) => `tool-tab-${p === '/' ? 'home' : p.slice(1).replaceAll('/', '-')}`;
+  const tabId = (p: string) =>
+    `tool-tab-${p === '/' ? 'home' : p.slice(1).replaceAll('/', '-')}`;
   const moveTabFocus = (current: string, key: string) => {
     const index = tabs.indexOf(current);
-    const next = key === 'Home' ? tabs[0] : key === 'End' ? tabs[tabs.length - 1]
-      : key === 'ArrowLeft' ? tabs[(index - 1 + tabs.length) % tabs.length]
-        : tabs[(index + 1) % tabs.length];
+    const next =
+      key === 'Home'
+        ? tabs[0]
+        : key === 'End'
+          ? tabs[tabs.length - 1]
+          : key === 'ArrowLeft'
+            ? tabs[(index - 1 + tabs.length) % tabs.length]
+            : tabs[(index + 1) % tabs.length];
     tabRefs.current.get(next)?.focus();
     navigate(next);
   };
-  const shell = useMemo(() => ({ propsEl, statusEl, headEl, setActions }), [propsEl, statusEl, headEl, setActions]);
+  const shell = useMemo(
+    () => ({ propsEl, statusEl, headEl, setActions }),
+    [propsEl, statusEl, headEl, setActions],
+  );
   const keyboardTab = tabs.includes(path) ? path : tabs[tabs.length - 1];
-  const tabTitle = (p: string) => (p === '/' ? 'Home' : p === '/tools' ? 'All tools' : p === '/schematic' ? 'Schematic design' : toolByPath(p)?.nav ?? p);
-  const tabColor = (p: string) => (p === '/' ? '#8a8a8a' : GROUP_COLORS[toolByPath(p)?.group ?? ''] ?? '#8a8a8a');
+  const tabTitle = (p: string) =>
+    p === '/'
+      ? 'Home'
+      : p === '/tools'
+        ? 'All tools'
+        : p === '/schematic'
+          ? 'Schematic design'
+          : (toolByPath(p)?.nav ?? p);
+  const tabColor = (p: string) =>
+    p === '/'
+      ? '#8a8a8a'
+      : (GROUP_COLORS[toolByPath(p)?.group ?? ''] ?? '#8a8a8a');
 
   const menuProps = (name: string) => ({
     label: name,
     open: menu === name,
-    onOpen: () => setMenu((m) => (m === name ? null : name)),
+    onOpenChange: (open: boolean) =>
+      setMenu((current) => (open ? name : current === name ? null : current)),
     onHover: () => menu && setMenu(name),
   });
 
   return (
     <ShellContext.Provider value={shell}>
-      <div className="flex h-full flex-col">
+      <div className="app-shell flex h-full flex-col">
+        <a className="skip-link" href="#tool-panel">
+          Skip to content
+        </a>
         {/* menu bar */}
-        <div ref={barRef} className="flex h-[26px] shrink-0 items-center border-b border-line bg-chrome">
-          <Link to="/" className="flex h-full items-center gap-1.5 px-2.5 text-ink no-underline" title={`${APP_NAME} – pcbplanner.com`}>
-            <img src="/favicon.svg?v=3" width="16" height="16" alt="" />
+        <div ref={barRef} className="menu-bar">
+          <Link to="/" className="brand" title={`${APP_NAME} – pcbplanner.com`}>
+            <img src="/favicon.svg?v=3" width="22" height="22" alt="" />
             <span className="font-semibold">
               <span className="text-[var(--copper)]">pcb</span>planner
             </span>
           </Link>
+          <Sheet open={mobileTools} onOpenChange={setMobileTools}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mobile-panel-toggle"
+                aria-label="Open tools panel"
+              >
+                <PanelLeft size={16} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="mobile-tools-sheet">
+              <SheetHeader>
+                <SheetTitle>Tools</SheetTitle>
+                <SheetDescription>
+                  Browse PCB design calculators and guides.
+                </SheetDescription>
+              </SheetHeader>
+              <ToolsNavigation
+                path={path}
+                onNavigate={() => setMobileTools(false)}
+              />
+            </SheetContent>
+          </Sheet>
           <Menu {...menuProps('File')}>
-            <Item onClick={run(() => navigator.clipboard?.writeText(window.location.href))} hint="Ctrl+L">
+            <Item
+              onClick={run(() =>
+                navigator.clipboard?.writeText(window.location.href),
+              )}
+              hint="Ctrl+L"
+            >
               Copy Link to Inputs
             </Item>
-            <Item onClick={run(() => actions.current?.reset?.())}>Reset Inputs</Item>
+            <Item onClick={run(() => actions.current?.reset?.())}>
+              Reset Inputs
+            </Item>
             <div className="menu-sep" />
             <Item
               onClick={run(() => {
@@ -234,7 +376,9 @@ export function Layout() {
                 if (!tool) return;
                 const id = activeId ?? projectStore.create('My board').id;
                 projectStore.saveTool(id, path, loc.search.replace(/^[?]/, ''));
-                setSaved(`Saved to ${projects.find((x) => x.id === id)?.name ?? 'project'}`);
+                setSaved(
+                  `Saved to ${projects.find((x) => x.id === id)?.name ?? 'project'}`,
+                );
               })}
             >
               Save Tool to Project
@@ -252,13 +396,22 @@ export function Layout() {
             )}
           </Menu>
           <Menu {...menuProps('View')}>
-            <Item checked={theme === 'dark'} onClick={run(() => setTheme('dark'))}>
+            <Item
+              checked={theme === 'dark'}
+              onClick={run(() => setTheme('dark'))}
+            >
               Dark Gray Theme
             </Item>
-            <Item checked={theme === 'light'} onClick={run(() => setTheme('light'))}>
+            <Item
+              checked={theme === 'light'}
+              onClick={run(() => setTheme('light'))}
+            >
               Light Gray Theme
             </Item>
-            <Item checked={theme === 'system'} onClick={run(() => setTheme('system'))}>
+            <Item
+              checked={theme === 'system'}
+              onClick={run(() => setTheme('system'))}
+            >
               System Theme
             </Item>
             <div className="menu-sep" />
@@ -269,21 +422,38 @@ export function Layout() {
               Imperial (mil)
             </Item>
             <div className="menu-sep" />
-            <Item checked={panels.tools} onClick={run(() => setPanels((p: typeof panels) => ({ ...p, tools: !p.tools })))}>
+            <Item
+              checked={panels.tools}
+              onClick={run(() =>
+                setPanels((p: typeof panels) => ({ ...p, tools: !p.tools })),
+              )}
+            >
               Tools Panel
             </Item>
-            <Item checked={panels.props} onClick={run(() => setPanels((p: typeof panels) => ({ ...p, props: !p.props })))}>
+            <Item
+              checked={panels.props}
+              onClick={run(() =>
+                setPanels((p: typeof panels) => ({ ...p, props: !p.props })),
+              )}
+            >
               Properties Panel
             </Item>
           </Menu>
           <Menu {...menuProps('Tools')}>
-            <Item onClick={run(() => navigate('/tools'))}>Browse all tools...</Item>
-            <Item onClick={run(() => navigate('/schematic'))}>Schematic design...</Item>
+            <Item onClick={run(() => navigate('/tools'))}>
+              Browse all tools...
+            </Item>
+            <Item onClick={run(() => navigate('/schematic'))}>
+              Schematic design...
+            </Item>
             <div className="menu-sep" />
             {GROUPS.map((g, gi) => (
               <div key={g}>
                 {gi > 0 && <div className="menu-sep" />}
-                <div className="flex items-center gap-1.5 px-3 py-0.5 text-[11px] text-faint"><CategoryIcon group={g} color={GROUP_COLORS[g]} size={14} />{g}</div>
+                <div className="flex items-center gap-1.5 px-3 py-0.5 text-[11px] text-faint">
+                  <CategoryIcon group={g} color={GROUP_COLORS[g]} size={14} />
+                  {g}
+                </div>
                 {TOOLS.filter((t) => t.group === g).map((t) => (
                   <Item key={t.path} onClick={run(() => navigate(t.path))}>
                     {t.nav}
@@ -293,35 +463,79 @@ export function Layout() {
             ))}
           </Menu>
           <Menu {...menuProps('Help')}>
-            <Item onClick={run(() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' }))}>Method &amp; References</Item>
+            <Item
+              onClick={run(() =>
+                document
+                  .getElementById('method')
+                  ?.scrollIntoView({ behavior: 'smooth' }),
+              )}
+            >
+              Method &amp; References
+            </Item>
             <Item onClick={run(() => navigate('/guides'))}>Guides</Item>
-            <Item onClick={run(() => navigate('/about'))}>About {APP_NAME}</Item>
+            <Item onClick={run(() => navigate('/about'))}>
+              About {APP_NAME}
+            </Item>
             <div className="menu-sep" />
-            <Item onClick={run(() => setConsentOpen(true))}>Analytics preferences</Item>
+            <Item onClick={run(() => setConsentOpen(true))}>
+              Analytics preferences
+            </Item>
           </Menu>
-          <Link to="/schematic" className={`hidden h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 sm:flex ${path === '/schematic' ? 'bg-sel' : ''}`}>
+          <Link
+            to="/schematic"
+            className={`hidden h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 sm:flex ${path === '/schematic' ? 'bg-sel' : ''}`}
+          >
             Schematic
           </Link>
-          <Link to="/guides" className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}>
+          <Link
+            to="/guides"
+            className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}
+          >
             Guides
           </Link>
+          <div className="header-spacer" />
+          <span className="workspace-label">Design workspace</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="theme-toggle"
+            aria-label={
+              'Switch to ' + (theme === 'light' ? 'dark' : 'light') + ' theme'
+            }
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          >
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          </Button>
         </div>
 
         {/* document tabs */}
-        <div className="flex h-[26px] shrink-0 items-end gap-px overflow-x-auto border-b border-line bg-chrome px-1" role="tablist" aria-label="Open tools">
+        <div
+          className="document-bar flex shrink-0 items-end gap-px overflow-x-auto border-b border-line bg-chrome px-2"
+          role="tablist"
+          aria-label="Open tools"
+        >
           {tabs.map((t) => {
             const active = t === path;
             return (
               <div
                 key={t}
                 role="presentation"
-                className={`group flex h-[23px] shrink-0 items-center gap-1.5 border border-b-0 pr-1 ${
-                  active ? 'border-line bg-[var(--tab-active)] text-ink' : 'border-transparent text-muted hover:bg-chrome-2'
+                className={`document-tab group flex h-[29px] shrink-0 items-center gap-1.5 border border-b-0 pr-1 ${
+                  active
+                    ? 'border-line bg-[var(--tab-active)] text-ink'
+                    : 'border-transparent text-muted hover:bg-chrome-2'
                 }`}
-                style={active ? { boxShadow: `inset 0 2px 0 ${tabColor(t)}` } : undefined}
+                style={
+                  active
+                    ? { boxShadow: `inset 0 2px 0 ${tabColor(t)}` }
+                    : undefined
+                }
               >
                 <button
-                  ref={node => { if (node) tabRefs.current.set(t, node); else tabRefs.current.delete(t); }}
+                  ref={(node) => {
+                    if (node) tabRefs.current.set(t, node);
+                    else tabRefs.current.delete(t);
+                  }}
                   type="button"
                   role="tab"
                   id={tabId(t)}
@@ -330,15 +544,25 @@ export function Layout() {
                   tabIndex={t === keyboardTab ? 0 : -1}
                   className="flex h-full items-center gap-1.5 pl-2 focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
                   onClick={() => navigate(t)}
-                  onAuxClick={event => { if (event.button === 1) closeTab(t); }}
-                  onKeyDown={event => {
-                    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                  onAuxClick={(event) => {
+                    if (event.button === 1) closeTab(t);
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(
+                        event.key,
+                      )
+                    ) {
                       event.preventDefault();
                       moveTabFocus(t, event.key);
                     }
                   }}
                 >
-                  <Swatch color={tabColor(t)} />
+                  {t === '/' ? (
+                    <Home size={14} className="text-accent-ink" />
+                  ) : (
+                    <Swatch color={tabColor(t)} />
+                  )}
                   <span>{tabTitle(t)}</span>
                 </button>
                 <button
@@ -360,69 +584,71 @@ export function Layout() {
         {/* workspace: on narrow screens one scrolling column (title, inputs, results); from lg up, docked panels */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
           {panels.tools && (
-            <aside className="hidden w-[224px] shrink-0 flex-col border-r border-line bg-panel lg:flex">
-              <div className="flex h-[24px] items-center border-b border-line bg-panel-head px-2 font-semibold">Tools</div>
-              <nav className="min-h-0 flex-1 overflow-y-auto py-1" aria-label="Tools">
-                <Link to="/tools" className={`mb-1 block px-2 py-[4px] font-semibold no-underline ${path === '/tools' ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>Browse all tools</Link>
-                <Link to="/schematic" className={`mb-1 block px-2 py-[4px] font-semibold no-underline ${path === '/schematic' ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>Schematic design</Link>
-                {GROUPS.map((g) => (
-                  <div key={g} className="mb-1">
-                    <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
-                      <span className="text-[9px] text-muted">▼</span>
-                      <CategoryIcon group={g} color={GROUP_COLORS[g]} size={14} />
-                      {g}
-                    </div>
-                    {TOOLS.filter((t) => t.group === g).map((t) => (
-                      <Link
-                        key={t.path}
-                        to={t.path}
-                        className={`block py-[3px] pl-[39px] pr-2 no-underline ${t.path === path ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}
-                      >
-                        {t.nav}
-                      </Link>
-                    ))}
-                  </div>
-                ))}
-                <div className="mb-1">
-                  <div className="flex items-center gap-1.5 px-2 py-[3px] font-semibold">
-                    <span className="text-[9px] text-muted">▼</span>
-                    <CategoryIcon group="Guides" color="#8a8a8a" size={14} />
-                    Guides
-                  </div>
-                  <Link to="/guides" className={`block py-[3px] pl-[39px] pr-2 no-underline ${isDoc ? 'bg-sel text-ink' : 'text-ink hover:bg-hover'}`}>
-                    All guides
-                  </Link>
-                </div>
-              </nav>
+            <aside className="tools-panel hidden shrink-0 flex-col border-r border-line bg-panel lg:flex">
+              <div className="panel-heading">
+                <span>Tools</span>
+                <Badge variant="outline">{TOOLS.length}</Badge>
+              </div>
+              <ToolsNavigation path={path} />
+              <div className="sidebar-footer">
+                <span className="ready-dot" />
+                Built for PCB design
+              </div>
             </aside>
           )}
 
           {/* narrow screens: the tool's title goes above its inputs */}
-          <div ref={setHeadEl} className="order-first shrink-0 bg-doc lg:hidden" />
+          <div
+            ref={setHeadEl}
+            className="order-first shrink-0 bg-doc lg:hidden"
+          />
 
           {/* on narrow screens, calculator inputs sit above their results */}
-          {panels.props && path !== '/' && path !== '/tools' && path !== '/schematic' && (
-            <aside
-              className={`order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
-            >
-              <div className="flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
-                <span>
-                  Properties <span className="hidden font-normal text-faint lg:inline">{toolByPath(path)?.nav}</span>
-                </span>
-                {/* wrapper carries lg:hidden: the unlayered .btn display rule would override it on the button */}
-                <span className="lg:hidden">
-                  <button type="button" className="btn" onClick={() => mainRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-                    Results ↓
-                  </button>
-                </span>
-              </div>
-              <div ref={setPropsEl} className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto" />
-            </aside>
-          )}
+          {panels.props &&
+            path !== '/' &&
+            path !== '/tools' &&
+            path !== '/schematic' && (
+              <aside
+                className={`properties-panel order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
+              >
+                <div className="properties-heading flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
+                  <span>
+                    Properties{' '}
+                    <span className="hidden font-normal text-faint lg:inline">
+                      {toolByPath(path)?.nav}
+                    </span>
+                  </span>
+                  {/* wrapper carries lg:hidden: the unlayered .btn display rule would override it on the button */}
+                  <span className="lg:hidden">
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() =>
+                        mainRef.current?.scrollIntoView({ behavior: 'smooth' })
+                      }
+                    >
+                      Results ↓
+                    </button>
+                  </span>
+                </div>
+                <div
+                  ref={setPropsEl}
+                  className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+                />
+              </aside>
+            )}
 
-          <main ref={mainRef} id="tool-panel" role={known ? 'tabpanel' : undefined} aria-labelledby={known ? tabId(path) : undefined} className="min-w-0 shrink-0 bg-doc lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <main
+            ref={mainRef}
+            id="tool-panel"
+            role={known ? 'tabpanel' : undefined}
+            aria-labelledby={known ? tabId(path) : undefined}
+            className="min-w-0 shrink-0 bg-doc lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+          >
             <ErrorBoundary key={path}>
-              <Suspense fallback={<div className="p-4 text-muted">Loading…</div>}>
+              <Suspense
+                fallback={<div className="p-4 text-muted">Loading…</div>}
+              >
                 <Outlet />
               </Suspense>
             </ErrorBoundary>
@@ -430,36 +656,102 @@ export function Layout() {
         </div>
 
         {/* status bar */}
-        <div className="flex h-[22px] shrink-0 items-center gap-3 border-t border-line bg-chrome px-2 text-muted">
+        <div className="status-bar flex shrink-0 items-center gap-3 border-t border-line bg-chrome px-3 text-muted">
           <div ref={setStatusEl} className="min-w-0 flex-1 truncate" />
-          {!online && <span title="No network connection: the calculators keep working from the saved copy">Offline</span>}
+          {!online && (
+            <span title="No network connection: the calculators keep working from the saved copy">
+              Offline
+            </span>
+          )}
           {(saved || activeProject) && (
-            <Link to="/projects" className="hidden truncate text-muted no-underline hover:text-ink sm:inline" title="Projects">
+            <Link
+              to="/projects"
+              className="hidden truncate text-muted no-underline hover:text-ink sm:inline"
+              title="Projects"
+            >
               {saved ?? `Project: ${activeProject?.name}`}
             </Link>
           )}
-          <button type="button" className="hover:text-ink" onClick={() => setUnit(unit === 'mm' ? 'mil' : 'mm')} title="Toggle default unit">
+          <button
+            type="button"
+            className="hover:text-ink"
+            onClick={() => setUnit(unit === 'mm' ? 'mil' : 'mm')}
+            title="Toggle default unit"
+          >
             Units: {unit}
           </button>
-          <span className="hidden sm:inline">Theme: {theme === 'dark' ? 'Dark Gray' : theme === 'light' ? 'Light Gray' : 'System'}</span>
-          <button type="button" className="hover:text-ink" onClick={() => setMenu('View')}>
+          <span className="hidden sm:inline">
+            Theme:{' '}
+            {theme === 'dark'
+              ? 'Dark Gray'
+              : theme === 'light'
+                ? 'Light Gray'
+                : 'System'}
+          </span>
+          <button
+            type="button"
+            className="hover:text-ink"
+            onClick={() => setMenu('View')}
+          >
             Panels
           </button>
         </div>
-        {analyticsChoice === 'accepted' && isAnalyticsHost() && <Analytics mode="production" route={path} path={path} beforeSend={beforeVercelSend} />}
-        {consentOpen && <aside role="region" aria-labelledby="analytics-consent-title" className="fixed inset-x-0 bottom-0 z-50 border-t border-line-strong bg-chrome px-4 py-3 shadow-[0_-6px_24px_#0008]">
-          <div className="mx-auto flex max-w-[1100px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="max-w-[75ch]">
-              <h2 id="analytics-consent-title" className="font-semibold text-ink">Site analytics</h2>
-              <p className="mt-1 text-muted">May we use Google Analytics and Vercel Web Analytics to measure visits and pages viewed? Google Analytics uses cookies; Vercel Web Analytics does not. You can change your choice under Help &gt; Analytics preferences. <Link to="/about">How your data is used</Link>.</p>
-              {analyticsChoice && <p className="mt-1 text-faint">Current choice: {analyticsChoice === 'accepted' ? 'accepted' : 'declined'}.</p>}
+        {analyticsChoice === 'accepted' && isAnalyticsHost() && (
+          <Analytics
+            mode="production"
+            route={path}
+            path={path}
+            beforeSend={beforeVercelSend}
+          />
+        )}
+        {consentOpen && (
+          <aside
+            role="region"
+            aria-labelledby="analytics-consent-title"
+            className="fixed inset-x-0 bottom-0 z-50 border-t border-line-strong bg-chrome px-4 py-3 shadow-[0_-6px_24px_#0008]"
+          >
+            <div className="mx-auto flex max-w-[1100px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-[75ch]">
+                <h2
+                  id="analytics-consent-title"
+                  className="font-semibold text-ink"
+                >
+                  Site analytics
+                </h2>
+                <p className="mt-1 text-muted">
+                  May we use Google Analytics and Vercel Web Analytics to
+                  measure visits and pages viewed? Google Analytics uses
+                  cookies; Vercel Web Analytics does not. You can change your
+                  choice under Help &gt; Analytics preferences.{' '}
+                  <Link to="/about">How your data is used</Link>.
+                </p>
+                {analyticsChoice && (
+                  <p className="mt-1 text-faint">
+                    Current choice:{' '}
+                    {analyticsChoice === 'accepted' ? 'accepted' : 'declined'}.
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  ref={consentButtonRef}
+                  type="button"
+                  className="btn h-[30px] flex-1 sm:flex-none"
+                  onClick={() => chooseAnalytics('declined')}
+                >
+                  Decline
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary h-[30px] flex-1 sm:flex-none"
+                  onClick={() => chooseAnalytics('accepted')}
+                >
+                  Accept analytics
+                </button>
+              </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <button ref={consentButtonRef} type="button" className="btn h-[30px] flex-1 sm:flex-none" onClick={() => chooseAnalytics('declined')}>Decline</button>
-              <button type="button" className="btn btn-primary h-[30px] flex-1 sm:flex-none" onClick={() => chooseAnalytics('accepted')}>Accept analytics</button>
-            </div>
-          </div>
-        </aside>}
+          </aside>
+        )}
       </div>
     </ShellContext.Provider>
   );

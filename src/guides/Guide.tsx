@@ -1,3 +1,4 @@
+import { Card } from '../components/shadcn/card';
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
@@ -12,7 +13,13 @@ export interface Source {
 }
 
 /** Article frame: title, date, body, the tools used, and numbered sources. */
-export function Guide({ children, sources }: { children: ReactNode; sources: Source[] }) {
+export function Guide({
+  children,
+  sources,
+}: {
+  children: ReactNode;
+  sources: Source[];
+}) {
   const { pathname } = useLocation();
   const g = guideByPath(pathname)!;
   useDocumentMeta(g.seoTitle, g.description);
@@ -25,17 +32,24 @@ export function Guide({ children, sources }: { children: ReactNode; sources: Sou
   }, [pathname]);
   const others = GUIDES.filter((x) => x.path !== g.path);
   return (
-    <article className="p-3">
-      <div className="mx-auto max-w-[860px] border border-line bg-sheet">
+    <article className="document-page">
+      <Card className="mx-auto max-w-[860px] border border-line bg-sheet">
         <div className="flex h-[24px] items-center gap-1 bg-panel-head px-2 text-muted">
           <Link to="/guides">Guides</Link>
           <span>›</span>
           <span className="truncate">{g.title}</span>
         </div>
-        <div className="prose-doc guide px-5 py-4">
+        <div className="prose-doc guide px-6 py-6">
           <h1>{g.title}</h1>
           <p className="text-faint">
-            <time dateTime={g.date}>{new Date(g.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</time> · {g.minutes} min read · pcbplanner
+            <time dateTime={g.date}>
+              {new Date(g.date).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </time>{' '}
+            · {g.minutes} min read · pcbplanner
           </p>
           {children}
           <h2>Tools used in this guide</h2>
@@ -72,8 +86,9 @@ export function Guide({ children, sources }: { children: ReactNode; sources: Sou
             ))}
           </ul>
         </div>
-      </div>
-      {statusEl && createPortal(<span>Guide · {g.minutes} min read</span>, statusEl)}
+      </Card>
+      {statusEl &&
+        createPortal(<span>Guide · {g.minutes} min read</span>, statusEl)}
     </article>
   );
 }
