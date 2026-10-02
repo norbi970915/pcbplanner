@@ -162,10 +162,10 @@ try {
   }
   await page.setViewportSize({ width: 1600, height: 1050 });
   await visit('/');
-  assert.equal(await page.locator('.featured-link').count(), 3);
+  assert.equal(await page.locator('.featured-link').count(), 10);
   assert.equal(await page.locator('.quick-task').count(), 0);
   assert.doesNotMatch(await page.locator('main').innerText(), /Quick access|A closer look at your design/);
-  assert.deepEqual(await page.locator('.featured-link').evaluateAll(links => links.map(link => new URL(link.href).pathname)), ['/impedance', '/stackup', '/s-parameter-viewer']);
+  assert.deepEqual(await page.locator('.featured-link').evaluateAll(links => links.slice(0, 3).map(link => new URL(link.href).pathname)), ['/impedance', '/stackup', '/s-parameter-viewer']);
   const signalColor = await page
     .locator('.category-link')
     .first()

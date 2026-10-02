@@ -24,6 +24,8 @@ Shared components live in src/components/shadcn/. Workbench layout and page styl
 
 Run node scripts/audit-ui.mjs after starting the production preview to check all routes at desktop and phone sizes, theme switching, search, calculator reset, projects and mobile navigation. Screenshots and the report are saved under dist-check/redesign/.
 
+Run node scripts/audit-featured-carousel.mjs for the featured-tools carousel: all ten illustrations, three visible cards, looping arrows, mouse dragging, touch swiping, keyboard navigation and dark/light mobile layouts. Its screenshots and report are saved under dist-check/carousel/.
+
 ## Field solver
 
 `src/lib/fieldsolver.ts` solves ∇·(ε∇φ) = 0 on a graded finite-volume mesh with Jacobi-preconditioned conjugate gradients. It uses the symmetry plane: a Neumann boundary gives single-ended / even mode and a Dirichlet boundary gives odd mode. Capacitance comes from field energy, and Z0 = 1/(c·√(C·C_air)). The solver runs in Web Workers; batch jobs such as the advisor use a worker pool.
