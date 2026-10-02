@@ -162,7 +162,10 @@ try {
   }
   await page.setViewportSize({ width: 1600, height: 1050 });
   await visit('/');
-  assert.equal(await page.locator('.quick-task').count(), 6);
+  assert.equal(await page.locator('.featured-link').count(), 3);
+  assert.equal(await page.locator('.quick-task').count(), 0);
+  assert.doesNotMatch(await page.locator('main').innerText(), /Quick access|A closer look at your design/);
+  assert.deepEqual(await page.locator('.featured-link').evaluateAll(links => links.map(link => new URL(link.href).pathname)), ['/impedance', '/stackup', '/s-parameter-viewer']);
   const signalColor = await page
     .locator('.category-link')
     .first()
@@ -183,8 +186,8 @@ try {
     .waitFor();
   assert.ok((await page.locator('.result-item').count()) > 0);
   await page.locator('#home-search').press('Escape');
-  await page.getByRole('heading', { name: 'Quick access' }).waitFor();
-  checks.push('Homepage search, Escape and colored icons');
+  await page.getByRole('heading', { name: 'Featured tools' }).waitFor();
+  checks.push('Featured tool links, homepage search, Escape and colored icons');
   await page.getByRole('button', { name: 'View', exact: true }).click();
   await page
     .getByRole('menuitemcheckbox', { name: 'Light Gray Theme', exact: true })
@@ -198,6 +201,14 @@ try {
   assert.ok((await page.locator('.status-bar').innerText()).includes('mil'));
   await page.getByRole('button', { name: 'Switch to dark theme' }).click();
   checks.push('Accessible menus, theme and unit switching');
+  for (const route of ['/impedance', '/stackup', '/s-parameter-viewer']) {
+    await visit('/');
+    await page.locator('.featured-link[href="' + route + '"]').click();
+    await page.waitForURL(url => url.pathname === route);
+    await page.locator('.document-page').waitFor();
+    assert.ok((await page.locator('main').innerText()).length > 60);
+  }
+  checks.push('Featured card navigation to impedance, stackup and S-parameters');
   await visit('/ohms-law');
   const fields = page.locator('.properties-panel input:not([type="checkbox"])');
   const before = await page.locator('main').innerText();

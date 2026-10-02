@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { FeaturedTools } from '../components/FeaturedTools';
 import { useDocumentMeta } from '../components/ToolPage';
 import { APP_NAME } from '../config';
 import {
@@ -23,44 +24,6 @@ import { useShell } from '../state/shell';
 import { GUIDES } from '../guides/registry';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
 
-const QUICK_TASKS = [
-  {
-    path: '/impedance',
-    action: 'Calculate trace impedance',
-    detail: 'Single-ended and differential traces',
-    group: 'Signal integrity',
-  },
-  {
-    path: '/stackup-advisor',
-    action: 'Choose a PCB stackup',
-    detail: 'Layers, thickness and routing needs',
-    group: 'Stackup',
-  },
-  {
-    path: '/trace-width',
-    action: 'Size a power trace',
-    detail: 'Current, temperature rise and voltage drop',
-    group: 'Power & conductors',
-  },
-  {
-    path: '/via',
-    action: 'Check a via',
-    detail: 'Current, resistance and parasitics',
-    group: 'Components',
-  },
-  {
-    path: '/schematic',
-    action: 'Plan a schematic',
-    detail: 'Power tree, values and interface checks',
-    group: 'Electronics',
-  },
-  {
-    path: '/units',
-    action: 'Convert units',
-    detail: 'Copper weight, length, power and more',
-    group: 'Utilities',
-  },
-];
 const RECENT_GUIDES = [...GUIDES]
   .sort((a, b) => b.date.localeCompare(a.date))
   .slice(0, 3);
@@ -296,6 +259,7 @@ export default function Home() {
           </Card>
         ) : (
           <>
+            <FeaturedTools />
             <Card className="news-card">
               <Heading
                 action={<span className="section-meta">Latest update</span>}
@@ -325,35 +289,6 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-            </Card>
-            <Card>
-              <Heading
-                action={
-                  <Link className="section-link" to="/tools">
-                    All {TOOLS.length} tools <ArrowRight size={13} />
-                  </Link>
-                }
-              >
-                Quick access
-              </Heading>
-              <div className="quick-grid">
-                {QUICK_TASKS.map((task) => (
-                  <Link className="quick-task" to={task.path} key={task.path}>
-                    <div className="task-icon">
-                      <CategoryIcon
-                        group={task.group}
-                        color={GROUP_COLORS[task.group]}
-                        size={20}
-                      />
-                    </div>
-                    <div className="task-text">
-                      <h3>{task.action}</h3>
-                      <p>{task.detail}</p>
-                    </div>
-                    <ArrowRight size={15} />
-                  </Link>
-                ))}
-              </div>
             </Card>
             <section
               className="categories-section"
