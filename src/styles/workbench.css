@@ -908,7 +908,7 @@ kbd {
 }
 .guide-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   font-size: 10px;
   color: var(--faint);

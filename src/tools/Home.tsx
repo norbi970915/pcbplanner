@@ -286,9 +286,7 @@ export default function Home() {
                         <h4>{g.title}</h4>
                         <ArrowRight size={14} />
                       </div>
-                      <span className="result-type">
-                        Guide · {g.minutes} min read
-                      </span>
+                      <span className="result-type">Guide</span>
                       <p>{g.description}</p>
                     </Link>
                   ))}
@@ -422,7 +420,6 @@ export default function Home() {
                     <h3>{g.title}</h3>
                     <p>{g.description}</p>
                     <div className="guide-footer">
-                      <span>{g.minutes} min read</span>
                       <ArrowRight size={15} />
                     </div>
                   </Link>

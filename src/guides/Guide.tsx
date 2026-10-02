@@ -12,7 +12,7 @@ export interface Source {
   url?: string;
 }
 
-/** Article frame: title, date, body, the tools used, and numbered sources. */
+/** Guide frame: title, body, the tools used, and numbered sources. */
 export function Guide({
   children,
   sources,
@@ -41,16 +41,6 @@ export function Guide({
         </div>
         <div className="prose-doc guide px-6 py-6">
           <h1>{g.title}</h1>
-          <p className="text-faint">
-            <time dateTime={g.date}>
-              {new Date(g.date).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </time>{' '}
-            · {g.minutes} min read · pcbplanner
-          </p>
           {children}
           <h2>Tools used in this guide</h2>
           <ul>
@@ -87,8 +77,7 @@ export function Guide({
           </ul>
         </div>
       </Card>
-      {statusEl &&
-        createPortal(<span>Guide · {g.minutes} min read</span>, statusEl)}
+      {statusEl && createPortal(<span>Guide</span>, statusEl)}
     </article>
   );
 }

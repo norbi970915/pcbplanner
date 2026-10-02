@@ -46,14 +46,14 @@ export default function GuidesIndex() {
         <CardHeader className="section-heading">
           <h2>Guides</h2>
           <Badge variant="outline" className="quiet-badge">
-            {GUIDES.length} articles
+            {GUIDES.length} guides
           </Badge>
         </CardHeader>
         <CardContent className="catalog-intro">
           <div className="eyebrow">REFERENCE &amp; DESIGN NOTES</div>
           <h1>PCB design guides</h1>
           <p className="text-muted">
-            Short, sourced articles that explain the design decisions behind the
+            Short, sourced guides that explain the design decisions behind the
             calculators, with numbers you can reproduce in the tools.
           </p>
           <label htmlFor="guides-search" className="search-label">
@@ -128,7 +128,6 @@ export default function GuidesIndex() {
                       <h3>{g.title}</h3>
                       <p>{g.description}</p>
                       <div className="guide-footer">
-                        <span>{g.minutes} min read</span>
                         <ArrowRight size={15} />
                       </div>
                     </Link>

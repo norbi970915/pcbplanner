@@ -19,7 +19,7 @@ const ogSlug = (path) => path.slice(1).replace(/\//g, '-');
 const ACCENT = '#e0953f';
 const cards = [
   ...TOOLS.map((t) => ({ path: t.path, label: t.group, color: GROUP_COLORS[t.group] ?? ACCENT, title: t.title, text: t.summary })),
-  ...GUIDES.map((g) => ({ path: g.path, label: `Guide · ${g.minutes} min read`, color: ACCENT, title: g.title, text: g.description })),
+  ...GUIDES.map((g) => ({ path: g.path, label: 'Guide', color: ACCENT, title: g.title, text: g.description })),
   { path: '/tools', label: 'All tools', color: ACCENT, title: 'PCB Design Calculators', text: `${TOOLS.length} free calculators for signal integrity, stackups, thermal design, power and components.` },
   { path: '/schematic', label: 'Schematic design', color: ACCENT, title: 'Schematic Design Tools', text: SCHEMATIC_DESCRIPTION },
   { path: '/guides', label: 'Guides', color: ACCENT, title: 'PCB Design Guides', text: 'Practical PCB design guides with worked examples and reproducible calculations.' },
