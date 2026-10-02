@@ -19,7 +19,6 @@ import { Button } from '../components/shadcn/button';
 import { Input } from '../components/shadcn/input';
 import { Badge } from '../components/shadcn/badge';
 import { NEWS } from '../data/news';
-import { PRESETS } from '../lib/stackups';
 import { useShell } from '../state/shell';
 import { GUIDES } from '../guides/registry';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
@@ -125,14 +124,6 @@ export default function Home() {
                   {APP_NAME}
                   <span className="title-dot">.</span>
                 </h1>
-              </div>
-              <div className="welcome-stats">
-                <span>
-                  <strong>{TOOLS.length}</strong> tools
-                </span>
-                <span>
-                  <strong>{PRESETS.length}</strong> stackups
-                </span>
               </div>
             </div>
             <p className="intro">
@@ -296,9 +287,6 @@ export default function Home() {
             >
               <div className="outside-heading">
                 <h2 id="categories-heading">Browse by category</h2>
-                <span className="section-meta">
-                  {GROUPS.length} disciplines
-                </span>
               </div>
               <div className="category-grid">
                 {GROUPS.map((group) => {
@@ -370,13 +358,7 @@ export default function Home() {
           </Link>
         </div>
       </div>
-      {statusEl &&
-        createPortal(
-          <span>
-            {TOOLS.length} tools · {PRESETS.length} stackups
-          </span>,
-          statusEl,
-        )}
+      {statusEl && createPortal(<span>Home</span>, statusEl)}
     </>
   );
 }
