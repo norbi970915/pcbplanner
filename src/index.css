@@ -1,30 +1,31 @@
 @import "tailwindcss";
+@import "./styles/workbench.css";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-/* Altium Designer–style themes: "Dark Gray" (default) and "Light Gray". */
+/* PCB Planner workbench themes. Material and category colors remain unchanged. */
 [data-theme='dark'],
 :root {
-  --chrome: #2b2b2b; /* menu bar, tab strip, status bar */
-  --chrome-2: #353535; /* hover on chrome */
-  --panel: #2f2f2f; /* docked panels */
-  --panel-head: #3a3a3a; /* panel title bars, section headers */
-  --doc: #1f1f1f; /* document area */
-  --sheet: #282828; /* sheets inside the document */
-  --ink: #dcdcdc;
-  --muted: #a3a3a3;
-  --faint: #7b7b7b;
-  --line: #414141;
-  --line-strong: #585858;
-  --field: #1c1c1c;
-  --field-line: #5a5a5a;
-  --accent: #3d8fe0; /* selection / focus blue */
-  --accent-ink: #6aaef0;
-  --sel: #26466a; /* selected row / active item */
-  --hover: #3a3a3a;
-  --tab-active: #1f1f1f;
-  --btn: #3c3c3c;
-  --btn-hover: #484848;
+  --chrome: #26272b; /* menu bar, tab strip, status bar */
+  --chrome-2: #303237; /* hover on chrome */
+  --panel: #222327; /* docked panels */
+  --panel-head: #2b2c30; /* panel title bars, section headers */
+  --doc: #1c1d20; /* document area */
+  --sheet: #252629; /* sheets inside the document */
+  --ink: #dedfe3;
+  --muted: #9da0a9;
+  --faint: #9296a0;
+  --line: #393b40;
+  --line-strong: #4b4e56;
+  --field: #202125;
+  --field-line: #454850;
+  --accent: #507aaa; /* selection / focus blue */
+  --accent-ink: #6b9bd2;
+  --sel: #2a3543; /* selected row / active item */
+  --hover: #30343a;
+  --tab-active: #1c1d20;
+  --btn: #303237;
+  --btn-hover: #3a3d44;
   --note-bg: #3a3320;
   --note-line: #c9a227;
   --err-bg: #3b2222;
@@ -35,32 +36,32 @@
   --laminate: #6b6a3e;
   --prepreg: #817f4a;
   --mask: #2f7a4f;
-  --grid: #2e2e2e;
+  --grid: #2b2c30;
   --surface-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025), 0 2px 7px rgb(0 0 0 / 0.07);
   color-scheme: dark;
 }
 
 [data-theme='light'] {
-  --chrome: #e4e4e4;
-  --chrome-2: #d6d6d6;
-  --panel: #f2f2f2;
-  --panel-head: #dedede;
-  --doc: #d9d9d9;
+  --chrome: #f8f9fa;
+  --chrome-2: #eef0f3;
+  --panel: #f6f7f9;
+  --panel-head: #fafbfc;
+  --doc: #f0f1f3;
   --sheet: #ffffff;
-  --ink: #1e1e1e;
-  --muted: #555555;
-  --faint: #7e7e7e;
-  --line: #cfcfcf;
-  --line-strong: #adadad;
+  --ink: #25282e;
+  --muted: #636872;
+  --faint: #6c727d;
+  --line: #d9dce1;
+  --line-strong: #c5c9d0;
   --field: #ffffff;
-  --field-line: #a6a6a6;
-  --accent: #0a64c8;
-  --accent-ink: #0a55aa;
-  --sel: #cce4f7;
-  --hover: #e6e6e6;
-  --tab-active: #d9d9d9;
-  --btn: #f7f7f7;
-  --btn-hover: #e8e8e8;
+  --field-line: #c5c9d0;
+  --accent: #38699f;
+  --accent-ink: #38699f;
+  --sel: #e4edf7;
+  --hover: #f1f3f6;
+  --tab-active: #f0f1f3;
+  --btn: #f8f9fa;
+  --btn-hover: #eef0f3;
   --note-bg: #fff6d6;
   --note-line: #d4a72c;
   --err-bg: #fde8e6;
@@ -70,22 +71,22 @@
   --laminate: #c9c38d;
   --prepreg: #ddd7a3;
   --mask: #3f8a5c;
-  --grid: #ececec;
+  --grid: #e8ebef;
   --surface-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 2px 7px rgb(0 0 0 / 0.035);
   color-scheme: light;
 }
 
 @theme inline {
-  --color-chrome: color-mix(in srgb, var(--chrome) 96%, transparent);
+  --color-chrome: var(--chrome);
   --color-chrome-2: var(--chrome-2);
   --color-panel: var(--panel);
-  --color-panel-head: color-mix(in srgb, var(--panel-head) 92%, transparent);
+  --color-panel-head: var(--panel-head);
   --color-doc: var(--doc);
-  --color-sheet: color-mix(in srgb, var(--sheet) 96%, transparent);
+  --color-sheet: var(--sheet);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
-  --color-line: color-mix(in srgb, var(--line) 88%, transparent);
+  --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-field: var(--field);
   --color-accent: var(--accent);
