@@ -183,6 +183,37 @@ export default function Home() {
               )}
             </div>
           </CardContent>
+          {!words.length && (
+            <section className="welcome-news" aria-labelledby="home-news-heading">
+              <div className="welcome-news-heading">
+                <h2 id="home-news-heading">What's new</h2>
+                <span className="section-meta">Latest update</span>
+              </div>
+              {NEWS.slice(0, 3).map((item) => (
+                <div className="news-item" key={item.title}>
+                  <div className="news-icon">
+                    <Check size={17} />
+                  </div>
+                  <div>
+                    <div className="news-title">
+                      <h3>{item.title}</h3>
+                      <time dateTime={item.date}>{newsDate(item.date)}</time>
+                    </div>
+                    <p>
+                      {item.text}
+                      {'links' in item &&
+                        item.links?.map((link) => (
+                          <Fragment key={link.to}>
+                            {' '}
+                            <Link to={link.to}>{link.label}</Link>
+                          </Fragment>
+                        ))}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
         </Card>
         {words.length ? (
           <Card id="search-results">
@@ -251,36 +282,6 @@ export default function Home() {
         ) : (
           <>
             <FeaturedTools />
-            <Card className="news-card">
-              <Heading
-                action={<span className="section-meta">Latest update</span>}
-              >
-                What's new
-              </Heading>
-              {NEWS.slice(0, 3).map((item) => (
-                <div className="news-item" key={item.title}>
-                  <div className="news-icon">
-                    <Check size={17} />
-                  </div>
-                  <div>
-                    <div className="news-title">
-                      <h3>{item.title}</h3>
-                      <time dateTime={item.date}>{newsDate(item.date)}</time>
-                    </div>
-                    <p>
-                      {item.text}
-                      {'links' in item &&
-                        item.links?.map((link) => (
-                          <Fragment key={link.to}>
-                            {' '}
-                            <Link to={link.to}>{link.label}</Link>
-                          </Fragment>
-                        ))}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </Card>
             <section
               className="categories-section"
               aria-labelledby="categories-heading"
