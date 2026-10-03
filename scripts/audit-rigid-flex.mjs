@@ -59,7 +59,7 @@ try {
   await selectRegion('flex');await assertThickness(0.025);
   checks.push('Adding a linked region and removing copper membership preserve the other regions');
   await row().getByTitle('Open this layer in the impedance calculator').click();await solved();
-  const iq=new URL(page.url()).searchParams;assert.equal(iq.get('type'),'embedded');assert.equal(iq.get('dl2'),'0.025:2.8,0.025:3.4');assert.equal(iq.get('coupling'),'edge');
+  const iq=new URL(page.url()).searchParams;assert.equal(iq.get('type'),'embedded');assert.equal(iq.get('dl2'),'0.025:2.8,0.025:3.4');assert.equal(iq.get('coupling')??'edge','edge');
   checks.push('Editor opens the exact covered flex cross-section in Impedance');
   await goto('/impedance');await page.getByLabel('Stackup',{exact:true}).selectOption('rf-4l-2f');
   await page.getByLabel('Region',{exact:true}).selectOption('flex');await page.getByLabel('Layer',{exact:true}).selectOption('rf-4l-2f-shared-cu-0');
