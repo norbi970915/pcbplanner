@@ -22,9 +22,13 @@ Every tool keeps its inputs in the URL, so any result can be shared as a link.
 
 Shared components live in src/components/shadcn/. Workbench layout and page styles are in src/styles/workbench.css; dark/light theme and material colors are in src/index.css. The desktop app keeps docked tools and properties, and phones have an accessible tools drawer. The existing calculator, URL state, projects and offline behavior are retained.
 
+Favorite tools with the star in the sidebar or calculator heading. Favorites appear at the top of the tools panel, persist in localStorage on the same browser/device, and update across open tabs.
+
 Run node scripts/audit-ui.mjs after starting the production preview to check all routes at desktop and phone sizes, theme switching, search, calculator reset, projects and mobile navigation. Screenshots and the report are saved under dist-check/redesign/.
 
 Run node scripts/audit-featured-carousel.mjs for the featured-tools carousel: all ten illustrations, three visible cards, looping arrows, mouse dragging, touch swiping, keyboard navigation and dark/light mobile layouts. Its screenshots and report are saved under dist-check/carousel/.
+
+Run node scripts/audit-favorites.mjs for favorites: sidebar and calculator toggles, browser-restart persistence, cross-tab updates, mobile navigation and unavailable storage. Its screenshots and report are saved under dist-check/favorites/.
 
 ## Field solver
 

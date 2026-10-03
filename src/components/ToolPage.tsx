@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { FavoriteButton } from './FavoriteButton';
 import { Button } from './shadcn/button';
 import { CategoryIcon } from './CategoryIcon';
 import { APP_NAME, SITE_URL } from '../config';
@@ -98,16 +99,14 @@ export function ToolPage({
         </div>
         <p className="text-muted">{description}</p>
       </div>
-      {onReset && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="reset-button"
-          onClick={onReset}
-        >
-          Reset
-        </Button>
-      )}
+      <div className="tool-actions">
+        {tool && <FavoriteButton path={tool.path} title={tool.title} compact />}
+        {onReset && (
+          <Button variant="outline" size="sm" className="reset-button" onClick={onReset}>
+            Reset
+          </Button>
+        )}
+      </div>
     </div>
   );
 
@@ -128,16 +127,14 @@ export function ToolPage({
           </h1>
           <p className="max-w-[95ch] text-muted">{description}</p>
         </div>
-        {onReset && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="reset-button"
-            onClick={onReset}
-          >
-            Reset
-          </Button>
-        )}
+        <div className="tool-actions">
+          {tool && <FavoriteButton path={tool.path} title={tool.title} />}
+          {onReset && (
+            <Button variant="outline" size="sm" className="reset-button" onClick={onReset}>
+              Reset
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">{children}</div>

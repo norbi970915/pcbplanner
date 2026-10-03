@@ -1346,3 +1346,78 @@ kbd {
     padding: 0;
   }
 }
+
+/* Favorites share the workbench navigation and persist per browser. */
+.favorites-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.favorites-heading > svg {
+  color: #c9a227;
+}
+.favorites-empty {
+  padding: 3px 8px 4px 30px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.nav-tool-row {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  gap: 2px;
+}
+.nav-tool-row > .tool-link {
+  flex: 1;
+  min-width: 0;
+}
+.favorite-tool-row > .tool-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+}
+.favorite-tool-row > .tool-link > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tool-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.favorite-button {
+  color: var(--muted);
+  font-size: 12px;
+}
+.favorite-button[aria-pressed='true'] > svg {
+  color: #c9a227;
+}
+[data-theme='light'] .favorite-button[aria-pressed='true'] > svg,
+[data-theme='light'] .favorites-heading > svg {
+  color: #997312;
+}
+.nav-tool-row > .favorite-button-compact {
+  width: 28px;
+  height: 28px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav-tool-row > .favorite-button[aria-pressed='false'] {
+    opacity: 0;
+  }
+  .nav-tool-row:hover > .favorite-button,
+  .nav-tool-row:focus-within > .favorite-button {
+    opacity: 1;
+  }
+}
+@media (max-width: 699px) {
+  .mobile-tool-heading .tool-actions {
+    flex-direction: column;
+  }
+}
