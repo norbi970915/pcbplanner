@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { isStackup } from '../lib/stackupFile';
 import type { Stackup } from '../lib/stackups';
 
 /** One tool's inputs, exactly as they appear in its URL. */
@@ -59,7 +60,7 @@ export function parseProjectFile(text: string): { projects: Project[]; stackups:
   if (f.version !== 1) return { error: `Unsupported project file version (${String(f.version)}).` };
   const projects = Array.isArray(f.projects) ? f.projects.filter(isProject) : [];
   if (!projects.length) return { error: 'The file contains no projects.' };
-  const stackups = Array.isArray(f.stackups) ? f.stackups.filter((s) => s && Array.isArray((s as Stackup).layers)) : [];
+  const stackups = Array.isArray(f.stackups) ? f.stackups.filter(isStackup) : [];
   return { projects, stackups };
 }
 

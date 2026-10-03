@@ -1,5 +1,5 @@
 // Stacked dielectric entry: a list of plies (thickness + Dk, and Df where loss matters),
-// kept in the URL as "t:dk[:df[:material]],…". Below the trace the list runs from the
+// kept in the URL as "t:dk[:df[:material[:referenceGHz]]],…". Below the trace the list runs from the
 // reference plane up to the trace; above it runs from the trace outward.
 // A ply may name a material from the laminate library instead of its own numbers; the
 // stored dk/df are then only a cache for display, and the library value is what counts.
@@ -7,6 +7,7 @@ export interface PlyInput {
   t: number; // mm
   dk: number;
   df?: number;
+  fGHz?: number; // optional individual Dk/Df reference frequency
   mat?: string; // laminate library id
 }
 
@@ -16,14 +17,16 @@ export function parsePlies(text: string): PlyInput[] | null {
   if (!s) return [];
   const out: PlyInput[] = [];
   for (const part of s.split(',')) {
-    const [a, b, c, m] = part.split(':');
+    const [a, b, c, m, freq] = part.split(':');
     const t = Number.parseFloat(a);
     const dk = Number.parseFloat(b);
     const df = c === undefined || c === '' ? undefined : Number.parseFloat(c);
+    const fGHz = freq === undefined || freq === '' ? undefined : Number(freq);
+    if (fGHz !== undefined && (!Number.isFinite(fGHz) || fGHz <= 0 || fGHz > 200)) return null;
     const mat = m === undefined || m === '' ? undefined : m;
     if (!(t > 0) || !(dk >= 1) || (df !== undefined && !(df >= 0 && df < 1))) return null;
     if (mat !== undefined && !/^[\w.-]+$/.test(mat)) return null;
-    out.push({ t, dk, ...(df === undefined ? {} : { df }), ...(mat === undefined ? {} : { mat }) });
+    out.push({ t, dk, ...(df === undefined ? {} : { df }), ...(mat === undefined ? {} : { mat }), ...(fGHz === undefined ? {} : { fGHz }) });
   }
   return out;
 }
@@ -33,6 +36,7 @@ export const formatPlies = (plies: PlyInput[]): string =>
   plies
     .map((p) => {
       const df = p.df === undefined ? '' : String(n(p.df));
+      if (p.fGHz !== undefined) return `${n(p.t)}:${n(p.dk)}:${df}:${p.mat ?? ''}:${n(p.fGHz)}`;
       return p.mat ? `${n(p.t)}:${n(p.dk)}:${df}:${p.mat}` : `${n(p.t)}:${n(p.dk)}${df === '' ? '' : `:${df}`}`;
     })
     .join(',');

@@ -1,7 +1,8 @@
 // Stackup model, presets and conversion to an impedance geometry.
+import { regionStackup } from './stackupRegions';
 import { FAB_STACKUPS, type RawStackup } from '../data/fabStackups';
 
-export type LayerKind = 'mask' | 'copper' | 'dielectric';
+export type LayerKind = 'mask' | 'copper' | 'dielectric' | 'coverlay' | 'adhesive';
 export type CopperRole = 'signal' | 'plane';
 
 export interface Layer {
@@ -12,6 +13,16 @@ export interface Layer {
   er?: number;
   df?: number; // loss tangent (dielectric and mask)
   role?: CopperRole;
+  material?: string;
+  fGHz?: number; // measurement frequency of the entered Dk/Df
+}
+
+export interface StackupRegion {
+  id: string;
+  name: string;
+  kind: 'rigid' | 'flex';
+  layerIds: string[]; // membership in the shared, ordered layer catalogue
+  nominal?: number;
 }
 
 export interface Stackup {
@@ -19,6 +30,11 @@ export interface Stackup {
   name: string;
   layers: Layer[];
   builtin?: boolean;
+  regions?: StackupRegion[];
+  construction?: 'rigid' | 'flex' | 'rigid-flex';
+  parentId?: string; // flattened region result; never saved as a complete construction
+  regionId?: string;
+  regionName?: string;
   label?: string; // short name inside its layer-count/thickness group (library stackups)
   note?: string;
   vendor?: string;
@@ -78,15 +94,17 @@ export const PRESETS: Stackup[] = FAB_STACKUPS.map(fromRaw);
 
 /** Name inside a stackup dropdown group (the group already says layers and thickness). */
 export const shortName = (s: Stackup) => s.label ?? s.name;
-export const copperCount = (s: Stackup) => s.layers.filter((l) => l.kind === 'copper').length;
-export const signalLayers = (s: Stackup) => s.layers.filter((l) => l.kind === 'copper' && l.role !== 'plane');
-export const totalThickness = (s: Stackup) => s.layers.reduce((a, l) => a + l.t, 0);
+export const copperCount = (s: Stackup) => regionStackup(s).layers.filter((l) => l.kind === 'copper').length;
+export const signalLayers = (s: Stackup) => regionStackup(s).layers.filter((l) => l.kind === 'copper' && l.role !== 'plane');
+export const totalThickness = (s: Stackup) => regionStackup(s).layers.reduce((a, l) => a + l.t, 0);
 /** Thickness without solder mask (what the fab quotes as board thickness). */
-export const boardThickness = (s: Stackup) => s.layers.filter((l) => l.kind !== 'mask').reduce((a, l) => a + l.t, 0);
+export const boardThickness = (s: Stackup) => regionStackup(s).layers.filter((l) => l.kind !== 'mask').reduce((a, l) => a + l.t, 0);
 
 export interface Ply {
   t: number;
   er: number;
+  df?: number;
+  fGHz?: number;
 }
 
 /**
@@ -95,10 +113,10 @@ export interface Ply {
  * because the resin fills around it.
  */
 function plies(layers: Layer[]): Ply[] {
-  const known = layers.filter((l) => l.kind === 'dielectric');
+  const known = layers.filter((l) => l.kind !== 'copper' && l.kind !== 'mask');
   const tk = known.reduce((a, l) => a + l.t, 0);
   const avg = tk > 0 ? known.reduce((a, l) => a + l.t * (l.er ?? 4), 0) / tk : 4;
-  return layers.map((l) => ({ t: l.t, er: l.kind === 'dielectric' ? (l.er ?? 4) : avg }));
+  return layers.map((l) => ({ t: l.t, er: l.kind !== 'copper' ? (l.er ?? 4) : avg, df: l.df, fGHz: l.fGHz }));
 }
 
 /** Total thickness and thickness-weighted average εr of a list of plies. */
@@ -128,10 +146,13 @@ export interface StackupGeometry {
  * Derive the impedance cross-section for a copper layer from the stackup.
  * The reference planes are the nearest copper layers marked as planes.
  */
-export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry | null {
+export function geometryForLayer(s: Stackup, layerId: string, regionId?: string): StackupGeometry | null {
+  s = regionStackup(s, regionId);
   const idx = s.layers.findIndex((l) => l.id === layerId);
   if (idx < 0 || s.layers[idx].kind !== 'copper') return null;
   const trace = s.layers[idx];
+  const outerCopper = idx === s.layers.findIndex(l=>l.kind==='copper') || idx === s.layers.findLastIndex(l=>l.kind==='copper');
+  const traceLabel = (s.regionName ? s.regionName + ' / ' : '') + trace.name;
 
   const scan = (dir: 1 | -1) => {
     const dielectrics: Layer[] = [];
@@ -171,7 +192,7 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
       below: [...down.run].reverse(),
       above: up.run,
       outer: false,
-      note: `${trace.name}: stripline between ${down.plane!.name} and ${up.plane!.name}.`,
+      note: `${traceLabel}: stripline between ${down.plane!.name} and ${up.plane!.name}.`,
     };
   }
   const ref = up.plane ? up : down;
@@ -188,7 +209,7 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
       mask: m ? { c1: m.t, c2: m.t / 2, er: m.er ?? MASK_ER } : undefined,
       below: [...ref.run].reverse(),
       outer: true,
-      note: `${trace.name}: surface microstrip over ${ref.plane!.name}${m ? ', solder-mask coated' : ''}.`,
+      note: `${traceLabel}: surface microstrip over ${ref.plane!.name}${m ? ', solder-mask coated' : ''}.`,
     };
   }
   return {
@@ -200,7 +221,7 @@ export function geometryForLayer(s: Stackup, layerId: string): StackupGeometry |
     t: trace.t,
     below: [...ref.run].reverse(),
     above: open.run,
-    outer: false,
-    note: `${trace.name}: embedded microstrip over ${ref.plane!.name}.`,
+    outer: outerCopper,
+    note: `${traceLabel}: embedded microstrip over ${ref.plane!.name}.`,
   };
 }

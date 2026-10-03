@@ -27,6 +27,8 @@ interface Normalised {
 
 /** Split the stackup into copper layers and the dielectric plies between them; reject what no tool can import. */
 export function normalise(s: Stackup): Normalised {
+  if (s.regions?.length) throw new Error('Select a region for CAD export; use PCBPlanner JSON for the complete rigid-flex construction.');
+  if (s.layers.some(l => l.kind === 'coverlay' || l.kind === 'adhesive')) throw new Error('This CAD template export does not support coverlay/adhesive layers. Use PCBPlanner JSON to preserve the complete construction.');
   const ls = s.layers;
   const firstCu = ls.findIndex((l) => l.kind === 'copper');
   const lastCu = ls.length - 1 - [...ls].reverse().findIndex((l) => l.kind === 'copper');

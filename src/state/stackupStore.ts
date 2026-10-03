@@ -1,22 +1,24 @@
 import { useSyncExternalStore } from 'react';
+import { isStackup } from '../lib/stackupFile';
+import { FLEX_PRESETS } from '../data/flexStackups';
 import { PRESETS, type Stackup } from '../lib/stackups';
 
 const KEY = 'pcbtk-stackups';
 let custom: Stackup[] = load();
 const listeners = new Set<() => void>();
-let snapshot: Stackup[] = [...PRESETS, ...custom];
+let snapshot: Stackup[] = [...PRESETS, ...FLEX_PRESETS, ...custom];
 
 function load(): Stackup[] {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '[]');
-    return Array.isArray(v) ? v.filter((s) => s && Array.isArray(s.layers)) : [];
+    return Array.isArray(v) ? v.filter(isStackup) : [];
   } catch {
     return [];
   }
 }
 
 function commit() {
-  snapshot = [...PRESETS, ...custom];
+  snapshot = [...PRESETS, ...FLEX_PRESETS, ...custom];
   try {
     localStorage.setItem(KEY, JSON.stringify(custom));
   } catch {

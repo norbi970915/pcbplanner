@@ -41,6 +41,7 @@ export function PlyEditor({
   value,
   onChange,
   withDf = false,
+  fallbackFrequency = 1,
   firstLabel,
   materials,
   resolve,
@@ -48,6 +49,7 @@ export function PlyEditor({
   value: string;
   onChange: (v: string) => void;
   withDf?: boolean;
+  fallbackFrequency?: number;
   firstLabel: string;
   materials?: MaterialOption[];
   /** library values for a material id, used to fill the ply when one is picked */
@@ -55,6 +57,7 @@ export function PlyEditor({
 }) {
   const { unit } = useSettings();
   const plies = parsePlies(value) ?? [];
+  const showFrequency = withDf && plies.some(p=>p.fGHz!==undefined);
   const set = (next: PlyInput[]) => onChange(formatPlies(next));
   const patch = (i: number, p: Partial<PlyInput>) => set(plies.map((x, k) => (k === i ? { ...x, ...p } : x)));
   const groups = materials ? [...new Set(materials.map((m) => m.group ?? ''))] : [];
@@ -73,6 +76,7 @@ export function PlyEditor({
             <th className="text-right font-normal">t ({unit})</th>
             <th className="text-right font-normal">Dk</th>
             {withDf && <th className="text-right font-normal">Df</th>}
+            {showFrequency && <th className="text-right font-normal">Ref GHz</th>}
             <th />
           </tr>
         </thead>
@@ -107,6 +111,7 @@ export function PlyEditor({
                   <Cell value={p.df ?? 0.02} onChange={(v) => patch(i, { df: v })} width={56} digits={4} disabled={!!p.mat} />
                 </td>
               )}
+              {showFrequency && <td className="text-right"><Cell value={p.fGHz ?? fallbackFrequency} onChange={fGHz=>patch(i,{fGHz})} width={64} digits={6} disabled={!!p.mat} /></td>}
               <td className="text-right">
                 <button className="btn" aria-label={`Remove ply ${i + 1}`} disabled={plies.length < 2} onClick={() => set(plies.filter((_, k) => k !== i))}>
                   ✕

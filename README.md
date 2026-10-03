@@ -47,6 +47,12 @@ It has been checked against:
 - `src/data/fabStackups.ts` holds 178 standard FR-4 stackups (2–12 layers, 0.8–2.0 mm), named by their outer prepreg glass style.
 - Default layer roles (signal / plane) are assigned by layer count in `src/lib/stackups.ts` (`ROLE_PATTERNS`).
 
+The layer stack manager also includes six editable flex and rigid-flex starters in `src/data/flexStackups.ts`. Regional membership references shared layer records, so copper and dielectric edits stay linked. The advisor evaluates each physical region separately, using its own thickness, reference planes and coverlay/adhesive plies. These are uniform cross-section models with solid planes; bends, transitions and hatched planes need separate validation. Material notes distinguish per-ply Dk/Df reference frequencies and the low-frequency Kapton film estimate.
+
+PCBPlanner JSON exports and imports the complete linked construction. Existing CAD templates export one selected rigid region; coverlay/adhesive CAD export is explicitly unavailable.
+
+Run `node scripts/audit-rigid-flex.mjs [baseURL]` against the production preview or live site for saving/importing, shared edits, region handoff, advisor solves and desktop/mobile themes. Screenshots and the report are written to `dist-check/rigid-flex/`.
+
 ## Development
 
 ```bash

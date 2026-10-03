@@ -2,6 +2,7 @@
 // line-design jobs, and rank the results.
 import type { Accuracy } from './fieldsolver';
 import type { DesignRequest, DesignResult, SpacingRule } from './design';
+import { constructionOf, regionStackup, stackupIssues, stackupRegions } from './stackupRegions';
 import { copperCount, geometryForLayer, type Stackup, type StackupGeometry } from './stackups';
 
 export interface Requirement {
@@ -26,6 +27,8 @@ export interface Constraints {
   maxW: number;
   etch: number;
   priority: 'cost' | 'margin';
+  construction?: 'rigid' | 'flex' | 'rigid-flex' | 'all';
+  region?: 'rigid' | 'flex' | 'all';
 }
 
 export interface PlannedLayer {
@@ -41,7 +44,7 @@ export interface Plan {
   jobs: { reqId: string; layerId: string; key: string }[];
 }
 
-export const nominalThickness = (s: Stackup) => s.nominal ?? s.layers.filter((l) => l.kind !== 'mask').reduce((a, l) => a + l.t, 0);
+export const nominalThickness = (s: Stackup) => { const active = regionStackup(s); return active.nominal ?? active.layers.filter(l=>l.kind!=='mask').reduce((a,l)=>a+l.t,0); };
 
 const r5 = (v: number | undefined) => (v === undefined ? undefined : Math.round(v * 1e5) / 1e5);
 
@@ -55,7 +58,11 @@ export function planAdvice(stackups: Stackup[], reqs: Requirement[], c: Constrai
   const rejected: { stackup: Stackup; reason: string }[] = [];
   const jobs = new Map<string, DesignRequest>();
 
-  for (const s of stackups) {
+  const candidates = stackups.filter(s=>c.construction===undefined || c.construction==='all' || constructionOf(s)===c.construction)
+    .flatMap(stackupRegions).filter(s=>c.region===undefined || c.region==='all' || constructionOf(s)===c.region);
+  for (const s of candidates) {
+    const issues=stackupIssues(s);
+    if(issues.length){rejected.push({stackup:s,reason:issues.join(' ')});continue;}
     const n = copperCount(s);
     const t = nominalThickness(s);
     if (n < c.layersMin || n > c.layersMax) continue;

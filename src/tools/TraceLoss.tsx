@@ -114,8 +114,8 @@ function buildRequest(p: P): { req: LossRequest | null; errors: string[] } {
   const dkAt = (s: DielectricSpec) => djordjevicSarkar(s).dk(fRef);
 
   // stacked plies: every prepreg / core gets its own Dk, Df and slab
-  const plySpec = (x: { dk: number; df?: number; mat?: string }, f0: number): DielectricSpec =>
-    x.mat ? specOf(x.mat, x.dk, x.df ?? 0, f0, laminateById) : { dk: x.dk, df: x.df ?? 0, f0: f0 * 1e9 };
+  const plySpec = (x: { dk: number; df?: number; mat?: string; fGHz?: number }, f0: number): DielectricSpec =>
+    x.mat ? specOf(x.mat, x.dk, x.df ?? 0, f0, laminateById) : { dk: x.dk, df: x.df ?? 0, f0: (x.fGHz ?? f0) * 1e9 };
   const hBelow = below.length ? pliesThickness(below) : p.h;
   const hAbove = above.length ? pliesThickness(above) : p.h2;
   const belowSpecs = below.length ? below.map((x) => plySpec(x, p.f0)) : [s1];
@@ -175,7 +175,7 @@ export default function TraceLoss() {
       setStackNote('That layer has no reference plane marked in the stackup.');
       return;
     }
-    const asPlies = (ps?: { t: number; er: number }[]) => (ps && ps.length > 1 ? formatPlies(ps.map((x) => ({ t: x.t, dk: x.er, df: p.df }))) : '');
+    const asPlies = (ps?: { t: number; er: number; df?: number; fGHz?: number }[]) => ps?.length ? formatPlies(ps.map(x=>({t:x.t,dk:x.er,df:x.df??p.df,fGHz:x.fGHz??p.f0}))) : '';
     set({
       type: g.type,
       h: g.h,
@@ -187,7 +187,7 @@ export default function TraceLoss() {
       ...(g.h2 !== undefined ? { h2: g.h2, mat2: 'custom', er2: g.er2 ?? g.er } : {}),
       ...(g.type === 'microstrip' ? { mask: !!g.mask, ...(g.mask ? { c1: g.mask.c1, c2: g.mask.c2, mmat: 'custom', erm: g.mask.er } : {}) } : {}),
     });
-    setStackNote(`${g.note} The stackup lists Dk only: check Df and its frequency below.`);
+    setStackNote(`${g.note} Stacked plies preserve Dk/Df and each reference frequency when available. Confirm the values at your signal frequency, especially coverlay film.`);
   };
 
   const matOptions = [{ value: 'custom', label: 'Custom (enter Dk, Df)', group: 'Custom' }, ...LAMINATES.map((l) => ({ value: l.id, label: `${l.vendor} ${l.name}`, group: l.cls }))];
@@ -317,6 +317,7 @@ export default function TraceLoss() {
               onChange={(v) => set({ dl: v })}
               withDf
               firstLabel="plane"
+              fallbackFrequency={p.f0}
               materials={matOptions.slice(1)}
               resolve={(m) => {
                 const l = laminateById(m);
@@ -347,6 +348,7 @@ export default function TraceLoss() {
                 onChange={(v) => set({ dl2: v })}
                 withDf
                 firstLabel="trace"
+                fallbackFrequency={p.f02}
                 materials={matOptions.slice(1)}
                 resolve={(m) => {
                   const l = laminateById(m);

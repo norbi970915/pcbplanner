@@ -6,6 +6,7 @@ import { nominalThickness, planAdvice, rankAdvice, type Constraints, type Ranked
 import type { DesignResult } from '../lib/design';
 import type { Accuracy } from '../lib/fieldsolver';
 import { cancelPool, poolSize, runPooled } from '../lib/solverClient';
+import { impedanceQuery } from '../lib/stackupRegions';
 import { copperCount, geometryForLayer } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
@@ -24,6 +25,8 @@ const PRESET_REQS: Record<string, Omit<Requirement, 'id'>> = {
 };
 
 const DEFAULTS = {
+  family: 'rigid',
+  region: 'rigid',
   lmin: 4,
   lmax: 6,
   tmin: 1.6,
@@ -92,6 +95,8 @@ export default function StackupAdvisor() {
     maxW: p.maxW,
     etch: p.etch,
     priority: p.prio as 'cost' | 'margin',
+    construction: p.family as Constraints['construction'],
+    region: p.region as Constraints['region'],
   };
   const preview = useMemo(() => planAdvice(stackups, reqs, c, p.acc as Accuracy), [stackups, reqs, JSON.stringify(c), p.acc]); // eslint-disable-line react-hooks/exhaustive-deps
   const errors: string[] = [];
@@ -149,19 +154,7 @@ export default function StackupAdvisor() {
   const openLayer = (r: Ranked, layerId: string) => {
     const g = geometryForLayer(r.plan.stackup, layerId);
     if (!g) return;
-    const q = new URLSearchParams({ type: g.type, h: String(g.h), er: String(g.er), t: String(g.t), etch: String(p.etch) });
-    if (g.h2 !== undefined) {
-      q.set('h2', String(g.h2));
-      q.set('er2', String(g.er2 ?? g.er));
-    }
-    if (g.type === 'microstrip') {
-      q.set('mask', g.mask ? '1' : '0');
-      if (g.mask) {
-        q.set('c1', String(g.mask.c1));
-        q.set('c2', String(g.mask.c2));
-        q.set('erm', String(g.mask.er));
-      }
-    }
+    const q = impedanceQuery(g, {etch:String(p.etch)});
     navigate(`/impedance?${q.toString()}`);
   };
 
@@ -170,6 +163,13 @@ export default function StackupAdvisor() {
   const properties = (
     <>
       <Section title="Board">
+        <SelectField label="Construction" value={p.family} onChange={(family)=>set({family,region:family==='rigid'?'rigid':family==='flex'?'flex':'all',
+          lmin:family==='rigid'?4:2,lmax:family==='flex'?4:family==='rigid'?6:12,
+          tmin:family==='rigid'?1.6:0,tmax:family==='flex'?0.5:family==='rigid'?1.6:2,sig:family==='rigid'?2:1})}
+          options={[{value:'rigid',label:'Rigid'},{value:'flex',label:'Flex'},{value:'rigid-flex',label:'Rigid-flex'},{value:'all',label:'All constructions'}]} />
+        {(p.family==='rigid-flex'||p.family==='all') && <SelectField label="Evaluate region" value={p.region} onChange={region=>set({region})}
+          options={[{value:'all',label:'Each region separately'},{value:'rigid',label:'Rigid regions'},{value:'flex',label:'Flex regions'}]} />}
+        {p.family!=='rigid' && <p className="text-faint">Layer count and thickness apply to each region. Results screen uniform cross-sections with solid reference planes; bends, transitions and hatched planes need separate validation.</p>}
         <SelectField
           label="Search"
           value={hasImpedance ? 'impedance' : 'regular'}
@@ -179,10 +179,10 @@ export default function StackupAdvisor() {
             { value: 'impedance', label: 'Controlled impedance' },
           ]}
         />
-        <SelectField label="Layers (min)" value={String(p.lmin)} onChange={(v) => set({ lmin: Number(v) })} options={LAYER_COUNTS.map((n) => ({ value: String(n), label: `${n}` }))} width={80} />
-        <SelectField label="Layers (max)" value={String(p.lmax)} onChange={(v) => set({ lmax: Number(v) })} options={LAYER_COUNTS.map((n) => ({ value: String(n), label: `${n}` }))} width={80} />
-        <SelectField label="Thickness (min)" value={String(p.tmin)} onChange={(v) => set({ tmin: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />
-        <SelectField label="Thickness (max)" value={String(p.tmax)} onChange={(v) => set({ tmax: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />
+        <SelectField label="Layers (min)" value={String(p.lmin)} onChange={(v) => set({ lmin: Number(v) })} options={(p.family === 'rigid' ? LAYER_COUNTS : [1, 2, 3, 4, 6, 8, 10, 12]).map((n) => ({ value: String(n), label: `${n}` }))} width={80} />
+        <SelectField label="Layers (max)" value={String(p.lmax)} onChange={(v) => set({ lmax: Number(v) })} options={(p.family === 'rigid' ? LAYER_COUNTS : [1, 2, 3, 4, 6, 8, 10, 12]).map((n) => ({ value: String(n), label: `${n}` }))} width={80} />
+        {p.family!=='rigid' ? <LenField label="Region thickness (min)" value={p.tmin} onChange={tmin=>set({tmin})} allowZero /> : <SelectField label="Thickness (min)" value={String(p.tmin)} onChange={(v) => set({ tmin: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />}
+        {p.family!=='rigid' ? <LenField label="Region thickness (max)" value={p.tmax} onChange={tmax=>set({tmax})} /> : <SelectField label="Thickness (max)" value={String(p.tmax)} onChange={(v) => set({ tmax: Number(v) })} options={THICKNESSES.map((t) => ({ value: String(t), label: `${t} mm` }))} width={80} />}
         {hasImpedance && <NumField label="Signal layers needed" value={p.sig} onChange={(v) => set({ sig: Math.max(1, Math.round(v)) })} unit="" />}
       </Section>
       {!hasImpedance && (
@@ -292,7 +292,7 @@ export default function StackupAdvisor() {
   return (
     <ToolPage
       title="Stackup Advisor"
-      description="Find stackups by board thickness and layer count. Add optional impedance requirements to solve trace widths and rank candidates against your fabrication limits."
+      description="Find rigid, flex and rigid-flex stackup regions by thickness and layer count. Add optional impedance requirements to solve trace widths and rank candidates against your fabrication limits."
       onReset={reset}
       properties={properties}
       status={
@@ -389,7 +389,7 @@ export default function StackupAdvisor() {
                                   {r.plan.stackup.layers.map((l) => (
                                     <tr key={l.id}>
                                       <td>{l.name}</td>
-                                      <td>{l.kind === 'copper' ? 'Copper' : l.kind === 'mask' ? 'Solder mask' : 'Dielectric'}</td>
+                                      <td>{l.kind === 'copper' ? 'Copper' : l.kind === 'mask' ? 'Solder mask' : l.kind === 'coverlay' ? 'Coverlay film' : l.kind === 'adhesive' ? 'Adhesive' : 'Dielectric'}</td>
                                       <td className="v">{L(l.t)}</td>
                                     </tr>
                                   ))}
@@ -402,7 +402,7 @@ export default function StackupAdvisor() {
                                   {l.name} → Impedance
                                 </button>
                               ))}
-                              <button className="btn" onClick={() => navigate(`/stackup?id=${encodeURIComponent(id)}`)}>
+                              <button className="btn" onClick={() => navigate(`/stackup?id=${encodeURIComponent(r.plan.stackup.parentId ?? id)}${r.plan.stackup.regionId ? `&region=${encodeURIComponent(r.plan.stackup.regionId)}` : ''}`)}>
                                 Open in Layer Stack Manager
                               </button>
                             </div>
@@ -425,6 +425,7 @@ export function Method() {
   return (
     <>
       <h2>How the advisor works</h2>
+      <p>Rigid-flex constructions are evaluated per region. A flex result describes the flex section, and a rigid result describes the rigid section; a passing row does not certify the complete board. Check both regions, their transition and fabrication requirements. Coverlay film and adhesive are modelled as distinct dielectric plies. Thickness includes coverlay and adhesive but excludes solder mask.</p>
       <p>
         For regular stackups, minimum trace width, minimum spacing and minimum via drill record your design requirements. The construction library has no verified manufacturing
         capability limits, so these inputs do not filter candidates or certify manufacturability. Trace and spacing capability depends on copper thickness and fabrication process;

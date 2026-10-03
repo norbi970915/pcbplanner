@@ -4,7 +4,7 @@
 // names the construction the value belongs to.
 import type { DataSource } from './source';
 
-export type LaminateClass = 'Standard FR-4' | 'Mid loss' | 'Low loss' | 'Very low loss' | 'Ultra-low loss' | 'RF laminate';
+export type LaminateClass = 'Standard FR-4' | 'Mid loss' | 'Low loss' | 'Very low loss' | 'Ultra-low loss' | 'RF laminate' | 'Flex materials';
 
 export interface Laminate {
   id: string;
@@ -44,7 +44,16 @@ export const LAMINATE_SOURCES: DataSource[] = [
   { title: 'B. Simonovich, “Cannonball-Huray Model Demystified,” white paper, 2019', url: 'http://lamsimenterprises.com/WhitePaper_Cannonball-Huray%20Model%20Demystified.pdf', note: 'Rz ≈ 2√3·Rq; Huray sphere radius r ≈ 0.06·Rz with 14 spheres on a 36r² tile (surface ratio 4.89).' },
 ];
 
+LAMINATE_SOURCES.push(
+  {title:'DuPont Pyralux AP data sheet EI-10124',url:'https://www.dupont.com/content/dam/dupont/amer/us/en/ei-transformation/public/documents/en/EI-10124-Pyralux-AP-Data-Sheet.pdf',note:'AP9121: Dk 3.2, Df 0.003 at 10 GHz, ASTM D2520.'},
+  {title:'DuPont Pyralux HP adhesive data sheet EI-10208',url:'https://www.dupont.com/content/dam/electronics/amer/us/en/electronics/public/documents/en/EI-10208-Pyralux-HP-Adhesive-Data-Sheet.pdf',note:'HP250000: Dk 2.8, Df 0.0035 at 10 GHz, ASTM D2520.'},
+  {title:'DuPont Pyralux HP coverlay data sheet EI-10209',url:'https://www.dupont.com/content/dam/dupont/amer/us/en/ei-transformation/public/documents/en/EI-10209-Pyralux-HP-Coverlay-Data-Sheet1.pdf',note:'HP252500 composite coverlay: Dk 3.0, Df 0.0045 at 10 GHz, ASTM D2520. Use for the complete film/adhesive composite, not each constituent.'},
+);
+
 export const LAMINATES: Laminate[] = [
+  {id:'pyralux-ap',name:'Pyralux AP polyimide (AP9121)',vendor:'DuPont',cls:'Flex materials',dk:3.2,df:0.003,fGHz:10,note:'All-polyimide double-sided copper-clad laminate. Typical construction AP9121, ASTM D2520.',src:22},
+  {id:'pyralux-hp-adh',name:'Pyralux HP epoxy adhesive',vendor:'DuPont',cls:'Flex materials',dk:2.8,df:0.0035,fGHz:10,note:'HP250000 sheet adhesive, ASTM D2520.',src:23},
+  {id:'pyralux-hp-coverlay',name:'Pyralux HP composite coverlay',vendor:'DuPont',cls:'Flex materials',dk:3.0,df:0.0045,fGHz:10,note:'HP252500 complete film/adhesive composite. Do not assign the composite Dk to both individual plies.',src:24},
   { id: 's1141', name: 'S1141 (laminate)', vendor: 'Shengyi', cls: 'Standard FR-4', dk: 4.4, df: 0.013, fGHz: 1, tg: 140, note: '1.6 mm 8×7628 laminate, IPC-TM-650 2.5.5.9.', src: 0 },
   { id: 's1141-2116', name: 'S1141 2116 prepreg, RC 55 %', vendor: 'Shengyi', cls: 'Standard FR-4', dk: 4.0, df: 0.017, fGHz: 5, tg: 140, note: 'Line-up table, SPDR.', src: 1 },
   { id: 's1141-1080', name: 'S1141 1080 prepreg, RC 64 %', vendor: 'Shengyi', cls: 'Standard FR-4', dk: 3.73, df: 0.019, fGHz: 5, tg: 140, note: 'Line-up table, SPDR.', src: 1 },

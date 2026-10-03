@@ -151,7 +151,7 @@ export const TOOLS: ToolDef[] = [
     seoTitle: 'PCB Stackup Finder by Thickness & Layer Count',
     nav: 'Stackup advisor',
     group: 'Stackup',
-    summary: 'Find stackups by board thickness and layer count, with optional impedance requirements to rank candidates and solve trace widths.',
+    summary: 'Find rigid, flex and rigid-flex region stackups by thickness and layer count, then rank candidates by impedance and solve trace widths.',
     component: lazyPage(() => import('./StackupAdvisor')),
   },
   {
@@ -159,7 +159,7 @@ export const TOOLS: ToolDef[] = [
     title: 'Layer Stack Manager',
     nav: 'Layer stack manager',
     group: 'Stackup',
-    summary: `${PRESETS.length} fab stackups from 2 to 12 layers, editable, with any signal layer sent to the impedance calculator.`,
+    summary: `${PRESETS.length} rigid fab stackups plus six flex and rigid-flex design starters, with linked regions, editable materials and per-layer impedance.`,
     component: lazyPage(() => import('./StackupTool')),
   },
   {
@@ -167,7 +167,7 @@ export const TOOLS: ToolDef[] = [
     title: 'PCB Laminate Materials (Dk / Df)',
     nav: 'Materials (Dk/Df)',
     group: 'Stackup',
-    summary: 'Datasheet Dk and Df of FR-4, low-loss and RF laminates (Isola, Panasonic, Rogers, Shengyi…) at any frequency, plus solder masks and copper foil roughness.',
+    summary: 'Datasheet Dk and Df of FR-4, low-loss, RF and flex laminates (Isola, Panasonic, Rogers, Shengyi…) at any frequency, plus solder masks and copper foil roughness.',
     component: lazyPage(() => import('./Materials')),
   },
   {

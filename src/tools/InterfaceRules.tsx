@@ -10,6 +10,7 @@ import type { Accuracy } from '../lib/fieldsolver';
 import { evaluateInterface, freqLabel, interfaceLossRequest, rateLabel, type CheckRow, type LineMetrics } from '../lib/interfaceRules';
 import type { LossRequest } from '../lib/solver.worker';
 import { runPooled, runSolver } from '../lib/solverClient';
+import { regionStackup } from '../lib/stackupRegions';
 import { geometryForLayer, type Layer, type StackupGeometry } from '../lib/stackups';
 import { formatPlies } from '../lib/plies';
 import { fmt, fromMm } from '../lib/units';
@@ -21,6 +22,7 @@ const DEFAULTS = {
   ifid: 'pcie-gen3',
   stk: 'std-6l-16-1080-2',
   lay: '',
+  region: '',
   len: 100,
   minW: 0.09,
   minS: 0.09,
@@ -68,7 +70,9 @@ export default function InterfaceRules() {
   const { unit } = useSettings();
   const stackups = useStackups();
   const spec = interfaceById(p.ifid) ?? INTERFACES[0];
-  const stack = stackups.find((s) => s.id === p.stk) ?? stackups[0];
+  const construction = stackups.find((s) => s.id === p.stk) ?? stackups[0];
+  const regionId = construction?.regions?.find(r=>r.id===p.region)?.id ?? construction?.regions?.[0]?.id;
+  const stack = useMemo(()=>construction?regionStackup(construction,regionId):undefined,[construction,regionId]);
   const coppers = useMemo(() => (stack ? stack.layers.filter((l) => l.kind === 'copper') : []), [stack]);
   const layerId = p.lay && coppers.some((l) => l.id === p.lay) ? p.lay : (coppers.find((l) => l.role !== 'plane')?.id ?? coppers[0]?.id ?? '');
   const sg = useMemo(() => (stack && layerId ? geometryForLayer(stack, layerId) : null), [stack, layerId]);
@@ -263,7 +267,7 @@ export default function InterfaceRules() {
           <label className="text-muted" htmlFor="ir-stk">
             Stackup
           </label>
-          <select id="ir-stk" className="fld w-[176px]" value={stack?.id ?? ''} onChange={(e) => set({ stk: e.target.value, lay: '' })}>
+          <select id="ir-stk" className="fld w-[176px]" value={construction?.id ?? ''} onChange={(e) => set({ stk: e.target.value, lay: '',region:'' })}>
             {[...new Set(stackups.map(stackupGroup))].map((g) => (
               <optgroup key={g} label={g}>
                 {stackups
@@ -277,6 +281,7 @@ export default function InterfaceRules() {
             ))}
           </select>
         </div>
+        {construction?.regions?.length && <SelectField label="Region" value={regionId ?? ''} onChange={region=>set({region,lay:''})} options={construction.regions.map(r=>({value:r.id,label:r.name+' ('+r.kind+')'}))} width={176} />}
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <label className="text-muted" htmlFor="ir-lay">
             Layer
