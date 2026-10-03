@@ -1,8 +1,8 @@
-import { useSyncExternalStore, type CSSProperties } from 'react';
+import { useCallback, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react'
 import { Card } from './shadcn/card';
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from './shadcn/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, type CarouselApi } from './shadcn/carousel';
 
 const FEATURES = [
  { path: '/impedance', title: 'Trace impedance', description: 'Find the right geometry for single-ended and differential traces.', category: 'Signal integrity', color: '#3d8fe0', kind: 'impedance' },
@@ -152,20 +152,66 @@ function motionSnapshot() {
  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function focusFeaturedTool(api: NonNullable<CarouselApi>, event: FocusEvent) {
+ const index = api.slideNodes().findIndex(slide => slide.contains(event.target as Node));
+ if (index < 0) return true;
+ // Native focus scrolling must not move the viewport independently of Embla.
+ api.rootNode().scrollLeft = 0;
+ const start = api.selectedScrollSnap();
+ const visible = [0, 1, 2].map(offset => (start + offset) % FEATURES.length);
+ if (!visible.includes(index)) api.scrollTo(index, true);
+ return false;
+}
+
 export function FeaturedTools() {
+ const [api, setApi] = useState<CarouselApi>();
+ const subscribeToPosition = useCallback((listener: () => void) => {
+  api?.on('scroll', listener);
+  api?.on('settle', listener);
+  api?.on('select', listener);
+  api?.on('reInit', listener);
+  return () => {
+   api?.off('scroll', listener);
+   api?.off('settle', listener);
+   api?.off('select', listener);
+   api?.off('reInit', listener);
+  };
+ }, [api]);
+ const positionSnapshot = useCallback(() => {
+  if (!api) return 0;
+  const left = api.rootNode().getBoundingClientRect().left;
+  let closest = 0;
+  let distance = Infinity;
+  api.slideNodes().forEach((slide, index) => {
+   const gap = Math.abs(slide.getBoundingClientRect().left - left);
+   if (gap < distance) { closest = index; distance = gap; }
+  });
+  return closest;
+ }, [api]);
+ const selected = useSyncExternalStore(subscribeToPosition, positionSnapshot, () => 0);
+ const visible = [0, 1, 2].map(offset => (selected + offset) % FEATURES.length);
  const reducedMotion = useSyncExternalStore(subscribeToMotion, motionSnapshot, () => false);
  return (
   <section className="featured-section" aria-labelledby="featured-heading">
    <Carousel
     className="featured-carousel"
+    setApi={setApi}
     aria-labelledby="featured-heading"
-    opts={{ align: 'start', loop: true, slidesToScroll: 1, duration: reducedMotion ? 0 : 25 }}
+    opts={{ align: 'start', loop: true, dragFree: true, slidesToScroll: 1, watchFocus: focusFeaturedTool, duration: reducedMotion ? 0 : 25 }}
    >
     <div className="outside-heading featured-heading">
      <h2 id="featured-heading">Featured tools</h2>
-     <div className="featured-controls">
+     <div className="featured-navigation">
+      <div className="featured-position" data-position={selected + 1}>
+       <span className="sr-only" role="status">Showing {visible.map(index => FEATURES[index].title).join(', ')}.</span>
+       <span className="featured-position-bars" aria-hidden="true">
+        {FEATURES.map((feature, index) => <span key={feature.path} data-visible={visible.includes(index)} />)}
+       </span>
+      </div>
+      <div className="featured-controls">
       <CarouselPrevious className="featured-control static translate-y-0" aria-label="Previous featured tool" />
       <CarouselNext className="featured-control static translate-y-0" aria-label="Next featured tool" />
+      </div>
      </div>
     </div>
     <CarouselContent className="featured-track">

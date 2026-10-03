@@ -486,10 +486,10 @@ export function Result({
   sub?: ReactNode;
 }) {
   return (
-    <tr data-copy-result>
+    <tr className="result-row" data-copy-result data-primary-result={strong || undefined}>
       <th scope="row" className="text-left font-normal">
         <span data-copy-label>{label}</span>
-        {sub && <div className="text-[11px] text-faint">{sub}</div>}
+        {sub && <div className="result-detail text-faint">{sub}</div>}
       </th>
       <td className={`v ${strong ? 'font-semibold' : ''}`}>
         <span data-copy-value>{value}</span>

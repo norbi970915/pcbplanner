@@ -13,8 +13,8 @@
   --doc: #1c1d20; /* document area */
   --sheet: #252629; /* sheets inside the document */
   --ink: #dedfe3;
-  --muted: #9da0a9;
-  --faint: #9296a0;
+  --muted: #b1b5be;
+  --faint: #9da3ae;
   --line: #393b40;
   --line-strong: #4b4e56;
   --field: #202125;
@@ -49,8 +49,8 @@
   --doc: #f0f1f3;
   --sheet: #ffffff;
   --ink: #25282e;
-  --muted: #636872;
-  --faint: #6c727d;
+  --muted: #535b66;
+  --faint: #616875;
   --line: #d9dce1;
   --line-strong: #c5c9d0;
   --field: #ffffff;

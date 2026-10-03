@@ -34,7 +34,33 @@ async function visible(page, expected) {
    .sort((a, b) => a.rect.left - b.rect.left).map(({ path }) => path);
   return expected ? JSON.stringify(cards) === JSON.stringify(expected) : cards.length === 3;
  }, { expected }, { timeout: 10000 });
- assert.equal((await page.evaluate(visibleCards)).length, 3);
+ const cards = await page.evaluate(visibleCards);
+ assert.equal(cards.length, 3);
+ const start = paths.indexOf(cards[0]);
+ await page.waitForFunction(start => Number(document.querySelector('.featured-position').dataset.position) === start + 1, start);
+ assert.equal(await page.locator('.featured-position-bars > span').count(), paths.length);
+ const marked = await page.locator('.featured-position-bars > span').evaluateAll(bars => bars.flatMap((bar, index) => bar.dataset.visible === 'true' ? [index] : []));
+ assert.deepEqual(marked, [0, 1, 2].map(offset => (start + offset) % paths.length).sort((a, b) => a - b));
+}
+async function settled(page) {
+ await page.evaluate(() => new Promise(resolve => {
+  const track = document.querySelector('.featured-track');
+  let previous = null;
+  let stable = 0;
+  const frame = () => {
+   const x = new DOMMatrixReadOnly(getComputedStyle(track).transform).m41;
+   stable = previous !== null && Math.abs(x - previous) < .02 ? stable + 1 : 0;
+   previous = x;
+   if (stable >= 6) resolve();
+   else requestAnimationFrame(frame);
+  };
+  frame();
+ }));
+}
+async function freePosition(page) {
+ await settled(page);
+ assert.equal(await page.locator('.featured-position-bars > span[data-visible="true"]').count(), 3);
+ return Number(await page.locator('.featured-position').getAttribute('data-position')) - 1;
 }
 async function visit(page) {
  await page.goto(base + '/?release=' + release, { waitUntil: 'networkidle' });
@@ -77,7 +103,7 @@ try {
   if ([3, 6, 9].includes(step)) await page.locator('.featured-section').screenshot({ path: resolve(out, 'desktop-' + step + '.png') });
  }
  assert.equal(seen.size, 10);
- checks.push('Ten unique illustrated tools; next/previous and continuous wrapping');
+ checks.push('Ten unique illustrated tools; next/previous, continuous wrapping and synchronized position indicator');
  await next.focus();
  await page.keyboard.press('ArrowRight');
  await visible(page, paths.slice(1, 4));
@@ -86,14 +112,28 @@ try {
  checks.push('Keyboard arrows');
  await page.locator('.featured-section').scrollIntoViewIfNeeded();
  const box = await page.locator('[data-slot="carousel-content"]').boundingBox();
- await page.mouse.move(box.x + box.width * .65, box.y + 75);
+ const initialX = await page.locator('.featured-track').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41);
+ await page.mouse.move(box.x + box.width * .85, box.y + 75);
  await page.mouse.down();
- await page.mouse.move(box.x + box.width * .30, box.y + 75, { steps: 20 });
+ await page.mouse.move(box.x + box.width * .10, box.y + 75, { steps: 30 });
+ await page.waitForFunction(({ initialX, minimum }) => Math.abs(new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.featured-track')).transform).m41 - initialX) > minimum, { initialX, minimum: box.width / 3 * 2 });
+ // Pause with the pointer held so a slow drag has no release velocity.
+ await page.waitForTimeout(180);
+ const draggedX = await page.locator('.featured-track').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41);
+ assert.ok(Math.abs(draggedX - initialX) > box.width / 3 * 2, 'A single drag must travel freely across more than two cards');
  await page.mouse.up();
- await visible(page);
- assert.notDeepEqual(await page.evaluate(visibleCards), paths.slice(0, 3));
+ const draggedStart = await freePosition(page);
+ const releasedX = await page.locator('.featured-track').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41);
+ const cardStep = box.width / 3;
+ const snapDistance = Math.abs(releasedX / cardStep - Math.round(releasedX / cardStep)) * cardStep;
+ assert.ok(snapDistance > 5, 'A free drag must retain its position instead of snapping to one-card steps');
  assert.equal(new URL(page.url()).pathname, '/');
- checks.push('Mouse dragging without accidental navigation');
+ await next.click();
+ const nextStart = (draggedStart + 1) % paths.length;
+ await visible(page, [0, 1, 2].map(offset => paths[(nextStart + offset) % paths.length]));
+ await next.click();
+ await visible(page, [0, 1, 2].map(offset => paths[(nextStart + 1 + offset) % paths.length]));
+ checks.push('Free mouse dragging across several cards with momentum; arrows still advance one card');
  await visit(page);
  await page.locator('.featured-link').last().focus();
  await visible(page);
@@ -154,11 +194,11 @@ try {
   await touch.page.waitForTimeout(16);
  }
  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
- await visible(touch.page);
- assert.notDeepEqual(await touch.page.evaluate(visibleCards), paths.slice(0, 3));
+ const touchStart = await freePosition(touch.page);
+ assert.notEqual(touchStart, 0);
  assert.equal(new URL(touch.page.url()).pathname, '/');
- checks.push('Real touch swipe with three cards after snapping');
- const visiblePath = (await touch.page.evaluate(visibleCards))[1];
+ checks.push('Free touch swipe with momentum and synchronized position indicator');
+ const visiblePath = paths[(touchStart + 1) % paths.length];
  await touch.page.locator('.featured-link[href="' + visiblePath + '"]').tap();
  await touch.page.waitForURL(url => url.pathname === visiblePath);
  await touch.page.locator('.document-page').waitFor();

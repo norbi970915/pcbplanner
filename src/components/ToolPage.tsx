@@ -1,5 +1,6 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { RelatedGuides } from './RelatedGuides';
 import { FavoriteButton } from './FavoriteButton';
 import { Button } from './shadcn/button';
 import { CategoryIcon } from './CategoryIcon';
@@ -111,7 +112,7 @@ export function ToolPage({
   );
 
   return (
-    <div className="document-page tool-page">
+    <div className="document-page tool-page" style={{ '--tool-accent': GROUP_COLORS[tool?.group ?? ''] ?? 'var(--accent-ink)' } as CSSProperties}>
       {headEl && createPortal(mobileHead, headEl)}
       <div className="tool-heading mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
         <div className="min-w-0">
@@ -140,17 +141,7 @@ export function ToolPage({
       <div className="space-y-4">{children}</div>
 
       {related.length > 0 && (
-        <div className="mt-4 border border-line bg-sheet px-3 py-2">
-          <span className="font-semibold">
-            Related {related.length > 1 ? 'guides' : 'guide'}:{' '}
-          </span>
-          {related.map((g, i) => (
-            <span key={g.path}>
-              {i > 0 && ' · '}
-              <Link to={g.path}>{g.title}</Link>
-            </span>
-          ))}
-        </div>
+        <RelatedGuides key={pathname} guides={related} toolPath={pathname} />
       )}
 
       {relatedT.length > 0 && (
