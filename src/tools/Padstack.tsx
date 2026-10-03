@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram, type DiagramPaint } from '../components/EngineeringDiagram';
 import { ToolPage } from '../components/ToolPage';
 import { Check, LenField, Notes, NumField, Panel, Result, Section, Segmented, SelectField } from '../components/ui';
 import { ANNULAR_RING, leadDiagonal, padstack, type DensityLevel, type FabBasis } from '../lib/padstack';
@@ -203,88 +205,33 @@ export default function Padstack() {
 
 type PadResult = ReturnType<typeof padstack>;
 function PadstackDrawing({ r, spokes, fmtLen, square }: { r: PadResult; spokes: number; fmtLen: (mm: number) => string; square: boolean }) {
-  const V = 200; // view size of each sub-drawing
-  const c = V / 2;
-  const span = Math.max(r.padOuter, r.padInner, r.antipad, r.thermalOd) * 1.35;
-  const k = V / span;
-  const R = (dMm: number) => (dMm / 2) * k;
-  const bg = 'var(--sheet)';
-  const outline = (size: number, fill: string) => square
-    ? <rect x={c - size * k / 2} y={c - size * k / 2} width={size * k} height={size * k} fill={fill} />
-    : <circle cx={c} cy={c} r={R(size)} fill={fill} />;
-  const outlineLabel = (size: number) => square ? `${fmtLen(size)} x ${fmtLen(size)}` : fmtLen(size);
-  const views = [
-    {
-      title: 'Outer layers',
-      sub: `pad ${outlineLabel(r.padOuter)}, hole ${fmtLen(r.hole)}`,
-      body: (
-        <>
-          {outline(r.padOuter, 'var(--copper)')}
-          <circle cx={c} cy={c} r={R(r.hole)} fill={bg} stroke="var(--ink)" strokeWidth={1} />
-        </>
-      ),
-    },
-    {
-      title: 'Inner signal layers',
-      sub: `pad ${outlineLabel(r.padInner)}, drill ${fmtLen(r.drill)}`,
-      body: (
-        <>
-          {outline(r.padInner, 'var(--copper)')}
-          <circle cx={c} cy={c} r={R(r.drill)} fill={bg} stroke="var(--ink)" strokeWidth={1} />
-        </>
-      ),
-    },
-    {
-      title: 'Plane, thermal relief',
-      sub: `ID ${fmtLen(r.thermalId)}, OD ${fmtLen(r.thermalOd)}`,
-      body: (
-        <>
-          <rect x={4} y={4} width={V - 8} height={V - 8} fill="var(--copper)" opacity={0.85} />
-          <circle cx={c} cy={c} r={R(r.thermalOd)} fill={bg} />
-          {Array.from({ length: spokes }, (_, i) => (
-            <rect
-              key={i}
-              x={c}
-              y={c - R(r.spokeWidth)}
-              width={R(r.thermalOd) + 1}
-              height={2 * R(r.spokeWidth)}
-              fill="var(--copper)"
-              transform={`rotate(${45 + (360 / spokes) * i} ${c} ${c})`}
-            />
-          ))}
-          <circle cx={c} cy={c} r={R(r.thermalId)} fill="var(--copper)" />
-          <circle cx={c} cy={c} r={R(r.drill)} fill={bg} stroke="var(--ink)" strokeWidth={1} />
-        </>
-      ),
-    },
-    {
-      title: 'Plane, clearance',
-      sub: `antipad ${outlineLabel(r.antipad)}`,
-      body: (
-        <>
-          <rect x={4} y={4} width={V - 8} height={V - 8} fill="var(--copper)" opacity={0.85} />
-          {outline(r.antipad, bg)}
-          <circle cx={c} cy={c} r={R(r.drill)} fill="none" stroke="var(--ink)" strokeWidth={1} strokeDasharray="3 2" />
-        </>
-      ),
-    },
+  const c=120, k=160/Math.max(r.padOuter,r.padInner,r.antipad,r.thermalOd), R=(mm:number)=>mm*k/2;
+  const bg='var(--sheet)';
+  const outline=(size:number,fill:string)=>square ? <rect x={c-R(size)} y={c-R(size)} width={size*k} height={size*k} fill={fill} stroke="var(--copper)" strokeWidth="1"/> : <circle cx={c} cy={c} r={R(size)} fill={fill} stroke="var(--copper)" strokeWidth="1"/>;
+  const shapeLabel=square?'Pad side':'Pad \u00d8';
+  const hole=(size:number)=><circle cx={c} cy={c} r={R(size)} fill={bg} stroke="var(--ink)" strokeWidth="1"/>;
+  const views: { title:string; size:number; dimension:string; values:{label:string;value:string}[]; body:(paint:DiagramPaint)=>ReactNode }[] = [
+    {title:'Outer layers',size:r.padOuter,dimension:shapeLabel,values:[{label:shapeLabel,value:fmtLen(r.padOuter)},{label:'Finished hole \u00d8',value:fmtLen(r.hole)},{label:'Nominal annular ring',value:fmtLen(r.ringExtNominal)}],body:p=><>{outline(r.padOuter,p.copper)}{hole(r.hole)}</>},
+    {title:'Inner signal layers',size:r.padInner,dimension:shapeLabel,values:[{label:shapeLabel,value:fmtLen(r.padInner)},{label:'Drilled hole \u00d8',value:fmtLen(r.drill)},{label:'Nominal annular ring',value:fmtLen(r.ringIntNominal)}],body:p=><>{outline(r.padInner,p.copper)}{hole(r.drill)}</>},
+    {title:'Plane, thermal relief',size:r.thermalOd,dimension:'Relief OD',values:[{label:'Relief ID / OD',value:fmtLen(r.thermalId)+' / '+fmtLen(r.thermalOd)},{label:'Drilled hole \u00d8',value:fmtLen(r.drill)},{label:'Spokes',value:spokes+' \u00d7 '+fmtLen(r.spokeWidth)}],body:p=><>
+      <rect x="16" y="16" width="208" height="208" fill={p.copper}/>
+      <circle cx={c} cy={c} r={R(r.thermalOd)} fill={bg} stroke="var(--copper)" strokeWidth="1"/>
+      {Array.from({length:spokes},(_,i)=><rect key={i} x={c} y={c-R(r.spokeWidth)} width={R(r.thermalOd)+1} height={2*R(r.spokeWidth)} fill={p.copper} transform={'rotate('+(45+360/spokes*i)+' '+c+' '+c+')'}/>)}
+      <circle cx={c} cy={c} r={R(r.thermalId)} fill={p.copper} stroke="var(--copper)" strokeWidth="1"/>{hole(r.drill)}
+    </>},
+    {title:'Plane, clearance',size:r.antipad,dimension:square?'Antipad side':'Antipad \u00d8',values:[{label:square?'Antipad side':'Antipad \u00d8',value:fmtLen(r.antipad)},{label:'Drilled hole \u00d8',value:fmtLen(r.drill)},{label:'Plane-to-drill gap',value:fmtLen(r.planeGap)}],body:p=><>
+      <rect x="16" y="16" width="208" height="208" fill={p.copper}/>{outline(r.antipad,bg)}
+      <circle cx={c} cy={c} r={R(r.drill)} fill="none" stroke="var(--ink)" strokeWidth="1" strokeDasharray="4 3"/>
+    </>},
   ];
-  return (
-    <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-4">
-      {views.map((v) => (
-        <figure key={v.title} className="m-0 text-center">
-          <svg viewBox={`0 0 ${V} ${V}`} className="mx-auto block h-auto w-full max-w-[200px]" role="img" aria-label={`${v.title}: ${v.sub}`}>
-            <rect x={0.5} y={0.5} width={V - 1} height={V - 1} fill={bg} stroke="var(--line)" />
-            {v.body}
-          </svg>
-          <figcaption className="mt-1">
-            <div className="font-semibold">{v.title}</div>
-            <div className="text-[11px] text-muted">{v.sub}</div>
-          </figcaption>
-        </figure>
-      ))}
-    </div>
-  );
+  return <div className="padstack-diagrams">{views.map(v=><EngineeringDiagram key={v.title} title={v.title} caption={v.title==='Plane, thermal relief'?'Round relief; copper spokes connect to the plane.':v.title==='Plane, clearance'?'Dashed circle marks the drilled hole.':square?'Square land around a round hole.':'Circular land around a round hole.'}>
+    <DiagramSvg viewBox="0 0 240 270" label={v.title+': '+v.values.map(i=>i.label+' '+i.value).join(', ')}>{paint=><>
+      {v.body(paint)}
+      <path d="M120 26V214 M26 120H214" className="diagram-centerline"/>
+      <DiagramDimension x1={c-R(v.size)} x2={c+R(v.size)} y1={250} y2={250} label={v.dimension} arrow={paint.arrow}/>
+    </>}</DiagramSvg>
+    <DiagramValues items={v.values}/>
+  </EngineeringDiagram>)}</div>;
 }
 
 export function Method() {

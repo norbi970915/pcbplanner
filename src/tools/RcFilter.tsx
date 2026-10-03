@@ -1,3 +1,4 @@
+import { DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
 import { useId, useState } from 'react';
 import { SiField } from '../components/SiField';
 import { ToolPage } from '../components/ToolPage';
@@ -154,28 +155,33 @@ export default function RcFilter() {
 
 function Circuit({ result: r }: { result: RcResult }) {
   const low = r.kind === 'lowpass';
-  return (
-    <svg viewBox="0 0 520 185" className="w-full" role="img" aria-label={low ? 'Low-pass: source resistance and filter resistor in series; capacitor and load shunt to ground.' : 'High-pass: source resistance and capacitor in series; filter resistor and load shunt to ground.'}>
-      <g fill="none" stroke="var(--ink)" strokeWidth={1.5}>
-        <circle cx={38} cy={80} r={18} /><path d="M38 62V48H80 M38 98V156H470 M80 48H90 M134 48H194 M238 48H470" />
-        <rect x={90} y={39} width={44} height={18} />
-        {low ? <rect x={194} y={39} width={44} height={18} /> : <path d="M194 48H209 M209 34V62 M222 34V62 M222 48H238" />}
-        <path d="M325 48V83 M325 119V156" />
-        {low ? <path d="M310 93H340 M310 105H340 M325 83V93 M325 105V119" /> : <rect x={316} y={83} width={18} height={36} />}
-        {r.rl > 0 && <><path d="M435 48V83 M435 119V156" /><rect x={426} y={83} width={18} height={36} /></>}
-        <path d="M245 156V165 M232 165H258 M237 170H253 M242 175H248" />
-        <path d="M33 75H43 M38 70V80 M33 88H43" />
+  return <EngineeringDiagram caption={low ? 'The series resistor and shunt capacitor form the low-pass filter. Source and load resistance are included in the calculation.' : 'The series capacitor and shunt resistor form the high-pass filter. Source and load resistance are included in the calculation.'}
+    legend={[{label:'Input',color:'var(--accent-ink)'},{label:'Output',color:'var(--copper)'}]}>
+    <DiagramSvg viewBox="0 0 520 230" label={low ? 'Low-pass: source resistance and filter resistor in series; capacitor and load shunt to ground.' : 'High-pass: source resistance and capacitor in series; filter resistor and load shunt to ground.'}>{()=> <>
+      <g fill="none" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="42" cy="114" r="20" fill="var(--sheet)"/>
+        <path d="M42 94V68H92 M42 134V182H472 M136 68H190 M246 68H472 M328 68V104 M328 144V182"/>
+        <rect x="92" y="58" width="44" height="20" rx="2" fill="color-mix(in srgb, var(--accent) 10%, var(--sheet))"/>
+        {low ? <rect x="190" y="58" width="56" height="20" rx="2" fill="color-mix(in srgb, var(--copper) 12%, var(--sheet))"/> : <path d="M190 68H209 M209 51V85 M225 51V85 M225 68H246" stroke="var(--copper)" strokeWidth="2.8"/>}
+        {low ? <path d="M311 114H345 M311 132H345 M328 104V114 M328 132V144" stroke="var(--copper)" strokeWidth="2.8"/> : <rect x="318" y="104" width="20" height="40" rx="2" fill="color-mix(in srgb, var(--copper) 12%, var(--sheet))"/>}
+        {r.rl>0 && <><path d="M436 68V104 M436 144V182"/><rect x="426" y="104" width="20" height="40" rx="2" fill="var(--sheet)"/></>}
+        <path d="M252 182V197 M237 197H267 M242 204H262 M247 211H257"/>
+        <path d="M36 107H48 M42 101V113 M36 122H48" stroke="var(--accent-ink)"/>
       </g>
-      <g fill="var(--accent)"><circle cx={325} cy={48} r={3} /><circle cx={470} cy={48} r={3} /></g>
-      <g fill="var(--muted)" fontSize={12} textAnchor="middle">
-        <text x={38} y={25}>Vin</text><text x={112} y={25}>Rs {si(r.rs, 'Ω', 3)}</text>
-        <text x={216} y={25}>{low ? `R ${si(r.r, 'Ω', 3)}` : `C ${si(r.c, 'F', 3)}`}</text>
-        <text x={310} y={137}>{low ? `C ${si(r.c, 'F', 3)}` : `R ${si(r.r, 'Ω', 3)}`}</text>
-        <text x={435} y={137}>{r.rl > 0 ? `RL ${si(r.rl, 'Ω', 3)}` : 'RL open'}</text>
-        <text x={470} y={25} fill="var(--accent)">Vout</text>
+      <circle cx="328" cy="68" r="3.5" fill="var(--copper)"/>
+      {r.rl>0 && <circle cx="436" cy="68" r="3" fill="var(--ink)"/>}
+      <circle cx="472" cy="68" r="4.5" fill="var(--copper)"/>
+      <g textAnchor="middle" className="diagram-label">
+        <text x="42" y="44" fill="var(--accent-ink)">Vin</text><text x="114" y="44">Rs</text>
+        <text x="218" y="44">{low?'R':'C'}</text><text x="298" y="132">{low?'C':'R'}</text>
+        <text x="436" y="166">{r.rl>0?'RL':'Open'}</text><text x="472" y="44" fill="var(--copper)">Vout</text>
       </g>
-    </svg>
-  );
+    </>}</DiagramSvg>
+    <DiagramValues items={[
+      {label:'Rs \u00b7 Source',value:si(r.rs,'\u03a9',3)}, {label:'R \u00b7 Filter',value:si(r.r,'\u03a9',3)},
+      {label:'C \u00b7 Filter',value:si(r.c,'F',3)}, {label:'RL \u00b7 Load',value:r.rl>0?si(r.rl,'\u03a9',3):'Open circuit'},
+    ]}/>
+  </EngineeringDiagram>;
 }
 
 function ResponsePlot({ result, corners, f, onFrequency, phase }: { result: RcResult; corners: RcResult[]; f: number; onFrequency: (f: number) => void; phase: boolean }) {

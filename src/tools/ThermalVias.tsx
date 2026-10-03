@@ -1,7 +1,9 @@
+import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
+import { useSettings } from '../state/settings';
 import { ToolPage } from '../components/ToolPage';
 import { Big, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import { FILLS, viaArray, type Fill } from '../lib/thermal';
-import { fmt } from '../lib/units';
+import { fmt, fromMm } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
 const DEFAULTS = { n: 9, hole: 0.3, plating: 0.025, len: 1.6, fill: 'none', fillK: 0, padW: 3, padH: 3, kLam: 0.3, p: 2 };
@@ -18,10 +20,13 @@ export default function ThermalVias() {
   const notes: string[] = [];
   if (r && r.viaAreaFraction > 0.6) notes.push(`The vias cover ${fmt(100 * r.viaAreaFraction, 3)} % of the pad. Check the via pitch and the solder-wicking risk (plug or tent open vias).`);
 
+  const { unit } = useSettings();
+  const length = (mm: number) => fmt(fromMm(mm, unit), 3) + ' ' + unit;
   // grid drawing
-  // the drawing shows at most 20 × 20 vias; the numbers always use the real count
+  // the drawing shows at most 400 vias; the numbers always use the real count
   const shown = Math.min(p.n, 400);
-  const cols = Math.ceil(Math.sqrt(shown));
+  const hasPad = p.padW > 0 && p.padH > 0;
+  const cols = Math.max(1, Math.min(shown, Math.ceil(Math.sqrt(shown * (hasPad ? p.padW / p.padH : 1)))));
   const rows = Math.ceil(shown / cols);
 
   const properties = (
@@ -79,22 +84,24 @@ export default function ThermalVias() {
             </table>
           </Panel>
           <Panel title="Pad Layout (schematic)">
-            <div className="p-3">
-              <svg viewBox="0 0 200 200" className="h-auto w-full">
-                <rect x="20" y="20" width="160" height="160" fill="var(--copper)" opacity="0.85" />
-                {Array.from({ length: shown }, (_, k) => {
-                  const cx = 20 + (160 / cols) * ((k % cols) + 0.5);
-                  const cy = 20 + (160 / rows) * (Math.floor(k / cols) + 0.5);
-                  const rr = Math.min(160 / cols, 160 / rows) * 0.22;
-                  return (
-                    <g key={k}>
-                      <circle cx={cx} cy={cy} r={rr * 1.25} fill="var(--copper)" stroke="var(--ink)" strokeWidth="0.6" />
-                      <circle cx={cx} cy={cy} r={rr} fill={fillK > 100 ? 'var(--copper)' : fillK > 0 ? 'var(--muted)' : 'var(--sheet)'} stroke="var(--ink)" strokeWidth="0.6" />
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
+            <EngineeringDiagram legend={[{label:'Copper pad / plating',color:'var(--copper)'},{label:fill==='none'?'Open hole':fill==='custom'?'Custom fill':FILLS[fill].label,color:fill==='none'?'var(--sheet)':fillK>100?'var(--copper)':'var(--muted)'}]}
+              caption={hasPad ? 'Pad proportions follow your dimensions. Via symbols and positions are illustrative; placement and pitch are not calculated.' + (p.n>400?' Showing 400 of '+p.n+' vias; results use the full count.':'') : 'Set both pad dimensions to show the layout.'}>
+              <DiagramSvg viewBox="0 0 280 280" label={'Thermal pad '+length(p.padW)+' by '+length(p.padH)+', '+p.n+' vias, '+(fill==='custom'?'custom fill':FILLS[fill].label)}>{paint=>{
+                const scale=180/Math.max(p.padW,p.padH,.001),pw=p.padW*scale,ph=p.padH*scale,x=140-pw/2,y=126-ph/2;
+                return hasPad ? <>
+                  <rect data-thermal-pad="true" x={x} y={y} width={pw} height={ph} fill={paint.copper} stroke="var(--copper)" strokeWidth="1"/>
+                  {Array.from({length:shown},(_,k)=>{
+                    const cx=x+pw/cols*((k%cols)+.5),cy=y+ph/rows*(Math.floor(k/cols)+.5),radius=Math.min(pw/cols,ph/rows)*.22;
+                    return <g key={k} data-thermal-via="true"><circle cx={cx} cy={cy} r={radius*1.3} fill="var(--copper)" stroke="var(--ink)" strokeWidth=".7"/>
+                      <circle cx={cx} cy={cy} r={radius} fill={fillK>100?paint.copper:fillK>0?'var(--muted)':'var(--sheet)'} stroke="var(--ink)" strokeWidth=".6"/>
+                    </g>;
+                  })}
+                  <DiagramDimension x1={x} x2={x+pw} y1={242} y2={242} label="W" arrow={paint.arrow}/>
+                  <DiagramDimension x1={250} x2={250} y1={y} y2={y+ph} label="L" arrow={paint.arrow}/>
+                </> : <text x="140" y="140" textAnchor="middle" className="diagram-note">Pad dimensions not set</text>;
+              }}</DiagramSvg>
+              <DiagramValues items={[{label:'W \u00b7 Pad width',value:length(p.padW)},{label:'L \u00b7 Pad length',value:length(p.padH)},{label:'Finished hole',value:length(p.hole)},{label:'Array',value:p.n+' vias'}]}/>
+            </EngineeringDiagram>
           </Panel>
         </div>
       )}
