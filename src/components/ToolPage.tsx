@@ -4,48 +4,12 @@ import { RelatedGuides } from './RelatedGuides';
 import { FavoriteButton } from './FavoriteButton';
 import { Button } from './shadcn/button';
 import { CategoryIcon } from './CategoryIcon';
-import { APP_NAME, SITE_URL } from '../config';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
+export { useDocumentMeta } from '../lib/useDocumentMeta';
 import { Link, useLocation } from 'react-router-dom';
 import { guidesForTool } from '../guides/registry';
 import { useShell } from '../state/shell';
 import { GROUP_COLORS, relatedTools, toolByPath } from '../tools/registry';
-
-export function useDocumentMeta(title: string, description: string) {
-  useEffect(() => {
-    document.title = `${title} – ${APP_NAME}`;
-    let meta = document.querySelector('meta[name="description"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.setAttribute('name', 'description');
-      document.head.appendChild(meta);
-    }
-    meta.setAttribute('content', description);
-    // canonical and social URLs follow the current tool
-    let canon = document.querySelector('link[rel="canonical"]');
-    if (!canon) {
-      canon = document.createElement('link');
-      canon.setAttribute('rel', 'canonical');
-      document.head.appendChild(canon);
-    }
-    const url = SITE_URL + window.location.pathname;
-    canon.setAttribute('href', url);
-    document
-      .querySelector('meta[property="og:url"]')
-      ?.setAttribute('content', url);
-    document
-      .querySelector('meta[property="og:title"]')
-      ?.setAttribute('content', `${title} – ${APP_NAME}`);
-    document
-      .querySelector('meta[property="og:description"]')
-      ?.setAttribute('content', description);
-    document
-      .querySelector('meta[name="twitter:title"]')
-      ?.setAttribute('content', `${title} – ${APP_NAME}`);
-    document
-      .querySelector('meta[name="twitter:description"]')
-      ?.setAttribute('content', description);
-  }, [title, description]);
-}
 
 /**
  * Frame of every tool: the document (results, drawings, help) is rendered in

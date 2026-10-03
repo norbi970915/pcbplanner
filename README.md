@@ -32,6 +32,8 @@ Run node scripts/audit-favorites.mjs for favorites: sidebar and calculator toggl
 
 Run node scripts/audit-broadside.mjs for broadside controls, width and spacing solving, URL sharing, vertical field polarity, mirrored plies, fabrication corners, mm/mil units, desktop/phone layouts and both themes. Its screenshots and report are saved under dist-check/broadside/.
 
+Run `node scripts/audit-seo.mjs [baseURL]` to compare all static pages with their metadata catalogue and verify client navigation, history, clean canonical URLs, 404 indexing, delayed responses and offline metadata. Reports are saved under `dist-check/seo/`. Prerendering rejects unresolved description expressions and missing method exports. The generated metadata catalogue is versioned under `dist/assets/`, shared with the browser after navigation and cached by the existing service worker.
+
 ## Field solver
 
 `src/lib/fieldsolver.ts` solves ∇·(ε∇φ) = 0 on a graded finite-volume mesh with Jacobi-preconditioned conjugate gradients. Edge-coupled pairs use the symmetry plane: a Neumann boundary gives single-ended / even mode and a Dirichlet boundary gives odd mode. Capacitance comes from field energy, and Z0 = 1/(c·√(C·C_air)). Broadside pairs use two vertically aligned, mirror-etched traces: opposite drive voltages for odd mode, equal voltages for even mode. The x symmetry boundary remains Neumann. The initial broadside model requires two ground planes and mirrored dielectrics; it excludes offsets and unbalanced or unshielded pairs. `src/lib/broadside.test.ts` checks parallel-plate limits, odd-mode half-height equivalence, dielectric scaling, convergence, target solving and balanced fabrication corners.

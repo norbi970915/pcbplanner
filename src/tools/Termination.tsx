@@ -77,7 +77,7 @@ export default function Termination() {
   </ToolPage>;
 }
 
-function Method() {
+export function Method() {
   return <>
     <h2>Method</h2>
     <p>For one point-to-point line with a high-impedance receiver, source-series termination is R<sub>series</sub> = Z0 − R<sub>out</sub>. Its source reflection coefficient is (R<sub>out</sub> + R<sub>series</sub> − Z0) / (R<sub>out</sub> + R<sub>series</sub> + Z0). The initial launched voltage is V<sub>step</sub> × Z0 / (R<sub>out</sub> + R<sub>series</sub> + Z0).</p>

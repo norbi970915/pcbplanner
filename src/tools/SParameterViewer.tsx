@@ -879,7 +879,7 @@ function GdReadout({ freq, y, markerHz, unit, aperture }: { freq: Float64Array; 
   );
 }
 
-function Method({ budget }: { budget: InterfaceSpec | null }) {
+export function Method({ budget = null }: { budget?: InterfaceSpec | null } = {}) {
   return (
     <>
       <h2>Reading the file</h2>

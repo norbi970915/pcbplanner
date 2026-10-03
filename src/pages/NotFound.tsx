@@ -18,7 +18,7 @@ const POPULAR = [
   .filter((t): t is ToolDef => !!t);
 
 export default function NotFound() {
-  useDocumentMeta('Page not found', NOT_FOUND_DESCRIPTION);
+  useDocumentMeta('Page not found', NOT_FOUND_DESCRIPTION, { noindex: true });
   return (
     <div className="document-page">
       <Card className="border border-line bg-sheet">

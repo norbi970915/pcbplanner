@@ -153,7 +153,7 @@ function CapacitanceEstimate({ p, set, model, estimate, limitPf }: {
   </Panel>;
 }
 
-function Method() {
+export function Method() {
   return <>
     <h2>Method</h2>
     <p>Bus capacitance is calculated for one SDA or SCL net: C<sub>b</sub> = C<sub>trace</sub> + ΣC<sub>pin</sub> + C<sub>cable</sub> + C<sub>other</sub>. Count all branches of the net. The PCB trace term is its total length times capacitance per unit length. The manual option accepts a measured or otherwise known total.</p>

@@ -12,6 +12,7 @@ const APP = 'PCB Planner';
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { TOOLS, GROUPS, relatedTools } = await vite.ssrLoadModule('/src/tools/registry.ts');
 const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
+const { FLEX_PRESETS } = await vite.ssrLoadModule('/src/data/flexStackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
@@ -35,10 +36,17 @@ function toolDescription(tool) {
   const m = src.match(/description=(?:"([^"]*)"|\{`([^`]*)`\})/);
   if (!m) console.warn(`prerender: no description in ${file ?? tool.path}, using the summary`);
   const text = m ? (m[1] ?? m[2]) : tool.summary;
-  return text.replace(/\$\{PRESETS\.length\}/g, String(PRESETS.length));
+  const values = { 'PRESETS.length': PRESETS.length, 'FLEX_PRESETS.length': FLEX_PRESETS.length };
+  return text.replace(/\$\{([^}]+)\}/g, (_, expression) => {
+    if (!(expression in values)) throw new Error('prerender: unresolved description expression in ' + file + ': ' + expression);
+    return String(values[expression]);
+  });
 }
 
 const template = readFileSync('dist/index.html', 'utf8');
+const metadata = {};
+const outputPages = [];
+
 
 /** The page's own link-preview image from scripts/render-og.mjs, versioned by content; else the site image. */
 function ogImage(path) {
@@ -52,6 +60,11 @@ function ogImage(path) {
 
 function page({ path, title, description, h1, body, jsonLd, raw }) {
   const url = SITE + path;
+  const image = ogImage(path);
+  const noindex = path === '/404';
+  if (/\$\{/.test(JSON.stringify({title,description,jsonLd}))) throw new Error('prerender: unresolved metadata for ' + path);
+  metadata[path] = { path, title, description, image, jsonLd, ...(noindex ? { noindex: true } : {}) };
+  outputPages.push(path === '/' ? 'dist/index.html' : 'dist' + path + '.html');
   const set = (html, re, value) => {
     if (!re.test(html)) throw new Error(`prerender: ${re} not found in dist/index.html`);
     return html.replace(re, value);
@@ -65,12 +78,12 @@ function page({ path, title, description, h1, body, jsonLd, raw }) {
   html = set(html, /(<meta property="og:description" content=")[^"]*/, `$1${esc(description)}`);
   html = set(html, /(<meta name="twitter:title" content=")[^"]*/, `$1${esc(title)}`);
   html = set(html, /(<meta name="twitter:description" content=")[^"]*/, `$1${esc(description)}`);
-  html = set(html, /(<meta property="og:image" content=")[^"]*/, `$1${ogImage(path)}`);
-  html = set(html, /(<meta name="twitter:image" content=")[^"]*/, `$1${ogImage(path)}`);
+  html = set(html, /(<meta property="og:image" content=")[^"]*/, `$1${image}`);
+  html = set(html, /(<meta name="twitter:image" content=")[^"]*/, `$1${image}`);
   html = set(
     html,
     /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
-    `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`,
+    `<meta name="pcbplanner:metadata" content="__PAGE_METADATA_URL__" />\n<script type="application/ld+json" data-page-path="${path}">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`,
   );
   html = set(html, /<div id="root"><\/div>/, `<div id="root">${raw ?? `<main class="prerender"><h1>${esc(h1)}</h1>${body}</main>`}</div>`);
   return html;
@@ -121,7 +134,11 @@ for (const tool of TOOLS) {
   const cross = relatedTools(tool.path).filter((t) => t.group !== tool.group);
   const related = TOOLS.filter((t) => t.group === tool.group && t !== tool);
   // the tool's own method section (formulas, explanation, references), rendered on the server side
-  const method = fileByPath[tool.path] ? renderToolMethod(fileByPath[tool.path]) : '';
+  const file = fileByPath[tool.path];
+  const method = file ? renderToolMethod(file) : '';
+  if (file && /method=\{<Method\b/.test(readFileSync('src/tools/' + file + '.tsx', 'utf8')) && !method) {
+    throw new Error('prerender: export Method from ' + file + ' so the static explanation is included.');
+  }
   const guides = GUIDES.filter((g) => g.tools.includes(tool.path));
   const body =
     `<p>${esc(description)}</p>` +
@@ -228,7 +245,7 @@ writeFileSync(
 
 // Guides: index and articles, with the full article text rendered into the page
 mkdirSync('dist/guides', { recursive: true });
-const guidesDescription = 'Practical PCB design guides with worked examples: impedance, stackups, high-speed routing, crosstalk, via current and via fences, decoupling capacitors, buck and boost converters, cooling and conductor spacing.';
+const guidesDescription = readFileSync('src/guides/GuidesIndex.tsx', 'utf8').match(/useDocumentMeta\(\s*'[^']*',\s*'([^']*)'/)[1];
 writeFileSync(
   'dist/guides.html',
   page({
@@ -282,6 +299,16 @@ for (const g of GUIDES) {
       },
     }),
   );
+}
+// One generated metadata catalogue serves both static pages and client navigation.
+// A content hash keeps it in step with the deploy and lets the existing service worker cache it offline.
+const catalogue = JSON.stringify(metadata).replace(/</g, '\\u003c');
+const metadataUrl = '/assets/page-metadata-' + createHash('sha256').update(catalogue).digest('hex').slice(0,12) + '.json';
+writeFileSync('dist' + metadataUrl, catalogue);
+for (const file of outputPages) {
+  const html = readFileSync(file,'utf8');
+  if (!html.includes('__PAGE_METADATA_URL__')) throw new Error('prerender: missing metadata link in ' + file);
+  writeFileSync(file,html.replace('__PAGE_METADATA_URL__',metadataUrl));
 }
 await vite.close();
 console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages, about, 404`);

@@ -77,7 +77,7 @@ export default function CurrentShunt() {
   </ToolPage>;
 }
 
-function Method() {
+export function Method() {
   return <>
     <h2>Method</h2>
     <p>Maximum nominal resistance from the burden budget is R<sub>max</sub> = V<sub>drop,max</sub> / I<sub>max</sub>. For the selected resistor, V<sub>sense</sub> = IR and P = I²R. The high-resistance corner multiplies nominal R by 1 + tolerance + TCR × |ΔT| (each term converted to a fraction).</p>
