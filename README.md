@@ -6,7 +6,7 @@ Browser-based calculators for PCB design with a compact shadcn/ui workbench: men
 
 | Group | Tools |
 |---|---|
-| Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential, solve W or S, laminate library), Delay & timing, Trace loss (conductor loss by incremental inductance with Hammerstad / Groiss / Huray roughness, dielectric loss from the field-energy split, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing |
+| Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential (edge-coupled and balanced shielded broadside), solve W or S, laminate library), Delay & timing, Trace loss (conductor loss by incremental inductance with Hammerstad / Groiss / Huray roughness, dielectric loss from the field-energy split, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing |
 | Stackup | Stackup advisor, Layer stack manager (178 standard FR-4 stackups, 2–12 layers), Laminate materials library (datasheet Dk/Df, solder masks, copper foil roughness) |
 | Thermal | Junction temperature, Thermal via array |
 | Power & conductors | Trace width / current (IPC-2221, IPC-2152), Via, Skin effect, Fusing current, Wire gauge, Conductor spacing (IPC-2221), Creepage & clearance (IEC 60664-1) |
@@ -30,9 +30,13 @@ Run node scripts/audit-featured-carousel.mjs for the featured-tools carousel: al
 
 Run node scripts/audit-favorites.mjs for favorites: sidebar and calculator toggles, browser-restart persistence, cross-tab updates, mobile navigation and unavailable storage. Its screenshots and report are saved under dist-check/favorites/.
 
+Run node scripts/audit-broadside.mjs for broadside controls, width and spacing solving, URL sharing, vertical field polarity, mirrored plies, fabrication corners, mm/mil units, desktop/phone layouts and both themes. Its screenshots and report are saved under dist-check/broadside/.
+
 ## Field solver
 
-`src/lib/fieldsolver.ts` solves ∇·(ε∇φ) = 0 on a graded finite-volume mesh with Jacobi-preconditioned conjugate gradients. It uses the symmetry plane: a Neumann boundary gives single-ended / even mode and a Dirichlet boundary gives odd mode. Capacitance comes from field energy, and Z0 = 1/(c·√(C·C_air)). The solver runs in Web Workers; batch jobs such as the advisor use a worker pool.
+`src/lib/fieldsolver.ts` solves ∇·(ε∇φ) = 0 on a graded finite-volume mesh with Jacobi-preconditioned conjugate gradients. Edge-coupled pairs use the symmetry plane: a Neumann boundary gives single-ended / even mode and a Dirichlet boundary gives odd mode. Capacitance comes from field energy, and Z0 = 1/(c·√(C·C_air)). Broadside pairs use two vertically aligned, mirror-etched traces: opposite drive voltages for odd mode, equal voltages for even mode. The x symmetry boundary remains Neumann. The initial broadside model requires two ground planes and mirrored dielectrics; it excludes offsets and unbalanced or unshielded pairs. `src/lib/broadside.test.ts` checks parallel-plate limits, odd-mode half-height equivalence, dielectric scaling, convergence, target solving and balanced fabrication corners.
+
+The solver runs in Web Workers; batch jobs such as the advisor use a worker pool.
 
 It has been checked against:
 - Hammerstad–Jensen and Wheeler formulas (within 2 %)

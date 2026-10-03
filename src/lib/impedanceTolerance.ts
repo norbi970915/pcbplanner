@@ -1,3 +1,4 @@
+import { resizeBroadside } from './broadside';
 import type { Geometry } from './fieldsolver';
 
 export interface ImpedanceVariation {
@@ -17,7 +18,7 @@ export function impedanceToleranceCorners(g: Geometry, v: ImpedanceVariation): G
   if (g.w - v.widthMm <= 0 || (g.wTop !== undefined && g.wTop - v.widthMm <= 0)) {
     throw new RangeError('The minimum width must stay wider than the etch allowance.');
   }
-  if (g.diff && (!(g.s && g.s - v.spacingMm > 0))) {
+  if (g.diff && (!(g.s && g.s * (g.coupling === 'broadside' ? 1 - v.heightPct / 100 : 1) - v.spacingMm > 0))) {
     throw new RangeError('The minimum pair spacing must stay above zero.');
   }
   if (g.slabs.some((slab) => slab.er * (1 - v.dkPct / 100) < 1)) {
@@ -33,6 +34,13 @@ export function impedanceToleranceCorners(g: Geometry, v: ImpedanceVariation): G
           const widthDelta = widthSign * v.widthMm;
           const heightScale = 1 + heightSign * v.heightPct / 100;
           const dkScale = 1 + dkSign * v.dkPct / 100;
+          if (g.coupling === 'broadside') {
+            const corner = resizeBroadside(g, heightScale, g.s! * heightScale + spacingSign * v.spacingMm);
+            corners.push({ ...corner, w: g.w + widthDelta,
+              wTop: g.wTop === undefined ? undefined : g.wTop + widthDelta,
+              slabs: corner.slabs.map(slab => ({ ...slab, er: slab.er * dkScale })) });
+            continue;
+          }
           const yTrace = g.yTrace * heightScale;
           const scaleY = (y: number) => y <= g.yTrace
             ? y * heightScale

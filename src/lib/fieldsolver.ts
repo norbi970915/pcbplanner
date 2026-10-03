@@ -8,7 +8,9 @@
 //
 // The structure is always symmetric about x = 0, so only the right half is
 // solved: a Neumann (magnetic-wall) boundary gives the single-ended / even
-// mode, a Dirichlet (electric-wall) boundary gives the odd mode.
+// mode, a Dirichlet (electric-wall) boundary gives the edge-coupled odd mode.
+// Broadside pairs keep the magnetic wall at x = 0 and explicitly drive the
+// mirrored upper trace at -1 V (odd) or +1 V (even).
 //
 // All lengths are in millimetres. The bottom ground plane is y = 0.
 import { ETA0 } from './units';
@@ -25,7 +27,8 @@ export interface Geometry {
   t: number; // trace thickness
   yTrace: number; // height of the trace bottom above the bottom ground plane
   diff: boolean;
-  s?: number; // edge-to-edge spacing of a differential pair
+  s?: number; // copper-to-copper gap: lateral for edge, vertical for broadside
+  coupling?: 'edge' | 'broadside'; // omitted means legacy edge coupling
   slabs: Slab[]; // dielectric slabs; everything else is air (εr = 1)
   topPlane?: number; // y of a top ground plane (stripline); undefined = open above
   mask?: { surfaceY: number; overSubstrate: number; overTrace: number; er: number };
@@ -60,6 +63,7 @@ export interface FieldMap {
   ny: number;
   mode: 'se' | 'odd';
   xHalf: boolean;
+  oddMirror?: boolean; // only edge-coupled odd fields change sign across x = 0
 }
 
 export interface SolveResult {
@@ -135,11 +139,14 @@ interface Mesh {
   ny: number;
   cellEr: Float64Array; // (nx-1)*(ny-1)
   cellRegion: Int16Array; // per cell: -1 air, slab index, or slabs.length for the solder mask
-  cond: Int8Array; // per node: 0 free, 1 trace (V), 2 grounded conductor
+  cond: Int8Array; // 0 free, 1 lower/right trace, 2 ground, 3 upper broadside trace
+  broadside: boolean;
 }
 
 function buildMesh(g: Geometry, acc: Accuracy): Mesh {
   const { n: N, growth } = ACC[acc];
+  const broadside = g.coupling === 'broadside';
+  const edge = g.diff && !broadside;
   const w = g.w;
   const wTop = g.wTop ?? g.w;
   const t = g.t;
@@ -147,16 +154,19 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
   const yb = g.yTrace;
   const ytop = g.yTrace + t;
   const hBelow = yb;
-  const hAbove = g.topPlane !== undefined ? g.topPlane - ytop : Infinity;
+  const upperBottom = ytop + s;
+  const upperTop = upperBottom + t;
+  const highestTrace = broadside ? upperTop : ytop;
+  const hAbove = g.topPlane !== undefined ? g.topPlane - highestTrace : Infinity;
   const hRef = Math.min(hBelow, hAbove);
 
-  const x0 = g.diff ? s / 2 : 0; // trace left edge (half domain)
-  const x1 = g.diff ? s / 2 + w : w / 2; // trace right edge
+  const x0 = edge ? s / 2 : 0; // trace left edge (half domain)
+  const x1 = edge ? s / 2 + w : w / 2; // trace right edge
   const dt = (w - wTop) / 2;
-  const xt0 = g.diff ? x0 + dt : 0;
+  const xt0 = edge ? x0 + dt : 0;
   const xt1 = x1 - dt;
 
-  const feat = [t, g.diff ? w : w / 2, hRef];
+  const feat = [t, edge ? w : w / 2, hRef];
   if (g.diff && s > 0) feat.push(s / 2);
   if (g.coplanarGap) feat.push(g.coplanarGap);
   if (g.mask) feat.push(g.mask.overSubstrate, g.mask.overTrace);
@@ -165,7 +175,7 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
   const open = g.topPlane === undefined;
   const span = open ? Math.max(20 * hRef, 2 * w) : 8 * (g.topPlane as number);
   const X = x1 + (g.coplanarGap ? g.coplanarGap : 0) + span;
-  const surface = Math.max(ytop, ...g.slabs.map((sl) => sl.y1), g.mask ? g.mask.surfaceY + g.mask.overSubstrate : 0);
+  const surface = Math.max(highestTrace, ...g.slabs.map((sl) => sl.y1), g.mask ? g.mask.surfaceY + g.mask.overSubstrate : 0);
   const Y = open ? surface + Math.max(20 * hRef, 2 * w) : (g.topPlane as number);
   // Far from edges the field varies on the scale of the dielectric height, so
   // cells may grow to that size along x; along y the planes must stay resolved.
@@ -188,6 +198,7 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
     [ytop, fine],
     [Y, open ? maxCellY : fine * 2],
   ];
+  if (broadside) yKeys.push([upperBottom, fine], [upperTop, fine]);
   for (const sl of g.slabs) yKeys.push([sl.y0, fine * 2], [sl.y1, fine * 2]);
   if (g.mask) {
     yKeys.push([g.mask.surfaceY + g.mask.overSubstrate, fine]);
@@ -206,13 +217,15 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
   const cond = new Int8Array(nx * ny);
   for (let j = 0; j < ny; j++) {
     const yy = y[j];
-    if (yy < yb - eps || yy > ytop + eps) continue;
-    const f = t > 0 ? (yy - yb) / t : 0;
-    const left = g.diff ? x0 + dt * f : 0;
+    const upper = broadside && yy >= upperBottom - eps && yy <= upperTop + eps;
+    if (!upper && (yy < yb - eps || yy > ytop + eps)) continue;
+    // Mirrored etch: the two narrow faces point toward the inter-layer gap.
+    const f = upper ? (upperTop - yy) / t : (yy - yb) / t;
+    const left = edge ? x0 + dt * f : 0;
     const right = x1 - dt * f;
     for (let i = 0; i < nx; i++) {
       const xx = x[i];
-      if (xx >= left - eps && xx <= right + eps) cond[j * nx + i] = 1;
+      if (xx >= left - eps && xx <= right + eps) cond[j * nx + i] = upper ? 3 : 1;
       else if (xx >= xg - eps) cond[j * nx + i] = 2;
     }
   }
@@ -250,7 +263,7 @@ function buildMesh(g: Geometry, acc: Accuracy): Mesh {
       cellRegion[j * (nx - 1) + i] = region;
     }
   }
-  return { x, y, nx, ny, cellEr, cellRegion, cond };
+  return { x, y, nx, ny, cellEr, cellRegion, cond, broadside };
 }
 
 interface Coeffs {
@@ -442,7 +455,10 @@ function boundary(m: Mesh, odd: boolean) {
       if (cond[k] === 1) {
         fixed[k] = 1;
         phi[k] = 1;
-      } else if (cond[k] === 2 || j === 0 || j === ny - 1 || i === nx - 1 || (odd && i === 0)) {
+      } else if (cond[k] === 3) {
+        fixed[k] = 1;
+        phi[k] = odd ? -1 : 1;
+      } else if (cond[k] === 2 || j === 0 || j === ny - 1 || i === nx - 1 || (odd && !m.broadside && i === 0)) {
         fixed[k] = 1;
         phi[k] = 0;
       }
@@ -489,6 +505,7 @@ export function solve(g: Geometry, opts: SolveOptions = {}): SolveResult {
     ny: m.ny,
     mode,
     xHalf: true,
+    oddMirror: mode === 'odd' && !m.broadside,
   });
   const nReg = g.slabs.length + (g.mask ? 1 : 0);
   const parts = (r: ModeRun): EnergyParts | undefined => {
@@ -534,6 +551,7 @@ function validate(g: Geometry) {
   if (!(g.t > 0)) bad('Trace thickness must be greater than 0.');
   if (!(g.yTrace > 0)) bad('Dielectric height must be greater than 0.');
   if (g.wTop !== undefined && !(g.wTop > 0 && g.wTop <= g.w)) bad('Top width must be between 0 and the bottom width.');
+  if (g.coupling === 'broadside') validateBroadside(g, bad);
   if (g.diff && !(g.s !== undefined && g.s > 0)) bad('Spacing must be greater than 0.');
   if (g.topPlane !== undefined && !(g.topPlane > g.yTrace + g.t)) bad('The top plane must be above the trace.');
   if (g.coplanarGap !== undefined && !(g.coplanarGap > 0)) bad('Coplanar gap must be greater than 0.');
@@ -543,4 +561,20 @@ function validate(g: Geometry) {
   );
   if (dims.some((v) => !Number.isFinite(v) || v > 1000)) bad('Dimensions must be finite and below 1000 mm.');
   if (Math.max(...dims) / Math.min(...dims) > 2e4) bad(TOO_LARGE);
+}
+
+/** Odd/even drive is valid only for a vertically balanced broadside pair. */
+function validateBroadside(g: Geometry, bad: (msg: string) => never) {
+  if (!g.diff || !(g.s && g.s > 0) || g.topPlane === undefined) bad('Broadside pairs need a positive vertical gap and two reference planes.');
+  if (g.mask || g.coplanarGap !== undefined) bad('Broadside pairs do not support solder mask or coplanar ground.');
+  const height = g.topPlane!;
+  if (Math.abs(height - (2 * g.yTrace + 2 * g.t + g.s!)) > 1e-8) bad('Broadside pairs need equal outer clearances to the reference planes.');
+  if (g.slabs.some(sl => !Number.isFinite(sl.y0) || !Number.isFinite(sl.y1) || sl.y0 < 0 || sl.y1 > height + 1e-8 || sl.y1 <= sl.y0)) bad('Check the broadside dielectric boundaries.');
+  const keys = [...new Set([0, height, ...g.slabs.flatMap(sl => [sl.y0, sl.y1, height - sl.y0, height - sl.y1])])].sort((a,b) => a-b);
+  const erAt = (y: number) => g.slabs.find(sl => y >= sl.y0 && y < sl.y1)?.er ?? 1;
+  for (let i = 1; i < keys.length; i++) {
+    if (keys[i] - keys[i-1] < 1e-8) continue;
+    const y = (keys[i] + keys[i-1]) / 2;
+    if (Math.abs(erAt(y) - erAt(height-y)) > 1e-8) bad('Broadside dielectric layers must be mirrored about the pair centre.');
+  }
 }

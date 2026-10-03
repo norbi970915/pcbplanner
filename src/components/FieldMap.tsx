@@ -38,8 +38,9 @@ export function FieldMap({ field, geom }: { field: FieldData; geom: Geometry }) 
     if (!cv) return;
     const cssW = cv.clientWidth || 520;
     const { x, y, phi, nx } = field;
-    const odd = field.mode === 'odd';
-    const xEdge = geom.diff ? (geom.s ?? 0) / 2 + geom.w : geom.w / 2;
+    const broadside = geom.coupling === 'broadside';
+    const oddMirror = field.oddMirror ?? (field.mode === 'odd' && !broadside);
+    const xEdge = geom.diff && !broadside ? (geom.s ?? 0) / 2 + geom.w : geom.w / 2;
     const hRef = geom.yTrace;
     const ytop = geom.yTrace + geom.t;
     const open = geom.topPlane === undefined;
@@ -94,7 +95,7 @@ export function FieldMap({ field, geom }: { field: FieldData; geom: Geometry }) 
             phi[k + 1] * tx * (1 - ty) +
             phi[k + nx] * (1 - tx) * ty +
             phi[k + nx + 1] * tx * ty;
-          if (odd && xx < 0) v = -v;
+          if (oddMirror && xx < 0) v = -v;
         }
         const a = Math.min(1, Math.abs(v));
         const band = Math.floor(a * 10);
@@ -115,18 +116,21 @@ export function FieldMap({ field, geom }: { field: FieldData; geom: Geometry }) 
     ctx.strokeStyle = readVar('--ink', '#1f2328');
     ctx.fillStyle = readVar('--copper', '#c7702f');
     const wTop = geom.wTop ?? geom.w;
-    const drawTrace = (xl: number, xr: number) => {
+    const drawTrace = (xl: number, xr: number, bottom = geom.yTrace, mirrored = false) => {
       const e = (geom.w - wTop) / 2;
       ctx.beginPath();
-      ctx.moveTo(X(xl), Y(geom.yTrace));
-      ctx.lineTo(X(xr), Y(geom.yTrace));
-      ctx.lineTo(X(xr - e), Y(ytop));
-      ctx.lineTo(X(xl + e), Y(ytop));
+      ctx.moveTo(X(xl + (mirrored ? e : 0)), Y(bottom));
+      ctx.lineTo(X(xr - (mirrored ? e : 0)), Y(bottom));
+      ctx.lineTo(X(xr - (mirrored ? 0 : e)), Y(bottom + geom.t));
+      ctx.lineTo(X(xl + (mirrored ? 0 : e)), Y(bottom + geom.t));
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
     };
-    if (geom.diff) {
+    if (broadside) {
+      drawTrace(-geom.w / 2, geom.w / 2);
+      drawTrace(-geom.w / 2, geom.w / 2, ytop + geom.s!, true);
+    } else if (geom.diff) {
       const s = geom.s ?? 0;
       drawTrace(s / 2, s / 2 + geom.w);
       drawTrace(-s / 2 - geom.w, -s / 2);

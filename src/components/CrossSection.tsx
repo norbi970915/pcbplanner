@@ -3,6 +3,7 @@ import { fmt } from '../lib/units';
 export interface XsecSpec {
   type: 'microstrip' | 'embedded' | 'stripline';
   diff: boolean;
+  coupling?: 'edge' | 'broadside';
   w: number;
   wTop: number;
   t: number;
@@ -21,6 +22,7 @@ export interface XsecSpec {
  * roughly realistic but clamped so every feature stays readable.
  */
 export function CrossSection({ spec, unitLabel, toUnit }: { spec: XsecSpec; unitLabel: string; toUnit: (mm: number) => number }) {
+  if (spec.diff && spec.coupling === 'broadside') return <BroadsideSection spec={spec} unitLabel={unitLabel} toUnit={toUnit} />;
   const V = (mm: number) => `${fmt(toUnit(mm), 3)} ${unitLabel}`;
   const Wd = 520;
   const Hd = 210;
@@ -141,4 +143,43 @@ export function CrossSection({ spec, unitLabel, toUnit }: { spec: XsecSpec; unit
       </text>
     </svg>
   );
+}
+
+function BroadsideSection({ spec, unitLabel, toUnit }: { spec: XsecSpec; unitLabel: string; toUnit: (mm: number) => number }) {
+  const V = (v: number) => `${fmt(toUnit(v), 3)} ${unitLabel}`;
+  const scale = Math.min(200 / Math.max(spec.w, 0.001), 900);
+  const width = Math.min(220, Math.max(70, spec.w * scale));
+  const x0 = 260 - width / 2, x1 = 260 + width / 2;
+  const h = Math.min(65, Math.max(34, spec.h * scale));
+  const gap = Math.min(70, Math.max(34, spec.s * scale));
+  const t = Math.min(12, Math.max(7, spec.t * scale));
+  const etch = Math.min(width / 4, Math.max(0, (spec.w - spec.wTop) / 2 * scale));
+  const bottom = 265, lowerBottom = bottom - h, lowerTop = lowerBottom - t;
+  const upperBottom = lowerTop - gap, upperTop = upperBottom - t, top = upperTop - h;
+  const dim = (x: number, a: number, b: number, label: string, left = false) => <g>
+    <line x1={x} x2={x} y1={a} y2={b} className="bs-dim" markerStart="url(#bs-arrow)" markerEnd="url(#bs-arrow)" />
+    <text x={x + (left ? -6 : 6)} y={(a+b)/2+4} textAnchor={left ? 'end' : 'start'} className="bs-label">{label}</text>
+  </g>;
+  return <svg viewBox={`0 ${top - 20} 520 ${bottom - top + 43}`} className="h-auto w-full" role="img" aria-label="Broadside differential pair: two aligned signal layers between ground planes">
+    <style>{`.bs-dim{stroke:var(--ink);stroke-width:.8;fill:none}.bs-label{fill:var(--ink);font:11px var(--font-sans);paint-order:stroke;stroke:var(--sheet);stroke-width:3px;stroke-linejoin:round}.bs-sub{fill:var(--muted);font:10.5px var(--font-sans)}@media(max-width:640px){.bs-label{font-size:17px}.bs-sub{font-size:15px}}`}</style>
+    <defs><marker id="bs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="var(--ink)" /></marker></defs>
+    <rect x={10} y={top} width={500} height={h} fill="var(--laminate)" />
+    <rect x={10} y={upperTop} width={500} height={gap+2*t} fill="var(--prepreg)" />
+    <rect x={10} y={lowerBottom} width={500} height={h} fill="var(--laminate)" />
+    <rect x={10} y={top-7} width={500} height={7} fill="var(--copper)" />
+    <rect x={10} y={bottom} width={500} height={7} fill="var(--copper)" />
+    <polygon points={`${x0},${lowerBottom} ${x1},${lowerBottom} ${x1-etch},${lowerTop} ${x0+etch},${lowerTop}`} fill="var(--copper)" stroke="var(--ink)" strokeWidth={0.6} />
+    <polygon points={`${x0},${upperTop} ${x1},${upperTop} ${x1-etch},${upperBottom} ${x0+etch},${upperBottom}`} fill="var(--copper)" stroke="var(--ink)" strokeWidth={0.6} />
+    <text x={16} y={top-10} className="bs-sub">Ground plane</text>
+    <text x={16} y={top+h/2} className="bs-sub">Dk {fmt(spec.er,3)}</text>
+    <text x={16} y={(lowerTop+upperBottom)/2+4} className="bs-sub">Dk {fmt(spec.er2,3)}</text>
+    <text x={16} y={lowerBottom+h/2} className="bs-sub">Dk {fmt(spec.er,3)}</text>
+    {dim(x1+24, top, upperTop, `H ${V(spec.h)}`)}
+    {dim(x1+24, lowerBottom, bottom, `H ${V(spec.h)}`)}
+    {dim(x0-18, upperBottom, lowerTop, `S ${V(spec.s)}`, true)}
+    {dim(x1+24, lowerTop, lowerBottom, `T ${V(spec.t)}`)}
+    <line x1={x0} x2={x1} y1={bottom+15} y2={bottom+15} className="bs-dim" markerStart="url(#bs-arrow)" markerEnd="url(#bs-arrow)" />
+    <text x={260} y={bottom+12} textAnchor="middle" className="bs-label">W {V(spec.w)}</text>
+    <text x={508} y={bottom+20} textAnchor="end" className="bs-sub">not to scale</text>
+  </svg>;
 }

@@ -32,7 +32,7 @@ export const TOOLS: ToolDef[] = [
     seoTitle: 'PCB Impedance Calculator: Microstrip & Stripline',
     nav: 'Impedance',
     group: 'Signal integrity',
-    summary: 'Single-ended and differential microstrip, coated and embedded microstrip, stripline and coplanar lines, solved with a 2D field solver.',
+    summary: 'Single-ended and differential microstrip, coated and embedded microstrip, stripline, coplanar lines and broadside differential pairs, solved with a 2D field solver.',
     component: lazyPage(() => import('./Impedance')),
   },
   {
