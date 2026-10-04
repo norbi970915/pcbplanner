@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { LedResistorDiagram, VoltageDividerDiagram } from '../components/ResistorDiagrams';
 import { SiField } from '../components/SiField';
 import { ToolPage } from '../components/ToolPage';
 import { Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
@@ -114,6 +115,7 @@ export default function Resistors() {
       <div className="grid gap-3 xl:grid-cols-2">
         <Panel title="Voltage divider">
           <Notes kind="error" items={errDiv} />
+          {div && <VoltageDividerDiagram vin={p.vin} r1={p.r1} r2={p.r2} load={p.rl} result={div} />}
           {div && (
             <table className="tbl">
               <tbody>
@@ -130,6 +132,7 @@ export default function Resistors() {
 
         <Panel title="LED series resistor">
           <Notes kind="error" items={errLed} />
+          {led && <LedResistorDiagram supply={p.vs} forward={p.vf} count={p.n} drop={led.vR} values={{ exact: ledRows[0], nearest: ledRows[1], higher: ledRows[2] }} />}
           {led && (
             <table className="tbl">
               <thead>
