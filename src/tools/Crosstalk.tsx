@@ -1,3 +1,4 @@
+import { CrosstalkDiagram } from '../components/CrosstalkDiagram';
 import { useEffect, useMemo, useState } from 'react';
 import { ToolPage } from '../components/ToolPage';
 import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
@@ -119,7 +120,7 @@ export default function Crosstalk() {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Spacing</th>
+                  <th>Edge gap</th>
                   <th className="v">S</th>
                   <th className="v">NEXT (Kb)</th>
                   <th className="v">FEXT at this length</th>
@@ -146,10 +147,11 @@ export default function Crosstalk() {
                     ))}
               </tbody>
             </table>
-            <p className="px-2.5 py-1.5 text-faint">The “3W rule” (S ≥ 2W, centre pitch ≥ 3W) typically keeps NEXT in the low single-digit percent.</p>
+            <p className="px-2.5 py-1.5 text-faint">Sweep rows use edge clearance S. The 2 W row corresponds to the 3W centre-pitch reference (P = W + S).</p>
           </Panel>
         </div>
       )}
+      {ok && <Panel title="Trace Spacing and the 3W Reference"><CrosstalkDiagram width={p.w} spacing={p.s} length={L}/></Panel>}
     </ToolPage>
   );
 }

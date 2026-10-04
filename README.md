@@ -80,3 +80,5 @@ node scripts/shots.mjs <outDir>   # browser smoke test + screenshots (needs Edge
 - The app name is set in `src/config.ts`.
 
 Run `node scripts/audit-diagrams.mjs [baseURL]` to verify the impedance/trace-loss cross-sections, RC circuit, thermal pad and padstack illustrations in both themes at desktop, 390 px and 320 px. Checks cover SVG label bounds, unique paint IDs, live input annotations, thermal pad proportions, mm/mil units and geometry variants. Screenshots and the report are saved under `dist-check/diagrams/`.
+
+Run `node scripts/audit-workbench.mjs [baseURL]` for the compact Home card, persistent Properties-panel resizing, buck/boost switch-phase illustrations, crosstalk spacing annotations and mobile input/result navigation. It checks both themes at 1600, 1024, 390 and 320 px. Screenshots and the report are saved under `dist-check/workbench/`.

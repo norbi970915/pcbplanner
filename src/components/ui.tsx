@@ -103,10 +103,10 @@ function Row({
 }) {
   return (
     <div
-      className="grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+      className="property-field grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
       title={hint}
     >
-      <label htmlFor={htmlFor} className="truncate text-muted">
+      <label htmlFor={htmlFor} className="property-field-label text-muted">
         {label}
         {symbol && (
           <span className="ml-1 font-[Cambria,serif] italic text-faint">
@@ -545,7 +545,7 @@ export function Big({
   busy?: boolean;
 }) {
   return (
-    <div className="headline-result min-w-[130px]" data-copy-result>
+    <div className="headline-result min-w-[130px]" data-copy-result data-result-busy={busy || undefined}>
       <div className="text-muted">
         <span data-copy-label>{label}</span>
         <CopyResultButton />

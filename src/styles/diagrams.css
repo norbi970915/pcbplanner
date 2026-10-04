@@ -32,3 +32,5 @@
   .diagram-stage { break-inside: avoid; box-shadow: none; }
   .diagram-values { break-inside: avoid; }
 }
+
+.power-stage-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 0; }

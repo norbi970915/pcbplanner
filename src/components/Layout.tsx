@@ -1,3 +1,5 @@
+import { ResizablePropertiesPanel } from './ResizablePropertiesPanel';
+import { MobileToolNavigation } from './MobileToolNavigation';
 import {
   Suspense,
   useCallback,
@@ -603,13 +605,15 @@ export function Layout() {
             className="order-first shrink-0 bg-doc lg:hidden"
           />
 
+          {!!toolByPath(path) && <MobileToolNavigation key={path} mainRef={mainRef} statusEl={statusEl} onShowInputs={()=>setPanels(previous=>({...previous,props:true}))}/>}
+
           {/* on narrow screens, calculator inputs sit above their results */}
           {panels.props &&
             path !== '/' &&
             path !== '/tools' &&
             path !== '/schematic' && (
-              <aside
-                className={`properties-panel order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:w-[300px] lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
+              <ResizablePropertiesPanel
+                className={`properties-panel order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
               >
                 <div className="properties-heading flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
                   <span>
@@ -618,24 +622,13 @@ export function Layout() {
                       {toolByPath(path)?.nav}
                     </span>
                   </span>
-                  {/* wrapper carries lg:hidden: the unlayered .btn display rule would override it on the button */}
-                  <span className="lg:hidden">
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() =>
-                        mainRef.current?.scrollIntoView({ behavior: 'smooth' })
-                      }
-                    >
-                      Results ↓
-                    </button>
-                  </span>
+
                 </div>
                 <div
                   ref={setPropsEl}
                   className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
                 />
-              </aside>
+              </ResizablePropertiesPanel>
             )}
 
           <main

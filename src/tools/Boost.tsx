@@ -1,3 +1,4 @@
+import { PowerStageDiagram } from '../components/PowerStageDiagram';
 import { Link } from 'react-router-dom';
 import { ToolPage } from '../components/ToolPage';
 import { Big, Check, Notes, NumField, Panel, Result, Section } from '../components/ui';
@@ -134,6 +135,7 @@ export default function Boost() {
         <p className="px-2.5 pb-2 text-muted">Current and capacitor checks use {si(r.lMin, 'H', 4)} at minimum frequency, across {fmt(b.vinMin)}–{fmt(b.vinMax)} V.
           {' '}The input sweep samples 201 points plus the nominal voltage and analytical ripple/CCM-boundary extrema. Ratings of 0 remain unchecked.</p>
       </Panel>
+      <Panel title="Power Stage"><PowerStageDiagram kind="boost" vin={b.vinNom} vout={b.vout} iout={b.iout} inductance={r.l} vf={b.vf ?? 0} ccm={r.ccm} inputCap={p.xcin} cout={b.cout} coutRequired={r.requiredOut}/></Panel>
       <div className="grid gap-3 xl:grid-cols-2">
         <Panel title="Inductor and Current">
           <table className="tbl"><tbody>
