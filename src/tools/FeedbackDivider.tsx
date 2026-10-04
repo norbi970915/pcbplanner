@@ -1,3 +1,4 @@
+import { FeedbackDividerDiagram } from '../components/FeedbackDividerDiagram';
 import { ToolPage } from '../components/ToolPage';
 import { Big, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import type { ESeries } from '../lib/electronics';
@@ -84,7 +85,10 @@ export default function FeedbackDivider() {
               </tbody>
             </table>
           </Panel>
-          <Panel title="Other Pairs">
+          <Panel title="Feedback Circuit">
+            <FeedbackDividerDiagram pair={best} vfb={p.vfb} ifb={ifb} series={p.series} />
+          </Panel>
+          <Panel title="Other Pairs" className="xl:col-span-2">
             <table className="tbl">
               <thead>
                 <tr>
