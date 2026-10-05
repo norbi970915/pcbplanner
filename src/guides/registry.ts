@@ -9,6 +9,7 @@ export interface GuideDef {
   seoTitle: string; // shorter title for search results (under ~50 characters before the site name)
   description: string; // meta description and card text
   tools: string[]; // tools used in the guide; those tool pages link back to it
+  related: string[]; // curated next guides, closest match first; empty when no close companion exists
   date: string; // ISO date of publication
   category: GuideCategory;
   component: LazyPage;
@@ -18,6 +19,7 @@ export interface GuideDef {
 export const GUIDES: GuideDef[] = [
   {
     path: '/guides/rc-filter-design',
+    related: ['/guides/i2c-pullup-resistor-calculation', '/guides/phase-noise-to-jitter'],
     title: 'RC Filter Design: Choosing R and C for Low-Pass and High-Pass Filters',
     seoTitle: 'RC Filter Design: Low-Pass & High-Pass',
     description: 'Choose RC filter values with worked low-pass and high-pass examples, source/load resistance, tolerance bounds and a settling check before an ADC.',
@@ -27,6 +29,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/ldo-efficiency-power-dissipation',
+    related: ['/guides/copper-area-for-cooling', '/guides/buck-converter-formulas', '/guides/decoupling-capacitor-values'],
     title: 'LDO Efficiency, Power Dissipation and Dropout: A Worked Thermal Check',
     seoTitle: 'LDO Efficiency & Power Dissipation',
     description: 'Calculate linear regulator efficiency, ground-current loss, junction temperature and dropout headroom, with a 5 V to 3.3 V example and a buck comparison.',
@@ -36,6 +39,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/i2c-pullup-resistor-calculation',
+    related: ['/guides/rc-filter-design', '/guides/controlled-impedance'],
     title: 'I²C Pull-up Resistors: When 4.7 kΩ Works and When It Does Not',
     seoTitle: 'I2C Pull-up Resistor Calculation & Bus Capacitance',
     description: 'Calculate I²C pull-up minimum and maximum resistance from sink current and rise time, estimate bus capacitance, and include parallel module pull-ups.',
@@ -45,6 +49,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/crystal-load-capacitors-ppm',
+    related: ['/guides/phase-noise-to-jitter', '/guides/decoupling-capacitor-values'],
     title: 'Crystal Load Capacitors and PPM Budget: From Picofarads to Clock Error',
     seoTitle: 'Crystal Load Capacitors & PPM Budget',
     description: 'Calculate equal crystal load capacitors, account for stray capacitance and standard values, and budget initial, temperature, aging and load-pulling error.',
@@ -54,6 +59,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/s4p-differential-s-parameters',
+    related: ['/guides/s-parameters-s11-s21', '/guides/vswr-return-loss-explained', '/guides/pcie-routing-guidelines'],
     title: 'Reading S4P Files: Differential Loss, Return Loss and Mode Conversion',
     seoTitle: 'S4P Files: SDD21, SDD11 & Mode Conversion',
     description: 'Choose the correct port pairing in a four-port Touchstone file, read SDD21 and SCD21, and try a downloadable synthetic differential-channel example.',
@@ -63,6 +69,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/vswr-return-loss-explained',
+    related: ['/guides/s-parameters-s11-s21', '/guides/l-network-impedance-matching', '/guides/quarter-wave-impedance-transformer'],
     title: 'VSWR, Return Loss and Reflected Power: What the Numbers Mean',
     seoTitle: 'VSWR to Return Loss and Reflected Power',
     tools: ['/vswr-calculator', '/s-parameter-viewer', '/attenuator'],
@@ -73,6 +80,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/coax-impedance-formula',
+    related: ['/guides/quarter-wave-impedance-transformer', '/guides/vswr-return-loss-explained', '/guides/l-network-impedance-matching'],
     title: 'Coaxial Cable Impedance: Diameter Ratio, Dielectric and Delay',
     seoTitle: 'Coax Impedance Formula and Worked Example',
     tools: ['/coax-impedance', '/quarter-wave-transformer'],
@@ -83,6 +91,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/l-network-impedance-matching',
+    related: ['/guides/quarter-wave-impedance-transformer', '/guides/vswr-return-loss-explained', '/guides/s-parameters-s11-s21'],
     title: 'L-Network Impedance Matching with a Smith Chart',
     seoTitle: 'L-Network Matching: Worked RF Example',
     tools: ['/impedance-matching', '/vswr-calculator', '/quarter-wave-transformer'],
@@ -93,6 +102,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/quarter-wave-impedance-transformer',
+    related: ['/guides/l-network-impedance-matching', '/guides/coax-impedance-formula', '/guides/controlled-impedance'],
     title: 'Quarter-Wave Impedance Transformer: Matching 50 Ω to 100 Ω',
     seoTitle: 'Quarter-Wave Transformer: 50 to 100 Ohms',
     tools: ['/quarter-wave-transformer', '/impedance-matching', '/impedance'],
@@ -103,6 +113,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/s-parameters-s11-s21',
+    related: ['/guides/s4p-differential-s-parameters', '/guides/vswr-return-loss-explained', '/guides/pcie-routing-guidelines'],
     title: 'S11 and S21 Explained: Reading Touchstone S-Parameter Files',
     seoTitle: 'S11 and S21: Return and Insertion Loss',
     tools: ['/s-parameter-viewer', '/interface-rules', '/trace-loss'],
@@ -113,6 +124,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/phase-noise-to-jitter',
+    related: ['/guides/crystal-load-capacitors-ppm', '/guides/rc-filter-design', '/guides/pcie-gen3-routing'],
     title: 'Phase Noise to RMS Jitter: Why the Integration Band Matters',
     seoTitle: 'Phase Noise to Jitter: Worked Example',
     tools: ['/clock-jitter', '/crystal', '/adc-input'],
@@ -123,6 +135,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcie-routing-guidelines',
+    related: ['/guides/pcie-gen3-routing', '/guides/controlled-impedance', '/guides/ac-coupling-capacitors'],
     title: 'PCIe PCB Routing Guidelines: Impedance, Return Paths, Vias, Loss and Skew',
     seoTitle: 'PCIe Routing Guidelines for Gen3, Gen4 & Gen5',
     tools: ['/interface-rules', '/impedance', '/trace-loss', '/differential-via', '/timing', '/crosstalk'],
@@ -134,6 +147,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/buck-converter-formulas',
+    related: ['/guides/boost-converter-formulas', '/guides/ldo-efficiency-power-dissipation', '/guides/decoupling-capacitor-values'],
     title: 'Buck Converter Formulas: Duty Cycle, Inductor and Capacitors, Worked Through',
     seoTitle: 'Buck Converter Formulas with a Worked Example',
     tools: ['/buck-converter', '/feedback-divider', '/power-tree'],
@@ -145,6 +159,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/boost-converter-formulas',
+    related: ['/guides/buck-converter-formulas', '/guides/decoupling-capacitor-values', '/guides/ldo-efficiency-power-dissipation'],
     title: 'Boost Converter Formulas: Why the Inductor Carries More Current than the Load',
     seoTitle: 'Boost Converter Formulas with a Worked Example',
     tools: ['/boost-converter', '/feedback-divider', '/power-tree'],
@@ -156,6 +171,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/via-fence-spacing',
+    related: ['/guides/pcb-crosstalk-3w-rule', '/guides/choosing-a-pcb-stackup', '/guides/pcie-routing-guidelines'],
     title: 'Via Fence and Stitching Via Spacing: From λ/20 to Millimetres',
     seoTitle: 'Via Fence Spacing: λ/10, λ/20 and Via Pitch',
     tools: ['/via-stitching', '/impedance', '/timing'],
@@ -167,6 +183,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcb-crosstalk-3w-rule',
+    related: ['/guides/controlled-impedance', '/guides/choosing-a-pcb-stackup', '/guides/via-fence-spacing'],
     title: 'PCB Crosstalk and the 3W Rule: How Much Spacing Is Enough?',
     seoTitle: 'PCB Crosstalk: 3W Rule and Trace Spacing',
     tools: ['/crosstalk', '/impedance', '/timing', '/interface-rules'],
@@ -178,6 +195,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcb-via-current-capacity',
+    related: ['/guides/copper-area-for-cooling', '/guides/buck-converter-formulas', '/guides/decoupling-capacitor-values'],
     title: 'How Much Current Can a PCB Via Carry? Worked Examples for Power Rails',
     seoTitle: 'PCB Via Current Capacity: Size and Via Count',
     tools: ['/via', '/trace-width'],
@@ -189,6 +207,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/decoupling-capacitor-values',
+    related: ['/guides/ldo-efficiency-power-dissipation', '/guides/buck-converter-formulas', '/guides/pcb-via-current-capacity'],
     title: '100 nF or 10 µF? Choosing Decoupling Capacitors for a PCB',
     seoTitle: 'Decoupling Capacitors: 100 nF or 10 µF?',
     tools: ['/pdn'],
@@ -200,6 +219,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/controlled-impedance',
+    related: ['/guides/choosing-a-pcb-stackup', '/guides/pcb-crosstalk-3w-rule', '/guides/usb3-85-or-90-ohm'],
     title: 'Controlled Impedance Explained: Microstrip, Stripline and Solder Mask',
     seoTitle: 'Controlled Impedance: Microstrip vs Stripline',
     tools: ['/impedance', '/timing', '/crosstalk', '/trace-loss', '/interface-rules'],
@@ -211,6 +231,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/choosing-a-pcb-stackup',
+    related: ['/guides/controlled-impedance', '/guides/pcie-gen3-routing', '/guides/pcb-crosstalk-3w-rule'],
     title: 'How to Choose a PCB Stackup (and What 1080, 2116 and 7628 Mean)',
     seoTitle: 'How to Choose a PCB Stackup (1080, 2116, 7628)',
     tools: ['/stackup-advisor', '/stackup', '/impedance', '/pcb-materials'],
@@ -222,6 +243,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcie-gen3-routing',
+    related: ['/guides/pcie-routing-guidelines', '/guides/ac-coupling-capacitors', '/guides/choosing-a-pcb-stackup'],
     title: 'PCIe Gen3 Routing on a Hobby Budget: Lessons from an M.2 NVMe Carrier Card',
     seoTitle: 'PCIe Gen3 Routing Guide for M.2 Carrier Cards',
     tools: ['/impedance', '/trace-loss', '/timing', '/differential-via', '/stackup', '/interface-rules'],
@@ -233,6 +255,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/ac-coupling-capacitors',
+    related: ['/guides/pcie-routing-guidelines', '/guides/usb3-85-or-90-ohm', '/guides/s4p-differential-s-parameters'],
     title: 'AC Coupling Capacitors on High-Speed Links: the Value for Every Interface',
     seoTitle: 'AC Coupling Capacitor Values by Interface',
     tools: ['/interface-rules', '/impedance', '/trace-loss'],
@@ -244,6 +267,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/usb3-85-or-90-ohm',
+    related: ['/guides/controlled-impedance', '/guides/ac-coupling-capacitors', '/guides/s4p-differential-s-parameters'],
     title: 'Is USB 3 85 Ω or 90 Ω? What the Specifications Actually Say',
     seoTitle: 'USB 3 Impedance: 85 Ω or 90 Ω?',
     tools: ['/interface-rules', '/impedance', '/stackup-advisor'],
@@ -255,6 +279,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/copper-area-for-cooling',
+    related: ['/guides/ldo-efficiency-power-dissipation', '/guides/pcb-via-current-capacity', '/guides/buck-converter-formulas'],
     title: 'How Much Copper Does a Regulator Need? PCB Heat Spreading in Numbers',
     seoTitle: 'How Much Copper Does a Regulator Need?',
     tools: ['/copper-heat-spreading', '/ldo', '/thermal-vias', '/junction-temperature'],
@@ -266,6 +291,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/creepage-clearance-mains',
+    related: [],
     title: 'Creepage and Clearance for Mains Circuits (IEC 60664-1)',
     seoTitle: 'Creepage and Clearance for Mains (IEC 60664-1)',
     tools: ['/creepage-clearance', '/conductor-spacing'],
@@ -280,3 +306,9 @@ export const GUIDES: GuideDef[] = [
 export const guideByPath = (p: string) => GUIDES.find((g) => g.path === p);
 /** Guides that use a given tool (listed as related guides on the tool page). */
 export const guidesForTool = (toolPath: string) => GUIDES.filter((g) => g.tools.includes(toolPath));
+
+/** Editorially selected next reads; preserves the curated order. */
+export const relatedGuidesFor = (path: string): GuideDef[] =>
+  (guideByPath(path)?.related ?? [])
+    .map(guideByPath)
+    .filter((guide): guide is GuideDef => guide !== undefined && guide.path !== path);

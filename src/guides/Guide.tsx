@@ -5,7 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useDocumentMeta } from '../components/ToolPage';
 import { useShell } from '../state/shell';
 import { toolByPath } from '../tools/registry';
-import { guideByPath, GUIDES } from './registry';
+import { guideByPath, relatedGuidesFor } from './registry';
 
 export interface Source {
   text: ReactNode;
@@ -30,7 +30,7 @@ export function Guide({
     document.querySelector('main')?.scrollTo(0, 0);
     window.scrollTo(0, 0);
   }, [pathname]);
-  const others = GUIDES.filter((x) => x.path !== g.path);
+  const related = relatedGuidesFor(g.path);
   return (
     <article className="document-page">
       <Card className="mx-auto max-w-[860px] border border-line bg-sheet">
@@ -67,14 +67,19 @@ export function Guide({
               </li>
             ))}
           </ol>
-          <h2>More guides</h2>
-          <ul>
-            {others.map((o) => (
-              <li key={o.path}>
-                <Link to={o.path}>{o.title}</Link>
-              </li>
-            ))}
-          </ul>
+          {related.length > 0 && (
+            <>
+              <h2>Related guides</h2>
+              <ul>
+                {related.map((guide) => (
+                  <li key={guide.path}>
+                    <Link to={guide.path}>{guide.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p><Link to="/guides">Browse all guides</Link></p>
         </div>
       </Card>
       {statusEl && createPortal(<span>Guide</span>, statusEl)}
