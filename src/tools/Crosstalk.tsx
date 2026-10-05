@@ -1,6 +1,9 @@
 import { CrosstalkDiagram } from '../components/CrosstalkDiagram';
 import { useEffect, useMemo, useState } from 'react';
 import { ToolPage } from '../components/ToolPage';
+import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
+import { useDesignComparison } from '../state/useDesignComparison';
+import { comparisonRow as row } from '../lib/designComparison';
 import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import { xtalk } from '../lib/crosstalk';
 import type { Geometry } from '../lib/fieldsolver';
@@ -54,6 +57,25 @@ export default function Crosstalk() {
   const L = (mm: number) => `${fmt(fromMm(mm, unit), 4)} ${unit}`;
   const pct = (v: number) => `${fmt(100 * v, 3)} %`;
 
+  const comparison = useDesignComparison('/crosstalk', {
+    state: p,
+    inputs: [
+      row('type', 'Line type', p.type), ...(p.type === 'microstrip' ? [row('mask', 'Solder mask', p.mask)] : []),
+      row('w', 'Trace width', p.w, 'mm'), row('t', 'Copper thickness', p.t, 'mm'), row('s', 'Edge-to-edge gap', p.s, 'mm'),
+      row('h', 'Height to lower plane', p.h, 'mm'), row('er', 'Lower dielectric Dk', p.er),
+      ...(p.type === 'stripline' ? [row('h2', 'Height to upper plane', p.h2, 'mm'), row('er2', 'Upper dielectric Dk', p.er2)] : []),
+      row('len', 'Coupled length', p.len, 'mm'), row('tr', 'Rise time', p.tr, 'ps'), row('v', 'Aggressor swing', p.v, 'V'),
+    ],
+    results: [
+      row('next', 'Near-end crosstalk (NEXT)', x ? x.next * 1000 : null, 'mV'),
+      row('fext', 'Far-end crosstalk (magnitude)', x ? Math.abs(x.fext) * 1000 : null, 'mV'),
+      row('kb', 'Saturated NEXT coefficient', x ? x.kb * 100 : null, '%'),
+      row('td', 'Coupled-section delay', x ? x.td * 1e12 : null, 'ps'),
+      row('zeven', 'Even-mode impedance', st.result?.even?.z ?? null, '\u03a9'),
+      row('zodd', 'Odd-mode impedance', st.result?.odd?.z ?? null, '\u03a9'),
+    ],
+  }, ok && !!x && !st.busy && !st.error, set);
+
   const properties = (
     <>
       <Section title="Line Pair">
@@ -100,7 +122,7 @@ export default function Crosstalk() {
       {/* drawn with placeholders until the first solve finishes, so the page does not jump when results arrive */}
       {ok && (
         <div className="grid gap-3 xl:grid-cols-2">
-          <Panel title="Results">
+          <Panel title="Results" right={<ComparisonButton comparison={comparison} />}>
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
               <Big label="Near-end crosstalk (NEXT)" value={x ? fmt(x.next * 1000, 4) : '—'} unit="mV" busy={st.busy} />
               <Big label="Far-end crosstalk (FEXT)" value={x ? fmt(Math.abs(x.fext) * 1000, 4) : '—'} unit="mV" busy={st.busy} />
@@ -151,6 +173,7 @@ export default function Crosstalk() {
           </Panel>
         </div>
       )}
+      <ComparisonPanel comparison={comparison} />
       {ok && <Panel title="Trace Spacing and the 3W Reference"><CrosstalkDiagram width={p.w} spacing={p.s} length={L}/></Panel>}
     </ToolPage>
   );

@@ -1,0 +1,31 @@
+.comparison-trigger { color: var(--muted); gap: 6px; }
+.comparison-trigger[aria-expanded="true"] { color: var(--tool-accent, var(--accent-ink)); background: var(--sel); }
+.comparison-intro { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px; }
+.comparison-intro p { margin: 0; color: var(--muted); }
+.comparison-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.comparison-actions button { gap: 5px; }
+.comparison-table-wrap { overflow-x: auto; }
+.comparison-table { width: 100%; }
+.comparison-table th:first-child { text-align: left; font-weight: 400; white-space: normal; min-width: 120px; }
+.comparison-table td, .comparison-table thead th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.comparison-table td { min-width: 92px; white-space: nowrap; }
+.comparison-table .comparison-changed td:last-child { color: var(--tool-accent, var(--accent-ink)); font-weight: 600; }
+.comparison-inputs { border-top: 1px solid var(--line); }
+.comparison-inputs summary { padding: 10px 12px; cursor: pointer; color: var(--muted); }
+.comparison-footnote { padding: 10px 12px; margin: 0; color: var(--faint); font-size: 11px; }
+@media print { .comparison-actions, .comparison-trigger, .design-comparison .section-heading button { display: none; } }
+
+@media (max-width: 600px) {
+  .comparison-results tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .comparison-input-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comparison-table thead th:first-child { display: none; }
+  .comparison-table tbody th:first-child { grid-column: 1 / -1; padding-bottom: 3px; font-weight: 600; }
+  .comparison-table td, .comparison-table th { min-width: 0; width: auto; white-space: normal; overflow-wrap: anywhere; }
+  .comparison-table td, .comparison-table thead th:not(:first-child) { text-align: left; }
+  .comparison-table tbody tr { border-top: 1px solid var(--line); }
+  .comparison-table tbody td { border: 0; padding-top: 3px; }
+}
+
+.design-comparison { scroll-margin-top: 12px; }
+.design-comparison:focus-visible { outline: 2px solid var(--tool-accent, var(--accent-ink)); outline-offset: 2px; }
+@media (max-width: 1023px) { .design-comparison { scroll-margin-top: 112px; } }

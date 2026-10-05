@@ -27,6 +27,9 @@ import LdoEfficiency from './LdoEfficiency';
 import I2cPullupGuide from './I2cPullupGuide';
 import CrystalLoadGuide from './CrystalLoadGuide';
 import DifferentialSParameters from './DifferentialSParameters';
+import FeedbackDividerGuide from './FeedbackDividerGuide';
+import ThermalViaGuide from './ThermalViaGuide';
+import TraceWidthGuide from './TraceWidthGuide';
 import About from '../pages/About';
 import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
@@ -38,6 +41,9 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/tools': ToolsIndex,
   '/schematic': Schematic,
   '/guides': GuidesIndex,
+  '/guides/feedback-divider-resistor-selection': FeedbackDividerGuide,
+  '/guides/thermal-via-array-design': ThermalViaGuide,
+  '/guides/pcb-trace-width-current-calculation': TraceWidthGuide,
   '/guides/rc-filter-design': RcFilterDesign,
   '/guides/ldo-efficiency-power-dissipation': LdoEfficiency,
   '/guides/i2c-pullup-resistor-calculation': I2cPullupGuide,

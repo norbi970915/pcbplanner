@@ -88,21 +88,22 @@ export function useLossSolve(req: LossRequest | null): LossState {
 
 /** Re-solve whenever the geometry changes (debounced); stale answers are dropped. */
 export function useFieldSolve(geom: Geometry | null, opts: SolveOptions): SolveState {
-  const [state, setState] = useState<SolveState>({ result: null, error: null, busy: false });
+  const [state, setState] = useState<SolveState & { key: string }>({ result: null, error: null, busy: false, key: '' });
   const seq = useRef(0);
   const key = JSON.stringify([geom, opts]);
   useEffect(() => {
-    if (!geom) return;
     const mySeq = ++seq.current;
-    setState((s) => ({ ...s, busy: true }));
+    let alive = true;
+    if (!geom) return;
     const t = setTimeout(() => {
       runSolver({ type: 'solve', geom, opts }).then((r) => {
-        if (mySeq !== seq.current) return;
-        setState(r.ok && r.result ? { result: r.result, error: null, busy: false } : { result: null, error: r.ok ? 'No result' : r.error, busy: false });
+        if (!alive || mySeq !== seq.current) return;
+        setState(r.ok && r.result ? { key, result: r.result, error: null, busy: false } : { key, result: null, error: r.ok ? 'No result' : r.error, busy: false });
       });
     }, 120);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-  return state;
+  const current = state.key === key;
+  return { result: geom && current ? state.result : null, error: geom && current ? state.error : null, busy: !!geom && !current };
 }

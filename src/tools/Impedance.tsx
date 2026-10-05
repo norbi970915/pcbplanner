@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { CrossSection } from '../components/CrossSection';
 import { FieldMap } from '../components/FieldMap';
 import { ToolPage } from '../components/ToolPage';
+import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
+import { useDesignComparison } from '../state/useDesignComparison';
+import { comparisonRow as row } from '../lib/designComparison';
 import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, Segmented, SelectField } from '../components/ui';
 import { StackupPicker } from '../components/StackupPicker';
 import { microstripHJ, striplineAsym, striplineWheeler } from '../lib/closedform';
@@ -253,6 +256,30 @@ export default function Impedance() {
   const toleranceHighLimit = p.target * (1 + raw.tolLimit / 100);
   const tolerancePass = toleranceMin !== null && toleranceMax !== null && toleranceMin >= toleranceLowLimit && toleranceMax <= toleranceHighLimit;
 
+  const comparison = useDesignComparison('/impedance', {
+    state: raw,
+    inputs: [
+      row('type', 'Line type', type), row('mode', 'Signal', diff ? 'Differential' : 'Single-ended'),
+      ...(diff ? [row('coupling', 'Pair coupling', broadside ? 'Broadside' : 'Edge-coupled'), row('s', broadside ? 'Inter-layer gap' : 'Edge gap', p.s, 'mm')] : []),
+      row('w', 'Trace width', p.w, 'mm'), row('t', 'Copper thickness', p.t, 'mm'), row('etch', 'Etch', p.etch, 'mm'),
+      row('h', 'Lower dielectric height', hShown, 'mm'), row('er', 'Lower dielectric Dk', erShown),
+      row('dl', 'Lower dielectric plies', raw.dl || 'Single dielectric'),
+      ...(!broadside && type !== 'microstrip' ? [row('h2', 'Upper dielectric height', h2Shown, 'mm'), row('er2', 'Upper dielectric Dk', er2Shown), row('dl2', 'Upper dielectric plies', raw.dl2 || 'Single dielectric')] : []),
+      ...(broadside ? [row('er2', 'Inter-layer Dk', p.er2)] : []),
+      ...(type === 'microstrip' ? [row('mask', 'Solder mask', p.mask), ...(p.mask ? [row('c1', 'Mask over substrate', p.c1, 'mm'), row('c2', 'Mask over trace', p.c2, 'mm'), row('erm', 'Mask Dk', p.erm)] : [])] : []),
+      ...(!broadside ? [row('cpw', 'Coplanar ground', p.cpw), ...(p.cpw ? [row('gap', 'Coplanar gap', p.gap, 'mm')] : [])] : []),
+      row('target', 'Target impedance', p.target, '\u03a9'), row('acc', 'Mesh accuracy', p.acc),
+      ...(usesLib ? [row('fq', 'Material frequency', p.fq, 'GHz')] : []),
+    ],
+    results: [
+      row(diff ? 'zdiff' : 'z0', diff ? 'Differential impedance' : 'Characteristic impedance', z ?? null, '\u03a9'),
+      row(diff ? 'eeff-odd' : 'eeff-se', diff ? 'Effective Dk (odd)' : 'Effective Dk', eeff ?? null),
+      row('target-error', 'Deviation from target', dev, '%'),
+      row('delay', 'Propagation delay', eeff ? delayPsPerMm(eeff) : null, 'ps/mm'),
+      ...(diff ? [row('zodd', 'Odd-mode impedance', r?.odd?.z ?? null, '\u03a9'), row('zeven', 'Even-mode impedance', r?.even?.z ?? null, '\u03a9'), row('zcomm', 'Common-mode impedance', r?.zcomm ?? null, '\u03a9')] : []),
+    ],
+  }, !!geom && !!z && !busy && !solveState.error, set);
+
   const properties = (
     <>
       <Section title="Structure">
@@ -419,7 +446,7 @@ export default function Impedance() {
     >
       <Notes kind="error" items={[...errors, ...(solveState.error && geom ? [solveState.error] : []), ...(solveErr ? [solveErr] : [])]} />
       <div className="grid gap-3 2xl:grid-cols-2">
-        <Panel title="Results">
+        <Panel title="Results" right={<ComparisonButton comparison={comparison} />}>
           <div className="flex flex-wrap items-end gap-x-8 gap-y-2 px-2.5 pb-1 pt-2">
             <Big label={diff ? 'Differential impedance Zdiff' : 'Characteristic impedance Z0'} value={z ? fmt(z, 4) : '—'} unit="Ω" busy={busy} />
             <Big label="Effective εr" value={eeff ? fmt(eeff, 4) : '—'} unit="" busy={busy} />
@@ -488,6 +515,7 @@ export default function Impedance() {
           </div>
         </Panel>
       </div>
+      <ComparisonPanel comparison={comparison} />
       {raw.tolEnabled && <Panel title="Fabrication Tolerance Check" className="mt-3">
         {tolerance.error ? <p className="px-3 py-3 text-muted">{tolerance.error}</p> : toleranceState.error && toleranceState.key === toleranceKey ? <p className="px-3 py-3 text-[var(--err-line)]">{toleranceState.error}</p> : toleranceMin === null || toleranceMax === null ? <p className="px-3 py-3 text-muted">Checking {tolerance.corners?.length ?? 0} fabrication corners…</p> : <>
           <div className="flex flex-wrap gap-8 px-3 py-3">

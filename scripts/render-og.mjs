@@ -1,6 +1,6 @@
 // Renders a 1200×630 link-preview image per page into public/og/, in the style of og-image.png.
 // scripts/prerender.mjs points each page's og:image at its file (falling back to og-image.png).
-// Usage: node scripts/render-og.mjs   (needs Microsoft Edge; run again after changing a title or summary)
+// Usage: node scripts/render-og.mjs [route ...] (all pages when no routes are supplied)
 import { chromium } from 'playwright-core';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -55,9 +55,11 @@ const html = (c) => {
 mkdirSync('public/og', { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
-for (const c of cards) {
+const requested = new Set(process.argv.slice(2));
+const rendered = requested.size ? cards.filter(card => requested.has(card.path)) : cards;
+for (const c of rendered) {
   await page.setContent(html(c));
   await page.screenshot({ path: resolve('public/og', `${ogSlug(c.path)}.png`) });
 }
 await browser.close();
-console.log(`${cards.length} preview images written to public/og/`);
+console.log(`${rendered.length} preview images written to public/og/`);

@@ -1,6 +1,9 @@
 import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
 import { useSettings } from '../state/settings';
 import { ToolPage } from '../components/ToolPage';
+import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
+import { useDesignComparison } from '../state/useDesignComparison';
+import { comparisonRow as row } from '../lib/designComparison';
 import { Big, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import { FILLS, viaArray, type Fill } from '../lib/thermal';
 import { fmt, fromMm } from '../lib/units';
@@ -28,6 +31,15 @@ export default function ThermalVias() {
   const hasPad = p.padW > 0 && p.padH > 0;
   const cols = Math.max(1, Math.min(shown, Math.ceil(Math.sqrt(shown * (hasPad ? p.padW / p.padH : 1)))));
   const rows = Math.ceil(shown / cols);
+
+  const comparison = useDesignComparison('/thermal-vias', {
+    state: p,
+    inputs: [row('n', 'Via count', p.n), row('hole', 'Finished hole', p.hole, 'mm'), row('plating', 'Plating thickness', p.plating, 'mm'), row('len', 'Board thickness', p.len, 'mm'),
+      row('fill', 'Via fill', fill === 'custom' ? 'Custom' : FILLS[fill].label), row('fillK', 'Fill conductivity', fillK, 'W/m\u00b7K'),
+      row('padW', 'Pad width', p.padW, 'mm'), row('padH', 'Pad length', p.padH, 'mm'), row('kLam', 'Laminate conductivity', p.kLam, 'W/m\u00b7K'), row('p', 'Power through array', p.p, 'W')],
+    results: [row('rTotal', 'Top-to-bottom thermal resistance', r?.rTotal ?? null, '\u00b0C/W'), row('deltaT', 'Temperature drop', r?.deltaT ?? null, '\u00b0C'),
+      row('rVia', 'One via (barrel + fill)', r?.rVia ?? null, '\u00b0C/W'), row('rArray', 'Via array resistance', r?.rArray ?? null, '\u00b0C/W'), row('viaShare', 'Heat carried by vias', r ? r.viaShare * 100 : null, '%')],
+  }, !!r, set);
 
   const properties = (
     <>
@@ -68,7 +80,7 @@ export default function ThermalVias() {
       <Notes items={notes} />
       {r && (
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
-          <Panel title="Results">
+          <Panel title="Results" right={<ComparisonButton comparison={comparison} />}>
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
               <Big label="Thermal resistance, top to bottom" value={fmt(r.rTotal, 4)} unit="°C/W" />
               <Big label={`Temperature drop at ${fmt(p.p, 3)} W`} value={fmt(r.deltaT, 4)} unit="°C" />
@@ -105,6 +117,7 @@ export default function ThermalVias() {
           </Panel>
         </div>
       )}
+      <ComparisonPanel comparison={comparison} />
     </ToolPage>
   );
 }

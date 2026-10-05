@@ -1,4 +1,7 @@
 import { ToolPage } from '../components/ToolPage';
+import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
+import { useDesignComparison } from '../state/useDesignComparison';
+import { comparisonRow as row } from '../lib/designComparison';
 import { Big, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import { junction } from '../lib/thermal';
 import { fmt } from '../lib/units';
@@ -30,6 +33,16 @@ export default function ThermalJunction() {
     { n: 'Ambient', t: p.ta },
   ] : [];
   const tMax = Math.max(p.tjmax, ...pts.map((x) => x.t));
+
+  const comparison = useDesignComparison('/junction-temperature', {
+    state: p,
+    inputs: [row('mode', 'Thermal model', mode === 'ja' ? 'Junction to ambient' : 'Junction, case and heatsink'),
+      row('p', 'Power dissipation', p.p, 'W'), row('ta', 'Ambient temperature', p.ta, '\u00b0C'), row('tjmax', 'Junction limit', p.tjmax, '\u00b0C'),
+      ...(mode === 'ja' ? [row('ja', 'Junction to ambient', p.ja, '\u00b0C/W')] : [row('jc', 'Junction to case', p.jc, '\u00b0C/W'), row('cs', 'Case to sink', p.cs, '\u00b0C/W'), row('sa', 'Sink to ambient', p.sa, '\u00b0C/W')])],
+    results: [row('tj', 'Junction temperature', r?.tj ?? null, '\u00b0C'), row('margin', 'Margin to junction limit', r?.margin ?? null, '\u00b0C'),
+      row('theta', 'Total thermal resistance', r?.theta ?? null, '\u00b0C/W'), row('maxPower', 'Maximum power for limit', r?.maxPower ?? null, 'W'),
+      ...(mode === 'chain' ? [row('case', 'Case temperature', r?.nodes?.case ?? null, '\u00b0C'), row('sink', 'Heatsink temperature', r?.nodes?.sink ?? null, '\u00b0C')] : [])],
+  }, !!r, set);
 
   const properties = (
     <>
@@ -74,7 +87,7 @@ export default function ThermalJunction() {
       <Notes items={notes} />
       {r && (
         <div className="grid gap-3 xl:grid-cols-2">
-          <Panel title="Results">
+          <Panel title="Results" right={<ComparisonButton comparison={comparison} />}>
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
               <Big label="Junction temperature Tj" value={fmt(r.tj, 4)} unit="°C" />
               <Big label="Margin to Tj,max" value={fmt(r.margin, 3)} unit="°C" />
@@ -120,6 +133,7 @@ export default function ThermalJunction() {
           </Panel>
         </div>
       )}
+      <ComparisonPanel comparison={comparison} />
     </ToolPage>
   );
 }

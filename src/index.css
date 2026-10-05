@@ -2,6 +2,7 @@
 @import "./styles/workbench.css";
 @import "./styles/diagrams.css";
 @import "./styles/workbench-update.css";
+@import "./styles/comparison.css";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 

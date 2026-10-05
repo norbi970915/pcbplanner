@@ -18,6 +18,36 @@ export interface GuideDef {
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/feedback-divider-resistor-selection',
+    related: ['/guides/buck-converter-formulas', '/guides/boost-converter-formulas', '/guides/ldo-efficiency-power-dissipation'],
+    title: 'Feedback Divider Resistor Selection: Ratio, Tolerance and Bias Current',
+    seoTitle: 'Feedback Divider: Resistors, Tolerance & Bias',
+    description: 'Choose feedback resistors for a regulator, reproduce a 3.3 V E96 example, and check resistor tolerance, divider current and feedback-pin bias error.',
+    tools: ['/feedback-divider', '/buck-converter', '/boost-converter', '/ldo'],
+    date: '2026-10-05', category: 'Power & Thermal',
+    component: lazyPage(() => import('./FeedbackDividerGuide')),
+  },
+  {
+    path: '/guides/thermal-via-array-design',
+    related: ['/guides/copper-area-for-cooling', '/guides/ldo-efficiency-power-dissipation', '/guides/pcb-via-current-capacity'],
+    title: 'Thermal Via Arrays: Barrel Geometry, Filling and Temperature Drop',
+    seoTitle: 'Thermal Via Arrays: Plating, Fill & Resistance',
+    description: 'Calculate a thermal via array from finished hole, barrel plating and board thickness, compare open and filled vias, and separate vertical drop from junction temperature.',
+    tools: ['/thermal-vias', '/copper-heat-spreading', '/junction-temperature'],
+    date: '2026-10-05', category: 'Power & Thermal',
+    component: lazyPage(() => import('./ThermalViaGuide')),
+  },
+  {
+    path: '/guides/pcb-trace-width-current-calculation',
+    related: ['/guides/pcb-via-current-capacity', '/guides/thermal-via-array-design', '/guides/copper-area-for-cooling'],
+    title: 'PCB Trace Width and Current: Temperature Rise, Voltage Drop and Loss',
+    seoTitle: 'PCB Trace Width: Current, Heating & Voltage Drop',
+    description: 'Work through a 3 A PCB trace calculation, check voltage drop and power loss, and understand the limits of IPC-2221 and the implemented IPC-2152 external curve fit.',
+    tools: ['/trace-width', '/via'],
+    date: '2026-10-05', category: 'Power & Thermal',
+    component: lazyPage(() => import('./TraceWidthGuide')),
+  },
+  {
     path: '/guides/rc-filter-design',
     related: ['/guides/i2c-pullup-resistor-calculation', '/guides/phase-noise-to-jitter'],
     title: 'RC Filter Design: Choosing R and C for Low-Pass and High-Pass Filters',
@@ -29,7 +59,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/ldo-efficiency-power-dissipation',
-    related: ['/guides/copper-area-for-cooling', '/guides/buck-converter-formulas', '/guides/decoupling-capacitor-values'],
+    related: ['/guides/copper-area-for-cooling', '/guides/thermal-via-array-design', '/guides/buck-converter-formulas'],
     title: 'LDO Efficiency, Power Dissipation and Dropout: A Worked Thermal Check',
     seoTitle: 'LDO Efficiency & Power Dissipation',
     description: 'Calculate linear regulator efficiency, ground-current loss, junction temperature and dropout headroom, with a 5 V to 3.3 V example and a buck comparison.',
@@ -147,7 +177,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/buck-converter-formulas',
-    related: ['/guides/boost-converter-formulas', '/guides/ldo-efficiency-power-dissipation', '/guides/decoupling-capacitor-values'],
+    related: ['/guides/boost-converter-formulas', '/guides/feedback-divider-resistor-selection', '/guides/ldo-efficiency-power-dissipation'],
     title: 'Buck Converter Formulas: Duty Cycle, Inductor and Capacitors, Worked Through',
     seoTitle: 'Buck Converter Formulas with a Worked Example',
     tools: ['/buck-converter', '/feedback-divider', '/power-tree'],
@@ -159,7 +189,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/boost-converter-formulas',
-    related: ['/guides/buck-converter-formulas', '/guides/decoupling-capacitor-values', '/guides/ldo-efficiency-power-dissipation'],
+    related: ['/guides/buck-converter-formulas', '/guides/feedback-divider-resistor-selection', '/guides/decoupling-capacitor-values'],
     title: 'Boost Converter Formulas: Why the Inductor Carries More Current than the Load',
     seoTitle: 'Boost Converter Formulas with a Worked Example',
     tools: ['/boost-converter', '/feedback-divider', '/power-tree'],
@@ -195,7 +225,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcb-via-current-capacity',
-    related: ['/guides/copper-area-for-cooling', '/guides/buck-converter-formulas', '/guides/decoupling-capacitor-values'],
+    related: ['/guides/pcb-trace-width-current-calculation', '/guides/thermal-via-array-design', '/guides/copper-area-for-cooling'],
     title: 'How Much Current Can a PCB Via Carry? Worked Examples for Power Rails',
     seoTitle: 'PCB Via Current Capacity: Size and Via Count',
     tools: ['/via', '/trace-width'],
@@ -279,7 +309,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/copper-area-for-cooling',
-    related: ['/guides/ldo-efficiency-power-dissipation', '/guides/pcb-via-current-capacity', '/guides/buck-converter-formulas'],
+    related: ['/guides/thermal-via-array-design', '/guides/ldo-efficiency-power-dissipation', '/guides/pcb-trace-width-current-calculation'],
     title: 'How Much Copper Does a Regulator Need? PCB Heat Spreading in Numbers',
     seoTitle: 'How Much Copper Does a Regulator Need?',
     tools: ['/copper-heat-spreading', '/ldo', '/thermal-vias', '/junction-temperature'],

@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ToolPage } from '../components/ToolPage';
+import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
+import { useDesignComparison } from '../state/useDesignComparison';
+import { comparisonRow as row } from '../lib/designComparison';
 import { Big, LenField, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import { K_CU } from '../lib/copper';
 import { spread, type Orientation, type SpreadInput } from '../lib/spreading';
@@ -73,6 +76,17 @@ export default function CopperSpreading() {
   if (r && tj > p.tj) notes.push(`The junction reaches ${fmt(tj, 4)} °C, above Tj,max. ${needed && Number.isFinite(needed) ? `A pour of about ${fmt(needed, 3)} × ${fmt(needed, 3)} mm is needed` : 'No copper pour alone is enough'}: add copper layers with thermal vias, airflow or a heatsink.`);
   if (r && r.efficiency < 0.5) notes.push(`Fin efficiency ${fmt(100 * r.efficiency, 3)} %: the outer copper is much cooler than the part and adds little. Thicker copper or more connected layers help more than a wider pour.`);
 
+  const comparison = useDesignComparison('/copper-heat-spreading', {
+    state: p,
+    inputs: [row('p', 'Power dissipation', p.p, 'W'), row('ta', 'Ambient temperature', p.ta, '\u00b0C'), row('tj', 'Junction limit', p.tj, '\u00b0C'),
+      row('jb', 'Junction to board', p.jb, '\u00b0C/W'), row('src', 'Source footprint side', p.src, 'mm'), row('pour', 'Copper pour side', p.pour, 'mm'),
+      row('t', 'Copper thickness', p.t, 'mm'), row('n', 'Connected copper layers', p.n), row('air', 'Cooling', p.air),
+      ...(p.air === 'natural' ? [row('orient', 'Board orientation', p.orient)] : [row('h', 'Convection coefficient', p.h, 'W/m\u00b2K')]), row('eps', 'Emissivity', p.eps)],
+    results: [row('tj', 'Junction temperature', r ? tj : null, '\u00b0C'), row('tBoard', 'Board temperature', r?.tBoard ?? null, '\u00b0C'),
+      row('theta', 'Copper to ambient', r?.theta ?? null, '\u00b0C/W'), row('total', 'Total junction to ambient', r ? p.jb + r.theta : null, '\u00b0C/W'),
+      row('needed', 'Smallest pour side for limit', needed !== null && Number.isFinite(needed) ? needed : null, 'mm'), row('efficiency', 'Fin efficiency', r ? r.efficiency * 100 : null, '%')],
+  }, !!r, set);
+
   const properties = (
     <>
       <Section title="Component">
@@ -128,7 +142,7 @@ export default function CopperSpreading() {
       <Notes items={notes} />
       {r && (
         <div className="grid gap-3 xl:grid-cols-2">
-          <Panel title="Results">
+          <Panel title="Results" right={<ComparisonButton comparison={comparison} />}>
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
               <Big label="Junction temperature" value={fmt(tj, 4)} unit="°C" />
               <Big label="Copper to ambient" value={fmt(r.theta, 4)} unit="°C/W" />
@@ -154,6 +168,7 @@ export default function CopperSpreading() {
           </Panel>
         </div>
       )}
+      <ComparisonPanel comparison={comparison} />
     </ToolPage>
   );
 }
