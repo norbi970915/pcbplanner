@@ -13,6 +13,7 @@ import {
 import { Analytics, type BeforeSendEvent } from '@vercel/analytics/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
+import { currentToolUrl } from '../lib/toolUrl';
 import { Home, PanelLeft, Sun, Moon } from 'lucide-react';
 import { Button } from './shadcn/button';
 import { Badge } from './shadcn/badge';
@@ -365,7 +366,7 @@ export function Layout() {
           <Menu {...menuProps('File')}>
             <Item
               onClick={run(() =>
-                navigator.clipboard?.writeText(window.location.href),
+                navigator.clipboard?.writeText(currentToolUrl()),
               )}
               hint="Ctrl+L"
             >
@@ -380,7 +381,7 @@ export function Layout() {
                 const tool = toolByPath(path);
                 if (!tool) return;
                 const id = activeId ?? projectStore.create('My board').id;
-                projectStore.saveTool(id, path, loc.search.replace(/^[?]/, ''));
+                projectStore.saveTool(id, path, new URL(currentToolUrl()).search.slice(1));
                 setSaved(
                   `Saved to ${projects.find((x) => x.id === id)?.name ?? 'project'}`,
                 );

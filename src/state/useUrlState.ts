@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { FLUSH_TOOL_URL_EVENT } from '../lib/toolUrl';
 
 type Primitive = string | number | boolean;
 const SESSION_PREFIX = 'pcbplanner:tool:';
@@ -101,12 +102,14 @@ export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
 
   useEffect(() => {
     saveSession(path, state, defaultsRef.current);
-    const t = setTimeout(() => {
+    const writeUrl = () => {
       const q = encode(state, defaultsRef.current);
       const url = path + (q ? `?${q}` : '') + window.location.hash;
       window.history.replaceState(window.history.state, '', url);
-    }, 250);
-    return () => clearTimeout(t);
+    };
+    const t = setTimeout(writeUrl, 250);
+    window.addEventListener(FLUSH_TOOL_URL_EVENT, writeUrl);
+    return () => { clearTimeout(t); window.removeEventListener(FLUSH_TOOL_URL_EVENT, writeUrl); };
   }, [path, state]);
 
   const set = useCallback((patch: Partial<T>) => setState((s) => ({ ...s, ...patch })), []);

@@ -1,3 +1,4 @@
+import { currentToolUrl } from './toolUrl';
 export interface ReportInput { section: string; label: string; value: string }
 export interface ReportSnapshot {
   title: string; description: string; created: string; url: string; inputs: ReportInput[];
@@ -97,7 +98,7 @@ export function captureReport(title: string, description: string, results: HTMLE
   // Capture against live nodes first, so computed paint and canvas pixels are still available.
   const staticResults = document.createElement('div'); staticResults.innerHTML = snapshotMarkup(results);
   staticResults.querySelectorAll('.design-comparison').forEach(element => element.remove());
-  return { title, description, created: new Date().toLocaleString(), url: window.location.href,
+  return { title, description, created: new Date().toLocaleString(), url: currentToolUrl(),
     inputs: collectReportInputs([inputs, results]), results: staticResults.innerHTML,
     comparison: comparison ? snapshotMarkup(comparison) : '', method: method ? snapshotMarkup(method) : '',
     blocked: reportBlockReason(results, inputs, status), usesLocalData: !!document.querySelector('.tool-page input[type="file"]') || !!inputs?.querySelector('input[type="file"]'),
