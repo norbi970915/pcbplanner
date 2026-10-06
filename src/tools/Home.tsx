@@ -21,6 +21,7 @@ import { Badge } from '../components/shadcn/badge';
 import { NEWS } from '../data/news';
 import { useShell } from '../state/shell';
 import { GUIDES } from '../guides/registry';
+import { searchEntries, type SearchEntry } from '../lib/siteSearch';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
 
 const RECENT_GUIDES = [...GUIDES]
@@ -88,20 +89,13 @@ export default function Home() {
     return () => window.removeEventListener('keydown', focusSearch);
   }, []);
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const toolMatches = words.length
-    ? TOOLS.filter((tool) => {
-        const text =
-          `${tool.nav} ${tool.title} ${tool.group} ${tool.summary}`.toLowerCase();
-        return words.every((word) => text.includes(word));
-      })
-    : [];
-  const guideMatches = words.length
-    ? GUIDES.filter((guide) => {
-        const text =
-          `${guide.title} ${guide.seoTitle} ${guide.description}`.toLowerCase();
-        return words.every((word) => text.includes(word));
-      })
-    : [];
+  const entries: SearchEntry[] = [
+    ...TOOLS.map(tool => ({ path: tool.path, title: tool.title, description: tool.summary, kind: 'Tool' as const, group: tool.group, keywords: tool.nav })),
+    ...GUIDES.map(guide => ({ path: guide.path, title: guide.title, description: guide.description, kind: 'Guide' as const, group: guide.category, keywords: guide.seoTitle })),
+  ];
+  const matches = searchEntries(entries, query);
+  const toolMatches = matches.filter(entry => entry.kind === 'Tool').map(entry => TOOLS.find(tool => tool.path === entry.path)!);
+  const guideMatches = matches.filter(entry => entry.kind === 'Guide').map(entry => GUIDES.find(guide => guide.path === entry.path)!);
 
   return (
     <>

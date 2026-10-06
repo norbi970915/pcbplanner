@@ -139,7 +139,7 @@ export default function Crosstalk() {
             </table>
           </Panel>
           <Panel title="Spacing Sweep (same geometry)">
-            <table className="tbl">
+            <table className="tbl" aria-busy={ok && !sweep}>
               <thead>
                 <tr>
                   <th>Edge gap</th>

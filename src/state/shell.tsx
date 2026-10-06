@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 
 export interface ToolActions {
   reset?: () => void;
+  report?: () => void;
 }
 
 export interface Shell {

@@ -4,6 +4,7 @@
 @import "./styles/workbench-update.css";
 @import "./styles/comparison.css";
 @import "./styles/field-interaction.css";
+@import "./styles/search-report.css";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 

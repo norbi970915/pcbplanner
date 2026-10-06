@@ -1,5 +1,6 @@
 import { ResizablePropertiesPanel } from './ResizablePropertiesPanel';
 import { MobileToolNavigation } from './MobileToolNavigation';
+import { GlobalSearch } from './GlobalSearch';
 import {
   Suspense,
   useCallback,
@@ -264,6 +265,7 @@ export function Layout() {
     writeJson(PANELS_KEY, panels);
   }, [panels]);
 
+  const openReport = () => { setMenu(null); actions.current?.report?.(); };
   const run = (fn: () => void) => () => {
     setMenu(null);
     fn();
@@ -388,6 +390,7 @@ export function Layout() {
             </Item>
             <Item onClick={run(() => navigate('/projects'))}>Projects…</Item>
             <div className="menu-sep" />
+            {!!toolByPath(path) && <Item onClick={openReport}>Calculation report...</Item>}
             <Item onClick={run(() => window.print())} hint="Ctrl+P">
               Print…
             </Item>
@@ -497,7 +500,7 @@ export function Layout() {
             Guides
           </Link>
           <div className="header-spacer" />
-          <span className="workspace-label">Design workspace</span>
+          <GlobalSearch />
           <Button
             variant="ghost"
             size="icon"

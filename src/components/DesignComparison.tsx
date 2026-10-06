@@ -33,11 +33,11 @@ function delta(a?: ComparisonRow, b?: ComparisonRow): string {
 export function ComparisonPanel({ comparison }: { comparison: Comparison }) {
   const { issues } = useFieldInteraction();
   const c = { ...comparison, ready: comparison.ready && issues.length === 0 };
-  if (!c.baseline || !c.expanded) return null;
+  if (!c.baseline) return null;
   const inputs = comparisonRows(c.baseline.inputs, c.design.inputs).filter(row => row.changed);
   // Never put an old worker result beside the new inputs while a solve is pending.
   const results = comparisonRows(c.baseline.results, c.ready ? c.design.results : []);
-  return <section id={c.id} className="design-comparison" aria-label="Design comparison" tabIndex={-1}>
+  return <section id={c.id} className="design-comparison" hidden={!c.expanded} aria-label="Design comparison" tabIndex={-1}>
     <Panel title="Design comparison" allowInvalid right={<Button type="button" variant="ghost" size="sm" onClick={c.close} aria-label="Close comparison"><X size={15} /></Button>}>
       <div className="comparison-intro">
         <p role="status">{!c.ready ? 'Waiting for valid results for the current design.' : inputs.length ? 'Baseline A stays fixed while you edit design B.' : 'Baseline saved. Change an input to compare the results.'}</p>

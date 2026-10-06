@@ -1,4 +1,7 @@
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { FileText } from 'lucide-react';
+import { CalculationReport } from './CalculationReport';
+import { captureReport, type ReportSnapshot } from '../lib/calculationReport';
 import { createPortal } from 'react-dom';
 import { RelatedGuides } from './RelatedGuides';
 import { FavoriteButton } from './FavoriteButton';
@@ -36,6 +39,10 @@ export function ToolPage({
 }) {
   const { pathname } = useLocation();
   const interaction = useFieldInteractionState();
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const methodRef = useRef<HTMLDivElement>(null);
+  const reportReturnFocus = useRef<HTMLElement | null>(null);
+  const [reportSnapshot, setReportSnapshot] = useState<ReportSnapshot | null>(null);
   const paused = interaction.issues.length > 0;
   const focusIssue = () => {
     showInputs();
@@ -49,10 +56,22 @@ export function ToolPage({
   const related = guidesForTool(pathname);
   const relatedT = relatedTools(pathname);
   const tool = toolByPath(pathname);
+  const createReport = useCallback(() => {
+    reportReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (resultsRef.current) setReportSnapshot(captureReport(title, description, resultsRef.current, propsEl, methodRef.current, statusEl));
+  }, [title, description, propsEl, statusEl]);
+  const closeReport = () => {
+    setReportSnapshot(null);
+    requestAnimationFrame(() => {
+      const trigger = reportReturnFocus.current;
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+      else Array.from(document.querySelectorAll<HTMLButtonElement>('.report-trigger')).find(button => button.getClientRects().length)?.focus({ preventScroll: true });
+    });
+  };
   useEffect(() => {
-    setActions({ reset: onReset });
+    setActions({ reset: onReset, report: createReport });
     return () => setActions(null);
-  }, [onReset, setActions]);
+  }, [onReset, setActions, createReport]);
 
   // narrow screens: the header is shown above the inputs (Layout slot), so it is hidden here
   const mobileHead = (
@@ -75,6 +94,7 @@ export function ToolPage({
         <p className="text-muted">{description}</p>
       </div>
       <div className="tool-actions">
+        {tool && <Button type="button" variant="ghost" size="sm" className="report-trigger" onClick={createReport} aria-label="Create calculation report"><FileText size={15} /><span>Report</span></Button>}
         {tool && <FavoriteButton path={tool.path} title={tool.title} compact />}
         {onReset && (
           <Button variant="outline" size="sm" className="reset-button" onClick={onReset}>
@@ -104,6 +124,7 @@ export function ToolPage({
           <p className="max-w-[95ch] text-muted">{description}</p>
         </div>
         <div className="tool-actions">
+          {tool && <Button type="button" variant="ghost" size="sm" className="report-trigger" onClick={createReport} aria-label="Create calculation report"><FileText size={15} />Report</Button>}
           {tool && <FavoriteButton path={tool.path} title={tool.title} />}
           {onReset && (
             <Button variant="outline" size="sm" className="reset-button" onClick={onReset}>
@@ -117,7 +138,7 @@ export function ToolPage({
         <div><strong>Results paused</strong><p>{interaction.issues[0].label}: {interaction.issues[0].message}</p></div>
         <Button type="button" variant="outline" size="sm" onClick={focusIssue}>Go to input</Button>
       </div>}
-      <div className="space-y-4" data-inputs-invalid={paused || undefined}>{children}</div>
+      <div ref={resultsRef} className="space-y-4" data-inputs-invalid={paused || undefined}>{children}</div>
 
       {related.length > 0 && (
         <RelatedGuides key={pathname} guides={related} toolPath={pathname} />
@@ -142,13 +163,14 @@ export function ToolPage({
           <summary className="method-heading flex cursor-pointer select-none items-center bg-panel-head px-2 font-semibold">
             Method, formulas and references
           </summary>
-          <div className="prose-doc px-4 py-3">{method}</div>
+          <div ref={methodRef} className="prose-doc px-4 py-3">{method}</div>
         </details>
       )}
 
       {propsEl && properties && createPortal(<FieldInteractionContext.Provider value={{ ...interaction, inProperties: true }}>{properties}</FieldInteractionContext.Provider>, propsEl)}
       {statusEl && status && createPortal(paused ? 'Results paused \u00b7 Check the inputs' : status, statusEl)}
     </div>
+    {reportSnapshot && <CalculationReport snapshot={reportSnapshot} onClose={closeReport} />}
     </FieldInteractionContext.Provider>
   );
 }

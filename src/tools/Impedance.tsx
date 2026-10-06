@@ -517,7 +517,7 @@ export default function Impedance() {
       </div>
       <ComparisonPanel comparison={comparison} />
       {raw.tolEnabled && <Panel title="Fabrication Tolerance Check" className="mt-3">
-        {tolerance.error ? <p className="px-3 py-3 text-muted">{tolerance.error}</p> : toleranceState.error && toleranceState.key === toleranceKey ? <p className="px-3 py-3 text-[var(--err-line)]">{toleranceState.error}</p> : toleranceMin === null || toleranceMax === null ? <p className="px-3 py-3 text-muted">Checking {tolerance.corners?.length ?? 0} fabrication corners…</p> : <>
+        {tolerance.error ? <p className="px-3 py-3 text-muted">{tolerance.error}</p> : toleranceState.error && toleranceState.key === toleranceKey ? <p className="px-3 py-3 text-[var(--err-line)]">{toleranceState.error}</p> : toleranceMin === null || toleranceMax === null ? <p aria-busy="true" className="px-3 py-3 text-muted">Checking {tolerance.corners?.length ?? 0} fabrication corners…</p> : <>
           <div className="flex flex-wrap gap-8 px-3 py-3">
             <Big label="Estimated low" value={fmt(toleranceMin, 4)} unit="Ω" />
             <Big label="Estimated high" value={fmt(toleranceMax, 4)} unit="Ω" />

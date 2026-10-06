@@ -29,7 +29,7 @@ export function StackupPicker({ onApply, applyLabel = 'Apply' }: { onApply: (sta
         <label className="text-muted" htmlFor="stk">
           Stackup
         </label>
-        <select
+        <select data-report-ignore
           id="stk"
           className="fld w-[176px]"
           value={stack?.id ?? ''}
@@ -54,7 +54,7 @@ export function StackupPicker({ onApply, applyLabel = 'Apply' }: { onApply: (sta
       </div>
       {stack?.regions?.length && <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <label htmlFor="stk-region" className="text-muted">Region</label>
-        <select id="stk-region" className="fld w-[176px]" value={selectedRegion} onChange={e=>{setRegionId(e.target.value);setLayerId('');}}>
+        <select data-report-ignore id="stk-region" className="fld w-[176px]" value={selectedRegion} onChange={e=>{setRegionId(e.target.value);setLayerId('');}}>
           {stack.regions.map(r=><option key={r.id} value={r.id}>{r.name} ({r.kind})</option>)}
         </select>
       </div>}
@@ -62,7 +62,7 @@ export function StackupPicker({ onApply, applyLabel = 'Apply' }: { onApply: (sta
         <label className="text-muted" htmlFor="stk-l">
           Layer
         </label>
-        <select id="stk-l" className="fld w-[118px]" value={layerId || coppers[0]?.id || ''} onChange={(e) => setLayerId(e.target.value)}>
+        <select data-report-ignore id="stk-l" className="fld w-[118px]" value={layerId || coppers[0]?.id || ''} onChange={(e) => setLayerId(e.target.value)}>
           {coppers.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
