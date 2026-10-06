@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 export interface FieldIssue { id: string; label: string; message: string; }
 interface FieldInteraction {
@@ -14,7 +14,17 @@ export const FieldInteractionContext = createContext<FieldInteraction>({
 });
 export const useFieldInteraction = () => useContext(FieldInteractionContext);
 export function useFieldInteractionState() {
-  const [activeField, setActiveField] = useState<string | null>(null);
+  const [activeField, setFocusedField] = useState<string | null>(null);
+  const highlightTimer = useRef<number | undefined>(undefined);
+  const setActiveField = useCallback((key: string | null) => {
+    window.clearTimeout(highlightTimer.current);
+    setFocusedField(key);
+    highlightTimer.current = key === null ? undefined : window.setTimeout(() => {
+      highlightTimer.current = undefined;
+      setFocusedField(null);
+    }, 5000);
+  }, []);
+  useEffect(() => () => window.clearTimeout(highlightTimer.current), []);
   const [issueMap, setIssueMap] = useState<Record<string, FieldIssue>>({});
   const reportIssue = useCallback((id: string, issue?: FieldIssue) => {
     setIssueMap(previous => {
@@ -26,7 +36,7 @@ export function useFieldInteractionState() {
     });
   }, []);
   const issues = useMemo(() => Object.values(issueMap), [issueMap]);
-  return useMemo(() => ({ activeField, setActiveField, issues, reportIssue }), [activeField, issues, reportIssue]);
+  return useMemo(() => ({ activeField, setActiveField, issues, reportIssue }), [activeField, setActiveField, issues, reportIssue]);
 }
 export function useFieldIssue(id: string | undefined, label: ReactNode, message?: string) {
   const { reportIssue } = useFieldInteraction();

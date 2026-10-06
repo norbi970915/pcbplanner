@@ -108,13 +108,13 @@ export function Row({
   return (
     <div className="property-field grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
       data-diagram-input={field}
-      onFocusCapture={() => setActiveField(field ?? null)}
-      onBlurCapture={event => { const next = event.relatedTarget; if (!event.currentTarget.contains(next) && !(next instanceof Element && next.closest(".mobile-workbench-bar"))) setActiveField(null); }}>
+      onFocusCapture={event => { if (event.target instanceof Element && event.target.matches("input, select") && event.currentTarget.contains(event.target)) setActiveField(field ?? null); }}
+      onPointerDownCapture={event => { if (event.target instanceof Node && event.currentTarget.contains(event.target)) setActiveField(field ?? null); }}>
       <div className="property-field-label-wrap">
         <label htmlFor={htmlFor} className="property-field-label text-muted">
           {label}{symbol && <span className="ml-1 font-[Cambria,serif] italic text-faint">{symbol}</span>}
         </label>
-        {hint && <FieldHelp label={label} hint={hint} descriptionId={htmlFor ? htmlFor + '-help' : undefined} />}
+        {hint && <FieldHelp label={label} hint={hint} descriptionId={htmlFor ? htmlFor + '-help' : undefined} diagramKey={field} />}
       </div>
       <div className="flex items-center gap-1">{children}</div>
       {error && <p id={htmlFor + '-error'} className="field-error">{error}</p>}
