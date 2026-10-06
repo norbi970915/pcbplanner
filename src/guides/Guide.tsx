@@ -1,5 +1,7 @@
+import { GuideContents } from '../components/GuideContents';
+import { guideScrollRoot, insertGuideContents, prepareGuideContents } from '../lib/guideContents';
 import { Card } from '../components/shadcn/card';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { useDocumentMeta } from '../components/ToolPage';
@@ -24,23 +26,25 @@ export function Guide({
   const g = guideByPath(pathname)!;
   useDocumentMeta(g.seoTitle, g.description);
   const { statusEl } = useShell();
+  const articleRef = useRef<HTMLElement>(null);
   // start each article at the top (the document area scrolls on desktop, the window on phones).
   // Block body on purpose: scrollTo returns a Promise in current browsers, and an effect must not return one.
   useEffect(() => {
-    document.querySelector('main')?.scrollTo(0, 0);
-    window.scrollTo(0, 0);
+    const frame = requestAnimationFrame(() => {
+      const article = articleRef.current;
+      if (!article) return;
+      let id = '';
+      try { id = decodeURIComponent(window.location.hash.slice(1)); } catch { /* malformed hash */ }
+      const target = id ? document.getElementById(id) : null;
+      if (target && article.contains(target)) {
+        target.scrollIntoView({ block: 'start' });
+        if (target.matches('h2')) target.focus({ preventScroll: true });
+      } else guideScrollRoot(article).scrollTo(0, 0);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [pathname]);
   const related = relatedGuidesFor(g.path);
-  return (
-    <article className="document-page">
-      <Card className="mx-auto max-w-[860px] border border-line bg-sheet">
-        <div className="flex h-[24px] items-center gap-1 bg-panel-head px-2 text-muted">
-          <Link to="/guides">Guides</Link>
-          <span>›</span>
-          <span className="truncate">{g.title}</span>
-        </div>
-        <div className="prose-doc guide px-6 py-6">
-          <h1>{g.title}</h1>
+  const prepared = prepareGuideContents(<>
           {children}
           <h2>Tools used in this guide</h2>
           <ul>
@@ -80,6 +84,19 @@ export function Guide({
             </>
           )}
           <p><Link to="/guides">Browse all guides</Link></p>
+  </>);
+  return (
+    <article ref={articleRef} className="document-page">
+      <Card className="mx-auto max-w-[860px] border border-line bg-sheet">
+        <div className="flex h-[24px] items-center gap-1 bg-panel-head px-2 text-muted">
+          <Link to="/guides">Guides</Link>
+          <span>›</span>
+          <span className="truncate">{g.title}</span>
+        </div>
+        <div className="prose-doc guide px-6 py-6">
+          <h1>{g.title}</h1>
+          {insertGuideContents(prepared.body, <GuideContents key={pathname} sections={prepared.sections} />)}
+          <p className="guide-back-to-contents"><a href="#guide-contents">Back to contents</a></p>
         </div>
       </Card>
       {statusEl && createPortal(<span>Guide</span>, statusEl)}

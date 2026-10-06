@@ -12,6 +12,8 @@ import { isStackup, parseStackupFile, serialiseStackup } from '../lib/stackupFil
 import { boardThickness, copperCount, DEFAULT_DF, shortName, geometryForLayer, MASK_DF, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
 import { fmt, fromMm, MM_PER_OZ, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
+import { useTrackedState } from '../state/useTrackedState';
+import { useSyncedText } from '../state/useNumericText';
 import { stackupStore, useStackups } from '../state/stackupStore';
 
 const TYPE_LABEL: Record<LayerKind, string> = { mask: 'Solder Mask', copper: 'Signal', dielectric: 'Dielectric', coverlay: 'Coverlay film', adhesive: 'Adhesive' };
@@ -43,10 +45,7 @@ const layerSwatch = (l: Layer, i: number, all: Layer[]) => {
 
 /** Numeric cell; only values above `min` (or at least `min` when `inclusive`) are accepted. */
 function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false, label, digits = 5 }: { value: number; onChange: (v: number) => void; width?: number; disabled?: boolean; min?: number; inclusive?: boolean; label?: string; digits?: number }) {
-  const [text, setText] = useState(plain(value, digits));
-  useEffect(() => {
-    setText(plain(value, digits));
-  }, [value, digits]);
+  const { text, setText, emit } = useSyncedText(value, v => plain(v, digits));
   const n = Number.parseFloat(text);
   const valid = (v: number) => Number.isFinite(v) && (inclusive ? v >= min : v > min) && v < 1000;
   return (
@@ -58,10 +57,11 @@ function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false
       disabled={disabled}
       aria-label={label}
       aria-invalid={!valid(n)}
+      data-uncommitted-input={!valid(n) || undefined}
       onChange={(e) => {
         setText(e.target.value);
         const v = Number.parseFloat(e.target.value);
-        if (valid(v)) onChange(v);
+        if (valid(v)) { emit(v); onChange(v); }
       }}
     />
   );
@@ -110,10 +110,10 @@ export default function StackupTool() {
   const { unit } = useSettings();
   const id = params.get('id') ?? readSession('selected') ?? stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id;
   const current = stackups.find((s) => s.id === id) ?? stackups[0];
-  const [draft, setDraft] = useState<Stackup>(() => readDraft(current));
+  const [draft, setDraft, replaceDraft] = useTrackedState<Stackup>('stackup-draft', () => readDraft(current));
   useEffect(() => {
-    setDraft(readDraft(current));
-  }, [current]);
+    replaceDraft(readDraft(current));
+  }, [current, replaceDraft]);
   useEffect(() => { writeSession('selected', current.id); }, [current.id]);
   useEffect(() => {
     if (draft.id !== current.id) return;
@@ -175,7 +175,7 @@ export default function StackupTool() {
   };
 
   // ---- impedance tab: widths for common targets on every signal layer ----
-  const [targets, setTargets] = useState(() => {
+  const [targets, setTargets] = useTrackedState('stackup-targets', () => {
     try {
       const saved = JSON.parse(readSession('targets') || 'null');
       if (saved && [saved.se, saved.diff, saved.s].every((v) => typeof v === 'number' && Number.isFinite(v))) return saved as { se: number; diff: number; s: number };

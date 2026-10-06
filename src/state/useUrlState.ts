@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTrackedState } from './useTrackedState';
+import { REFRESH_INPUTS_EVENT } from './designHistoryStore';
 import { FLUSH_TOOL_URL_EVENT } from '../lib/toolUrl';
 
 type Primitive = string | number | boolean;
@@ -85,20 +87,20 @@ function saveSession<T extends Record<string, Primitive>>(path: string, state: T
  * returning to a tool during this browser tab's session.
  */
 /** Event fired after a reset so input fields re-display their values. */
-export const RESET_EVENT = 'pcbplanner:reset';
+export const RESET_EVENT = REFRESH_INPUTS_EVENT;
 
 export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
   const defaultsRef = useRef(defaults);
   const location = useLocation();
   const path = location.pathname;
-  const [state, setState] = useState<T>(() => restoreToolState(window.location.search, readSession(path), defaults));
+  const [state, setState, replaceState] = useTrackedState<T>('inputs', () => restoreToolState(window.location.search, readSession(path), defaults));
   const navigationKey = useRef(location.key);
 
   useEffect(() => {
     if (navigationKey.current === location.key) return;
     navigationKey.current = location.key;
-    setState(restoreToolState(location.search, readSession(path), defaultsRef.current));
-  }, [location.key, location.search, path]);
+    replaceState(restoreToolState(location.search, readSession(path), defaultsRef.current));
+  }, [location.key, location.search, path, replaceState]);
 
   useEffect(() => {
     saveSession(path, state, defaultsRef.current);
@@ -112,12 +114,12 @@ export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
     return () => { clearTimeout(t); window.removeEventListener(FLUSH_TOOL_URL_EVENT, writeUrl); };
   }, [path, state]);
 
-  const set = useCallback((patch: Partial<T>) => setState((s) => ({ ...s, ...patch })), []);
+  const set = useCallback((patch: Partial<T>) => setState((s) => ({ ...s, ...patch })), [setState]);
   const reset = useCallback(() => {
-    setState(defaultsRef.current);
+    setState(defaultsRef.current, 'Reset inputs');
     saveSession(path, defaultsRef.current, defaultsRef.current);
     // after the re-render, tell every field to re-display its value (clears unparsable text)
     setTimeout(() => window.dispatchEvent(new Event(RESET_EVENT)), 0);
-  }, [path]);
+  }, [path, setState]);
   return [state, set, reset] as const;
 }

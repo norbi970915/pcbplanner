@@ -9,6 +9,9 @@ import { decimateMinMax, groupDelay, lowerIndex, magnitudeDb, phaseDeg, svgPath,
 import { impedanceFromRho, lowPassStep, stepRiseTime } from '../lib/tdr';
 import { MAX_FILE_CHARS, MAX_PORTS, parseTouchstone, portsFromFileName, type Matrices, type Network } from '../lib/touchstone';
 import { fmt } from '../lib/units';
+import { useLocation } from 'react-router-dom';
+import { useTrackedState } from '../state/useTrackedState';
+import { historyTransaction } from '../state/designHistoryStore';
 import { useUrlState } from '../state/useUrlState';
 
 const DEFAULTS = { f: 4, view: 'se', conv: '13', tr: '', mt: '', gd: '', tdr: '', ap: 5, beta: 6, tmax: 0, ph: 'wrap', iface: '' };
@@ -343,7 +346,8 @@ interface Loaded {
 
 export default function SParameterViewer() {
   const [p, set, reset] = useUrlState(DEFAULTS);
-  const [data, setData] = useState<Loaded | null>(null);
+  const { pathname } = useLocation();
+  const [data, setData, replaceData] = useTrackedState<Loaded | null>('loaded-file', null, Object.is);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -360,10 +364,10 @@ export default function SParameterViewer() {
       if (id !== readSeq.current) return;
       const net = parseTouchstone(text, { ports: portsFromFileName(file.name) });
       if (id !== readSeq.current) return;
-      setData({ net, name: file.name });
+      replaceData({ net, name: file.name });
     } catch (e) {
       if (id === readSeq.current) {
-        setData(null);
+        replaceData(null);
         setError(e instanceof Error ? e.message : String(e));
       }
     } finally {
@@ -416,10 +420,12 @@ export default function SParameterViewer() {
 
   const clear = () => {
     ++readSeq.current;
-    setData(null);
+    historyTransaction(pathname, 'Reset inputs', () => {
+      setData(null);
+      reset();
+    });
     setError(null);
     setBusy(false);
-    reset();
   };
 
   const net = data?.net ?? null;

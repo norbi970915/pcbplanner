@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { FileText } from 'lucide-react';
+import { HistoryControls } from './HistoryControls';
+import { useHistoryShortcuts } from '../state/useHistoryShortcuts';
 import { CalculationReport } from './CalculationReport';
 import { captureReport, type ReportSnapshot } from '../lib/calculationReport';
 import { createPortal } from 'react-dom';
@@ -39,6 +41,7 @@ export function ToolPage({
 }) {
   const { pathname } = useLocation();
   const interaction = useFieldInteractionState();
+  const historyMessage = useHistoryShortcuts();
   const resultsRef = useRef<HTMLDivElement>(null);
   const methodRef = useRef<HTMLDivElement>(null);
   const reportReturnFocus = useRef<HTMLElement | null>(null);
@@ -94,6 +97,7 @@ export function ToolPage({
         <p className="text-muted">{description}</p>
       </div>
       <div className="tool-actions">
+        <HistoryControls />
         {tool && <Button type="button" variant="ghost" size="sm" className="report-trigger" onClick={createReport} aria-label="Create calculation report"><FileText size={15} /><span>Report</span></Button>}
         {tool && <FavoriteButton path={tool.path} title={tool.title} compact />}
         {onReset && (
@@ -109,6 +113,7 @@ export function ToolPage({
     <FieldInteractionContext.Provider value={interaction}>
     <div className="document-page tool-page" style={{ '--tool-accent': GROUP_COLORS[tool?.group ?? ''] ?? 'var(--accent-ink)' } as CSSProperties}>
       {headEl && createPortal(mobileHead, headEl)}
+      <span className="sr-only" role="status" aria-live="polite">{historyMessage}</span>
       <div className="tool-heading mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
         <div className="min-w-0">
           <h1 className="tool-title flex items-center gap-2.5 font-semibold">
@@ -124,6 +129,7 @@ export function ToolPage({
           <p className="max-w-[95ch] text-muted">{description}</p>
         </div>
         <div className="tool-actions">
+        <HistoryControls />
           {tool && <Button type="button" variant="ghost" size="sm" className="report-trigger" onClick={createReport} aria-label="Create calculation report"><FileText size={15} />Report</Button>}
           {tool && <FavoriteButton path={tool.path} title={tool.title} />}
           {onReset && (

@@ -97,17 +97,18 @@ export function Panel({
 }
 
 export function Row({
-  label, symbol, hint, htmlFor, children, error, diagramKey,
+  label, symbol, hint, htmlFor, children, error, diagramKey, uncommitted = false,
 }: {
   label: ReactNode; symbol?: ReactNode; hint?: string; htmlFor?: string;
-  children: ReactNode; error?: string; diagramKey?: string;
+  children: ReactNode; error?: string; diagramKey?: string; uncommitted?: boolean;
 }) {
   const { setActiveField } = useFieldInteraction();
   const field = diagramKey ?? (typeof symbol === 'string' ? symbol.toLowerCase() : undefined);
-  useFieldIssue(htmlFor, label, error);
+  useFieldIssue(htmlFor, label, error, uncommitted);
   return (
     <div className="property-field grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
       data-diagram-input={field}
+      data-uncommitted-input={error && uncommitted || undefined}
       onFocusCapture={event => { if (event.target instanceof Element && event.target.matches("input, select") && event.currentTarget.contains(event.target)) setActiveField(field ?? null); }}
       onPointerDownCapture={event => { if (event.target instanceof Node && event.currentTarget.contains(event.target)) setActiveField(field ?? null); }}>
       <div className="property-field-label-wrap">
@@ -164,7 +165,7 @@ export function LenField({
   const error = numericInputIssue(text, { min, allowZero, scale: LEN_UNITS[unit].toMm, minimumLabel: plain(fromMm(min, unit), 5) + ' ' + LEN_UNITS[unit].label });
   const help = hint;
   return (
-    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey}>
+    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey} uncommitted>
       <Input
         id={id}
         className="fld w-[84px] text-right"
@@ -239,7 +240,7 @@ export function NumField({
   const error = numericInputIssue(text, options);
   const help = hint;
   return (
-    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey}>
+    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey} uncommitted>
       <Input
         id={id}
         className="fld text-right"
