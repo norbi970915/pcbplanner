@@ -1,7 +1,23 @@
 /* Compact welcome card; announcements retain their existing order. */
 .welcome-card .welcome-content { padding: 16px 20px; }
 .welcome-card .intro { margin-top: 7px; line-height: 1.6; }
-.welcome-card .starter { margin-top: 9px; }
+.home-project-start { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: color-mix(in srgb, var(--copper) 5%, var(--sheet)); }
+.home-project-icon { flex-shrink: 0; margin-top: 1px; color: var(--copper); }
+.home-project-copy { min-width: 0; }
+.home-project-copy h2 { font-size: 13px; font-weight: 600; line-height: 1.45; }
+.home-project-copy p { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.home-project-actions { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-top: 12px; }
+.home-project-actions > a { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--accent-ink); }
+.project-create-dialog { position: fixed; z-index: 81; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 24px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--sheet); color: var(--ink); box-shadow: 0 20px 80px rgb(0 0 0 / .4); }
+.project-create-dialog h2 { padding-right: 25px; font-size: 17px; font-weight: 600; }
+.project-create-dialog > p { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.project-create-close { position: absolute; top: 12px; right: 12px; }
+.project-create-dialog form { margin-top: 20px; }
+.project-create-dialog label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 600; }
+.project-create-dialog .project-create-note { margin-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.project-create-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+@media (max-width: 480px) { .home-project-start { gap: 10px; padding: 12px; } .project-create-dialog { padding: 20px; } }
+@media print { .project-create-dialog { display: none !important; } }
 .welcome-card .search-label { margin-top: 13px; }
 .welcome-card .welcome-news-heading { padding: 11px 20px 0; }
 .welcome-card .welcome-news .news-item { padding: 10px 20px 12px; gap: 10px; }

@@ -186,9 +186,10 @@ export default function Projects() {
               </tbody>
             </table>
           ) : (
-            <p className="px-2.5 py-2 text-muted">
-              Nothing saved yet. Open a tool, set your inputs, then use <b>File → Save Tool to Project</b>.
-            </p>
+            <div className="px-2.5 py-3 text-muted">
+              <p>Nothing saved yet. Choose a calculator, set your inputs, then use <b>File &rarr; Save Tool to Project</b>.</p>
+              <Link className="btn btn-primary inline-flex mt-3" to="/tools">Choose a calculator</Link>
+            </div>
           )}
           <p className="px-2.5 py-1.5 text-faint">
             Created {when(active.created)} · last change {when(active.updated)}
