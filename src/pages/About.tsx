@@ -142,13 +142,9 @@ export default function About() {
             </p>
           </section>
 
-          <section className="about-creator" aria-labelledby="about-creator">
-            <h2 id="about-creator">Built by a hardware engineer</h2>
-            <p>
-              {APP_NAME} is created by a hardware design engineer with a background in physics
-              and experience in automotive electronics, home appliances and industrial sensors.
-              The aim is to make practical PCB calculations easier to use, explain and revisit.
-            </p>
+          <section className="about-motto" aria-labelledby="about-motto">
+            <h2 id="about-motto">Built by an engineer, for engineers.</h2>
+            <p>Practical tools. Clear assumptions. Better design decisions.</p>
           </section>
         </div>
       </Card>

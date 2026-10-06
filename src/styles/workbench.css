@@ -1628,8 +1628,8 @@ kbd {
 .about-copy a.about-feature:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 .about-copy .about-workflows { padding-left: 20px; }
 .about-copy .about-workflows li { margin: 12px 0; }
-.about-copy .about-creator { margin-top: 28px; padding-top: 3px; border-top: 1px solid var(--line); }
-.about-copy .about-creator p { color: var(--muted); }
+.about-copy .about-motto { margin-top: 28px; padding-top: 3px; border-top: 1px solid var(--line); }
+.about-copy .about-motto p { color: var(--muted); }
 @media (max-width: 699px) {
   .about-features { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .about-copy a.about-feature { padding: 15px; }
