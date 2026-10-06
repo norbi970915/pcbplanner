@@ -1,4 +1,4 @@
-import { DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
+import { DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
 import { useId, useState } from 'react';
 import { SiField } from '../components/SiField';
 import { ToolPage } from '../components/ToolPage';
@@ -168,6 +168,10 @@ function Circuit({ result: r }: { result: RcResult }) {
         <path d="M252 182V197 M237 197H267 M242 204H262 M247 211H257"/>
         <path d="M36 107H48 M42 101V113 M36 122H48" stroke="var(--accent-ink)"/>
       </g>
+      <DiagramFocus field="rs" x={86} y={52} width={56} height={32} />
+      <DiagramFocus field={low?"r":"c"} x={184} y={45} width={68} height={46} />
+      <DiagramFocus field={low?"c":"r"} x={302} y={98} width={52} height={52} />
+      {r.rl > 0 && <DiagramFocus field="rl" x={418} y={98} width={36} height={52} />}
       <circle cx="328" cy="68" r="3.5" fill="var(--copper)"/>
       {r.rl>0 && <circle cx="436" cy="68" r="3" fill="var(--ink)"/>}
       <circle cx="472" cy="68" r="4.5" fill="var(--copper)"/>

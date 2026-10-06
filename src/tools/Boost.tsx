@@ -48,7 +48,7 @@ export default function Boost() {
   if (r && r.ccm && b.dvTotal > 0 && r.totalRequired === null) notes.push('ESR ripple alone meets or exceeds the total output-ripple budget. More capacitance cannot meet this budget with the entered ESR.');
   if (r && r.ccm && r.partialLoss > r.loss + 1e-9) notes.push('The entered winding, diode and capacitor losses exceed the loss budget implied by your efficiency estimate. Check the efficiency and component values.');
   const field = (label: string, k: keyof typeof DEFAULTS, unit: string, hint?: string, allowZero = false) =>
-    <NumField key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
+    <NumField diagramKey={k} key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
   const optional = '0 = not supplied; no pass is claimed.';
   const toggle = (label: string, k: 'xcin' | 'xrat' | 'xic' | 'xsweep' | 'xwave', hint: string) =>
     <Check key={k} label={label} checked={p[k]} onChange={v => set({ [k]: v })} hint={hint} />;

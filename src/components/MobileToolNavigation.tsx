@@ -8,9 +8,10 @@ export function MobileToolNavigation({mainRef,statusEl,onShowInputs}:{mainRef:Re
     let frame=0;
     const update=()=>{
       frame=0;const main=mainRef.current;
+      const paused=main?.querySelector('.inputs-paused');
       const error=main?.querySelector('[role="alert"]');
       const results=main?[...main.querySelectorAll('.headline-result')].slice(0,2):[];
-      const next=error?[{label:'Check inputs',value:text(error)}]:results.length?results.map(el=>({
+      const next=paused?[{label:'Results paused',value:text(paused.querySelector('p'))}]:error?[{label:'Check inputs',value:text(error)}]:results.length?results.map(el=>({
         label:text(el.querySelector('[data-copy-label]')),
         value:el.getAttribute('data-result-busy')==='true'?'Updating\u2026':[text(el.querySelector('[data-copy-value]')),text(el.querySelector('[data-copy-unit]'))].filter(Boolean).join(' '),
       })):[{label:'Current result',value:text(statusEl)||'Enter inputs to see results.'}];
@@ -18,7 +19,7 @@ export function MobileToolNavigation({mainRef,statusEl,onShowInputs}:{mainRef:Re
     };
     const schedule=()=>{if(!frame)frame=requestAnimationFrame(update);};
     const observer=new MutationObserver(schedule);
-    if(mainRef.current)observer.observe(mainRef.current,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-result-busy']});
+    if(mainRef.current)observer.observe(mainRef.current,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-result-busy','data-inputs-invalid','hidden']});
     if(statusEl)observer.observe(statusEl,{subtree:true,childList:true,characterData:true});
     schedule();return()=>{observer.disconnect();cancelAnimationFrame(frame);};
   },[mainRef,statusEl]);

@@ -89,15 +89,15 @@ export default function Crosstalk() {
           ]}
         />
         {p.type === 'microstrip' && <Check label="Solder mask coating" checked={p.mask} onChange={(v) => set({ mask: v })} />}
-        <LenField label="Trace width" symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
-        <LenField label="Copper thickness" symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
-        <LenField label="Edge-to-edge spacing" symbol="S" value={p.s} onChange={(v) => set({ s: v })} />
-        <LenField label={p.type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
-        <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+        <LenField label="Trace width" hint="Copper trace width. The cross-section is schematic; use the numerical dimensions for fabrication." symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
+        <LenField label="Copper thickness" hint="Copper thickness after processing. Selecting oz converts copper weight to an approximate thickness." symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
+        <LenField label="Edge-to-edge spacing" hint="Copper edge-to-edge clearance between the two traces. Centre pitch equals W + S." symbol="S" value={p.s} onChange={(v) => set({ s: v })} />
+        <LenField label={p.type === 'stripline' ? 'Plane to trace' : 'Height to plane'} hint="Dielectric distance from the nearest copper trace face to the reference plane; copper thickness is separate." symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
+        <NumField label="Dielectric constant" diagramKey="er" hint="Relative permittivity (Dk). Use a laminate value appropriate for your signal frequency." symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
         {p.type === 'stripline' && (
           <>
-            <LenField label="Trace to upper plane" symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
-            <NumField label="Upper εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+            <LenField label="Trace to upper plane" hint="Dielectric distance between the trace and the upper reference plane or cover boundary." symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
+            <NumField label="Upper εr" diagramKey="er2" hint="Relative permittivity of the upper dielectric." value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
           </>
         )}
       </Section>

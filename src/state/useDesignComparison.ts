@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { RESET_EVENT } from './useUrlState';
 import { decodeComparison, snapshotDesign, type ComparisonDesign, type ComparisonState } from '../lib/designComparison';
 
 export function useDesignComparison<S extends ComparisonState>(tool: string, design: ComparisonDesign<S>, ready: boolean, onRestore: (state: S) => void) {
@@ -31,6 +32,6 @@ export function useDesignComparison<S extends ComparisonState>(tool: string, des
     });
   };
   return { baseline, design, ready, expanded, id, save, close, toggle,
-    restore: () => { if (baseline) onRestore({ ...baseline.state }); },
+    restore: () => { if (baseline) { onRestore({ ...baseline.state }); setTimeout(() => window.dispatchEvent(new Event(RESET_EVENT)), 0); } },
   };
 }

@@ -295,9 +295,10 @@ export function Layout() {
     tabRefs.current.get(next)?.focus();
     navigate(next);
   };
+  const showInputs = useCallback(() => setPanels(previous => ({ ...previous, props: true })), []);
   const shell = useMemo(
-    () => ({ propsEl, statusEl, headEl, setActions }),
-    [propsEl, statusEl, headEl, setActions],
+    () => ({ propsEl, statusEl, headEl, setActions, showInputs }),
+    [propsEl, statusEl, headEl, setActions, showInputs],
   );
   const keyboardTab = tabs.includes(path) ? path : tabs[tabs.length - 1];
   const tabTitle = (p: string) =>
@@ -605,15 +606,14 @@ export function Layout() {
             className="order-first shrink-0 bg-doc lg:hidden"
           />
 
-          {!!toolByPath(path) && <MobileToolNavigation key={path} mainRef={mainRef} statusEl={statusEl} onShowInputs={()=>setPanels(previous=>({...previous,props:true}))}/>}
+          {!!toolByPath(path) && <MobileToolNavigation key={path} mainRef={mainRef} statusEl={statusEl} onShowInputs={showInputs}/>}
 
           {/* on narrow screens, calculator inputs sit above their results */}
-          {panels.props &&
-            path !== '/' &&
+          {path !== '/' &&
             path !== '/tools' &&
             path !== '/schematic' && (
               <ResizablePropertiesPanel
-                className={`properties-panel order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
+                className={`properties-panel ${panels.props ? "" : "properties-panel-is-hidden"} order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
               >
                 <div className="properties-heading flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
                   <span>

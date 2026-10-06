@@ -10,6 +10,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { guidesForTool } from '../guides/registry';
 import { useShell } from '../state/shell';
 import { GROUP_COLORS, relatedTools, toolByPath } from '../tools/registry';
+import { FieldInteractionContext, useFieldInteractionState } from '../state/fieldInteraction';
 
 /**
  * Frame of every tool: the document (results, drawings, help) is rendered in
@@ -34,8 +35,17 @@ export function ToolPage({
   method?: ReactNode;
 }) {
   const { pathname } = useLocation();
+  const interaction = useFieldInteractionState();
+  const paused = interaction.issues.length > 0;
+  const focusIssue = () => {
+    showInputs();
+    const input = document.getElementById(interaction.issues[0]?.id);
+    const toggle = input?.closest('.properties-section')?.querySelector<HTMLButtonElement>('button[aria-expanded="false"]');
+    toggle?.click();
+    requestAnimationFrame(() => { input?.focus(); input?.scrollIntoView({ block: 'center' }); });
+  };
   useDocumentMeta(toolByPath(pathname)?.seoTitle ?? title, description);
-  const { propsEl, statusEl, headEl, setActions } = useShell();
+  const { propsEl, statusEl, headEl, setActions, showInputs } = useShell();
   const related = guidesForTool(pathname);
   const relatedT = relatedTools(pathname);
   const tool = toolByPath(pathname);
@@ -76,6 +86,7 @@ export function ToolPage({
   );
 
   return (
+    <FieldInteractionContext.Provider value={interaction}>
     <div className="document-page tool-page" style={{ '--tool-accent': GROUP_COLORS[tool?.group ?? ''] ?? 'var(--accent-ink)' } as CSSProperties}>
       {headEl && createPortal(mobileHead, headEl)}
       <div className="tool-heading mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">
@@ -102,7 +113,11 @@ export function ToolPage({
         </div>
       </div>
 
-      <div className="space-y-4">{children}</div>
+      {paused && <div className="inputs-paused" role="status">
+        <div><strong>Results paused</strong><p>{interaction.issues[0].label}: {interaction.issues[0].message}</p></div>
+        <Button type="button" variant="outline" size="sm" onClick={focusIssue}>Go to input</Button>
+      </div>}
+      <div className="space-y-4" data-inputs-invalid={paused || undefined}>{children}</div>
 
       {related.length > 0 && (
         <RelatedGuides key={pathname} guides={related} toolPath={pathname} />
@@ -131,8 +146,9 @@ export function ToolPage({
         </details>
       )}
 
-      {propsEl && properties && createPortal(properties, propsEl)}
-      {statusEl && status && createPortal(status, statusEl)}
+      {propsEl && properties && createPortal(<FieldInteractionContext.Provider value={{ ...interaction, inProperties: true }}>{properties}</FieldInteractionContext.Provider>, propsEl)}
+      {statusEl && status && createPortal(paused ? 'Results paused \u00b7 Check the inputs' : status, statusEl)}
     </div>
+    </FieldInteractionContext.Provider>
   );
 }

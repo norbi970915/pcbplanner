@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import { useDiagramField, useFieldInteraction } from '../state/fieldInteraction';
 
 export type DiagramPaint = { copper: string; laminate: string; prepreg: string; arrow: string };
 export function EngineeringDiagram({ children, caption, legend = [], title }: {
@@ -37,17 +38,31 @@ export function DiagramSvg({ viewBox, label, children }: {
   </svg>;
 }
 
-export function DiagramDimension({ x1, y1, x2, y2, label, arrow }: {
-  x1: number; y1: number; x2: number; y2: number; label: string; arrow: string;
+export function DiagramDimension({ x1, y1, x2, y2, label, arrow, field }: {
+  x1: number; y1: number; x2: number; y2: number; label: string; arrow: string; field?: string;
 }) {
+  const active = useDiagramField(field ?? label.toLowerCase());
   const vertical = x1 === x2;
-  return <g className="diagram-dimension">
+  return <g className="diagram-dimension" data-diagram-field={field ?? label.toLowerCase()} data-active={active || undefined}>
+    {active && <line className="diagram-focus-line" x1={x1} y1={y1} x2={x2} y2={y2} />}
     <path d={vertical ? 'M' + (x1-5) + ' ' + y1 + 'h10 M' + (x2-5) + ' ' + y2 + 'h10' : 'M' + x1 + ' ' + (y1-5) + 'v10 M' + x2 + ' ' + (y2-5) + 'v10'} className="diagram-extension" />
     <line x1={x1} y1={y1} x2={x2} y2={y2} markerStart={arrow} markerEnd={arrow} />
     <text x={vertical ? x1 + 10 : (x1+x2)/2} y={vertical ? (y1+y2)/2 + 5 : y1-9} textAnchor={vertical ? 'start' : 'middle'} className="diagram-label">{label}</text>
   </g>;
 }
 
-export function DiagramValues({ items }: { items: { label: string; value: string; color?: string }[] }) {
-  return <dl className="diagram-values">{items.map(item => <div key={item.label}><dt>{item.color && <i style={{ background: item.color }} aria-hidden="true" />}{item.label}</dt><dd>{item.value}</dd></div>)}</dl>;
+/** An explicit outline supplements color so the selected component is easy to locate. */
+export function DiagramFocus({ field, x, y, width, height }: {
+  field: string | string[]; x: number; y: number; width: number; height: number;
+}) {
+  const active = useDiagramField(field);
+  return active ? <rect data-diagram-field={Array.isArray(field) ? field.join(' ') : field}
+    data-active="true" x={x} y={y} width={width} height={height} rx="5" className="diagram-focus-region" /> : null;
+}
+export function DiagramValues({ items }: { items: { label: string; value: string; color?: string; field?: string }[] }) {
+  const { activeField } = useFieldInteraction();
+  return <dl className="diagram-values">{items.map(item => {
+    const field = item.field ?? item.label.split(' \u00b7 ')[0].toLowerCase();
+    return <div key={item.label} data-diagram-field={field} data-active={field === activeField || undefined}><dt>{item.color && <i style={{ background: item.color }} aria-hidden="true" />}{item.label}</dt><dd>{item.value}</dd></div>;
+  })}</dl>;
 }

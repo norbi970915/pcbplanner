@@ -49,7 +49,7 @@ export default function Buck() {
   if (r && r.ccm && r.partialLoss > r.loss + 1e-9) notes.push('The entered winding, diode and capacitor losses exceed the loss budget implied by your efficiency estimate. Check the efficiency and component values.');
   if (r && r.dutyHigh > 0.9 && !b.maxDuty) notes.push(`Duty cycle reaches ${fmt(100 * r.dutyHigh, 3)} % at the lowest input. Enter the IC's maximum duty cycle or minimum off-time under IC limits to check it.`);
   const field = (label: string, k: keyof typeof DEFAULTS, unit: string, hint?: string, allowZero = false) =>
-    <NumField key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
+    <NumField diagramKey={k} key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
   const optional = '0 = not supplied; no pass is claimed.';
   const toggle = (label: string, k: 'xcin' | 'xrat' | 'xic' | 'xsweep' | 'xwave', hint: string) =>
     <Check key={k} label={label} checked={p[k]} onChange={v => set({ [k]: v })} hint={hint} />;

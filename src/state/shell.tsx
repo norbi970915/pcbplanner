@@ -10,7 +10,8 @@ export interface Shell {
   /** Narrow screens only: slot above the Properties panel for the tool's title. */
   headEl: HTMLElement | null;
   setActions: (a: ToolActions | null) => void;
+  showInputs: () => void;
 }
 
-export const ShellContext = createContext<Shell>({ propsEl: null, statusEl: null, headEl: null, setActions: () => {} });
+export const ShellContext = createContext<Shell>({ propsEl: null, statusEl: null, headEl: null, setActions: () => {}, showInputs: () => {} });
 export const useShell = () => useContext(ShellContext);

@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { plain } from '../lib/units';
 import { RESET_EVENT } from '../state/useUrlState';
+import { Row } from './ui';
+import { numericInputIssue, parseNumericInput } from '../lib/numericInput';
 
 const MULT: Record<string, number> = { p: 1e-12, n: 1e-9, µ: 1e-6, m: 1e-3, '': 1, k: 1e3, M: 1e6, G: 1e9 };
 export type SiPrefix = 'p' | 'n' | 'µ' | 'm' | '' | 'k' | 'M' | 'G';
@@ -30,6 +32,7 @@ export function SiField({
   allowNegative = false,
   digits = 6,
   hint,
+  diagramKey,
 }: {
   label: ReactNode;
   symbol?: ReactNode;
@@ -41,6 +44,7 @@ export function SiField({
   allowNegative?: boolean;
   digits?: number;
   hint?: string;
+  diagramKey?: string;
 }) {
   const [prefix, setPrefix] = useState<SiPrefix>(() => pickPrefix(value, prefixes));
   const [text, setText] = useState(() => plain(value / MULT[prefix], digits));
@@ -69,25 +73,22 @@ export function SiField({
     return () => window.removeEventListener(RESET_EVENT, onReset);
   }, []);
   const id = useId();
-  const n = Number.parseFloat(text);
-  const bad = !Number.isFinite(n) || (!allowNegative && (allowZero ? n < 0 : n <= 0));
+  const options = { allowZero, allowNegative, scale: MULT[prefix] };
+  const error = numericInputIssue(text, options);
+  const help = hint;
   return (
-    <div className="grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2" title={hint}>
-      <label htmlFor={id} className="truncate text-muted">
-        {label}
-        {symbol && <span className="ml-1 font-[Cambria,serif] italic text-faint">{symbol}</span>}
-      </label>
-      <div className="flex items-center gap-1">
+    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey}>
         <input
           id={id}
           className="fld w-[84px] text-right"
           inputMode="decimal"
           value={text}
-          aria-invalid={bad}
+          aria-invalid={!!error}
+          aria-describedby={[help && id + '-help', error && id + '-error'].filter(Boolean).join(' ')}
           onChange={(e) => {
             setText(e.target.value);
-            const v = Number.parseFloat(e.target.value);
-            if (Number.isFinite(v)) {
+            const v = parseNumericInput(e.target.value);
+            if (v !== null && !numericInputIssue(e.target.value, options)) {
               const base = v * MULT[prefix];
               emitted.current = base;
               onChange(base);
@@ -101,7 +102,8 @@ export function SiField({
           onChange={(e) => {
             const p = e.target.value as SiPrefix;
             setPrefix(p);
-            setText(plain(value / MULT[p], digits));
+            const entry = parseNumericInput(text);
+            if (entry !== null) setText(plain((error ? entry * MULT[prefix] : value) / MULT[p], digits));
           }}
         >
           {prefixes.map((p) => (
@@ -110,7 +112,6 @@ export function SiField({
             </option>
           ))}
         </select>
-      </div>
-    </div>
+    </Row>
   );
 }

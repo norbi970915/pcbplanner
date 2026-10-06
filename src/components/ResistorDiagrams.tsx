@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
+import { DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
 import { Segmented } from './ui';
 import type { divider } from '../lib/electronics';
 import { fmt, si } from '../lib/units';
@@ -21,6 +21,10 @@ export function VoltageDividerDiagram({ vin, r1, r2, load, result }: {
           {loaded && <g data-divider-load="connected"><path d="M390 170V207 M390 255V275H200" /><rect x="378" y="207" width="24" height="48" rx="3" fill="var(--panel)" stroke="var(--muted)" /></g>}
           <path d="M185 285H215 M190 293H210 M195 301H205" />
         </g>
+        <DiagramFocus field="r1" x={176} y={80} width={48} height={60} />
+        <DiagramFocus field="r2" x={176} y={201} width={48} height={60} />
+        {loaded && <DiagramFocus field="rl" x={366} y={201} width={48} height={60} />}
+        <DiagramFocus field="vin" x={247} y={22} width={108} height={58} />
         <circle cx="200" cy="50" r="4" fill="var(--copper)" /><circle cx="200" cy="170" r="4" fill="var(--accent-ink)" />
         {loaded && <><circle cx="390" cy="170" r="3" fill="var(--muted)" /><circle cx="200" cy="275" r="3" fill="var(--ink)" /></>}
         <g className="diagram-label">
@@ -65,6 +69,9 @@ export function LedResistorDiagram({ supply, forward, count, drop, values }: {
               <path d={'M445 ' + (y - 3) + 'L462 ' + (y - 20) + ' M454 ' + (y + 6) + 'L471 ' + (y - 11)} stroke="var(--accent-ink)" strokeWidth="1.4" markerEnd={paint.arrow} />
             </g>)}
           </g>
+          <DiagramFocus field="vs" x={35} y={140} width={60} height={60} />
+          <DiagramFocus field="if" x={294} y={79} width={80} height={48} />
+          <DiagramFocus field={["vf", "led-count"]} x={399} y={centres[0]-30} width={83} height={centres.at(-1)!-centres[0]+60} />
           <path d="M302 88H366" fill="none" stroke="var(--accent-ink)" strokeWidth="1.8" markerEnd={paint.arrow} />
           <g className="diagram-label" textAnchor="middle">
             <text x="190" y="33">R</text><text x="190" y="103">{si(selected.r, '\u03a9')}</text>

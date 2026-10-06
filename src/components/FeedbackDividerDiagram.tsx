@@ -1,4 +1,4 @@
-import { DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
+import { DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
 import type { FeedbackPair } from '../lib/power';
 import { fmt, si } from '../lib/units';
 
@@ -20,6 +20,10 @@ export function FeedbackDividerDiagram({ pair, vfb, ifb, series }: {
           <rect x="380" y="142" width="130" height="56" rx="6" fill="var(--panel)" stroke="var(--line-strong)" />
           <path d="M215 285H245 M220 293H240 M225 301H235" />
         </g>
+        <DiagramFocus field="vout" x={296} y={23} width={95} height={58} />
+        <DiagramFocus field="vfb" x={275} y={126} width={103} height={51} />
+        <DiagramFocus field="idiv" x={202} y={201} width={56} height={60} />
+        <DiagramFocus field="ifb" x={277} y={181} width={83} height={49} />
         <circle cx="230" cy="50" r="4" fill="var(--copper)" />
         <circle cx="230" cy="170" r="4" fill="var(--accent-ink)" />
         <g className="diagram-label">
@@ -35,8 +39,8 @@ export function FeedbackDividerDiagram({ pair, vfb, ifb, series }: {
       </>}
     </DiagramSvg>
     <DiagramValues items={[
-      { label: 'R2 \u00b7 Divider current', value: si(pair.iDivider, 'A', 4) },
-      { label: 'IFB \u00b7 Output shift', value: (biasShift > 0 ? '+' : '') + si(biasShift, 'V', 4) },
+      { field: 'idiv', label: 'R2 \u00b7 Divider current', value: si(pair.iDivider, 'A', 4) },
+      { field: 'ifb', label: 'IFB \u00b7 Output shift', value: (biasShift > 0 ? '+' : '') + si(biasShift, 'V', 4) },
     ]} />
   </EngineeringDiagram>;
 }

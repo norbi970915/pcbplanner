@@ -1,11 +1,14 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Card, CardHeader, CardContent } from './shadcn/card';
 import { Input } from './shadcn/input';
 import { Button } from './shadcn/button';
 import { formatCopiedResult } from '../lib/copyResult';
 import { fromMm, LEN_UNITS, plain, toMm, type LenUnit } from '../lib/units';
 import { useSettings } from '../state/settings';
-import { RESET_EVENT } from '../state/useUrlState';
+import { useSyncedText } from '../state/useNumericText';
+import { FieldHelp } from './FieldHelp';
+import { useFieldInteraction, useFieldIssue } from '../state/fieldInteraction';
+import { numericInputIssue, parseNumericInput } from '../lib/numericInput';
 
 /** Collapsible section of the Properties panel (▾ Title). */
 export function Section({
@@ -39,7 +42,7 @@ export function Section({
         </Button>
         {right}
       </div>
-      {open && <div className="space-y-1 px-3 py-3">{children}</div>}
+      <div className="space-y-1 px-3 py-3" hidden={!open}>{children}</div>
     </section>
   );
 }
@@ -66,12 +69,16 @@ export function Panel({
   right,
   children,
   className = '',
+  allowInvalid = false,
 }: {
   title?: ReactNode;
   right?: ReactNode;
   children: ReactNode;
   className?: string;
+  allowInvalid?: boolean;
 }) {
+  const { issues, inProperties } = useFieldInteraction();
+  const paused = issues.length > 0 && !allowInvalid && !inProperties;
   return (
     <Card className={`min-w-0 border border-line bg-sheet ${className}`}>
       {title && (
@@ -81,66 +88,38 @@ export function Panel({
         </CardHeader>
       )}
       {/* wide tables scroll sideways inside the panel on narrow screens */}
-      <CardContent className="panel-content overflow-x-auto p-0">
+      {paused && <p className="panel-inputs-paused">Waiting for valid inputs.</p>}
+      <CardContent className="panel-content overflow-x-auto p-0" hidden={paused}>
         {children}
       </CardContent>
     </Card>
   );
 }
 
-function Row({
-  label,
-  symbol,
-  hint,
-  htmlFor,
-  children,
+export function Row({
+  label, symbol, hint, htmlFor, children, error, diagramKey,
 }: {
-  label: ReactNode;
-  symbol?: ReactNode;
-  hint?: string;
-  htmlFor?: string;
-  children: ReactNode;
+  label: ReactNode; symbol?: ReactNode; hint?: string; htmlFor?: string;
+  children: ReactNode; error?: string; diagramKey?: string;
 }) {
+  const { setActiveField } = useFieldInteraction();
+  const field = diagramKey ?? (typeof symbol === 'string' ? symbol.toLowerCase() : undefined);
+  useFieldIssue(htmlFor, label, error);
   return (
-    <div
-      className="property-field grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
-      title={hint}
-    >
-      <label htmlFor={htmlFor} className="property-field-label text-muted">
-        {label}
-        {symbol && (
-          <span className="ml-1 font-[Cambria,serif] italic text-faint">
-            {symbol}
-          </span>
-        )}
-      </label>
+    <div className="property-field grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+      data-diagram-input={field}
+      onFocusCapture={() => setActiveField(field ?? null)}
+      onBlurCapture={event => { const next = event.relatedTarget; if (!event.currentTarget.contains(next) && !(next instanceof Element && next.closest(".mobile-workbench-bar"))) setActiveField(null); }}>
+      <div className="property-field-label-wrap">
+        <label htmlFor={htmlFor} className="property-field-label text-muted">
+          {label}{symbol && <span className="ml-1 font-[Cambria,serif] italic text-faint">{symbol}</span>}
+        </label>
+        {hint && <FieldHelp label={label} hint={hint} descriptionId={htmlFor ? htmlFor + '-help' : undefined} />}
+      </div>
       <div className="flex items-center gap-1">{children}</div>
+      {error && <p id={htmlFor + '-error'} className="field-error">{error}</p>}
     </div>
   );
-}
-
-function useSyncedText(value: number, toText: (v: number) => string) {
-  const [text, setText] = useState(() => toText(value));
-  const emitted = useRef(value);
-  const latest = useRef({ value, toText });
-  latest.current = { value, toText };
-  useEffect(() => {
-    if (value !== emitted.current) {
-      emitted.current = value;
-      setText(toText(value));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-  // Reset must also clear text the user typed that never parsed (the value did not change).
-  useEffect(() => {
-    const onReset = () => {
-      emitted.current = latest.current.value;
-      setText(latest.current.toText(latest.current.value));
-    };
-    window.addEventListener(RESET_EVENT, onReset);
-    return () => window.removeEventListener(RESET_EVENT, onReset);
-  }, []);
-  return { text, setText, emitted };
 }
 
 /** Length input stored in mm, displayed in a selectable unit. */
@@ -153,6 +132,7 @@ export function LenField({
   min = 0,
   allowZero = false,
   hint,
+  diagramKey,
 }: {
   label: ReactNode;
   symbol?: ReactNode;
@@ -162,39 +142,42 @@ export function LenField({
   min?: number;
   allowZero?: boolean;
   hint?: string;
+  diagramKey?: string;
 }) {
   const { unit: pref } = useSettings();
   // copper-thickness fields list 'oz' first and keep it regardless of the global unit
   const followsPref = units[0] !== 'oz' && units.includes(pref);
   const [unit, setUnit] = useState<LenUnit>(followsPref ? pref : units[0]);
-  const { text, setText, emitted } = useSyncedText(value, (v) =>
+  const { text, setText, emit } = useSyncedText(value, (v) =>
     plain(fromMm(v, unit), 5),
   );
   // global unit switch: change the unit AND convert the displayed number
   useEffect(() => {
     if (followsPref && pref !== unit) {
       setUnit(pref);
-      setText(plain(fromMm(value, pref), 5));
+      const entry = parseNumericInput(text);
+      if (entry !== null) setText(plain(fromMm(error ? toMm(entry, unit) : value, pref), 5));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pref]);
   const id = useId();
-  const n = Number.parseFloat(text);
-  const bad = !Number.isFinite(n) || (allowZero ? n < min : n <= min);
+  const error = numericInputIssue(text, { min, allowZero, scale: LEN_UNITS[unit].toMm, minimumLabel: plain(fromMm(min, unit), 5) + ' ' + LEN_UNITS[unit].label });
+  const help = hint;
   return (
-    <Row label={label} symbol={symbol} hint={hint} htmlFor={id}>
+    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey}>
       <Input
         id={id}
         className="fld w-[84px] text-right"
         inputMode="decimal"
         value={text}
-        aria-invalid={bad}
+        aria-invalid={!!error}
+        aria-describedby={[help && id + '-help', error && id + '-error'].filter(Boolean).join(' ')}
         onChange={(e) => {
           setText(e.target.value);
-          const v = Number.parseFloat(e.target.value);
-          if (Number.isFinite(v)) {
+          const v = parseNumericInput(e.target.value);
+          if (v !== null && !numericInputIssue(e.target.value, { min, allowZero, scale: LEN_UNITS[unit].toMm })) {
             const mm = toMm(v, unit);
-            emitted.current = mm;
+            emit(mm);
             onChange(mm);
           }
         }}
@@ -206,7 +189,8 @@ export function LenField({
         onChange={(e) => {
           const u = e.target.value as LenUnit;
           setUnit(u);
-          setText(plain(fromMm(value, u), 5));
+          const entry = parseNumericInput(text);
+          if (entry !== null) setText(plain(fromMm(error ? toMm(entry, unit) : value, u), 5));
         }}
       >
         {units.map((u) => (
@@ -231,6 +215,9 @@ export function NumField({
   allowNegative = false,
   hint,
   width = 84,
+  diagramKey,
+  max,
+  integer = false,
 }: {
   label: ReactNode;
   symbol?: ReactNode;
@@ -242,26 +229,30 @@ export function NumField({
   allowNegative?: boolean;
   hint?: string;
   width?: number;
+  diagramKey?: string;
+  max?: number;
+  integer?: boolean;
 }) {
-  const { text, setText, emitted } = useSyncedText(value, (v) => plain(v, 6));
+  const { text, setText, emit } = useSyncedText(value, (v) => plain(v, 6));
   const id = useId();
-  const n = Number.parseFloat(text);
-  const bad =
-    !Number.isFinite(n) || (!allowNegative && (allowZero ? n < min : n <= min));
+  const options = { min, max, allowZero, allowNegative, integer };
+  const error = numericInputIssue(text, options);
+  const help = hint;
   return (
-    <Row label={label} symbol={symbol} hint={hint} htmlFor={id}>
+    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey}>
       <Input
         id={id}
         className="fld text-right"
         style={{ width }}
         inputMode="decimal"
         value={text}
-        aria-invalid={bad}
+        aria-invalid={!!error}
+        aria-describedby={[help && id + '-help', error && id + '-error'].filter(Boolean).join(' ')}
         onChange={(e) => {
           setText(e.target.value);
-          const v = Number.parseFloat(e.target.value);
-          if (Number.isFinite(v)) {
-            emitted.current = v;
+          const v = parseNumericInput(e.target.value);
+          if (v !== null && !numericInputIssue(e.target.value, options)) {
+            emit(v);
             onChange(v);
           }
         }}
@@ -291,7 +282,7 @@ export function TextField({
 }) {
   const id = useId();
   return (
-    <Row label={label} hint={hint} htmlFor={id}>
+    <Row label={label} hint={hint} htmlFor={id} error={invalid ? 'Check this value.' : undefined}>
       <Input
         id={id}
         className="fld text-right"
@@ -299,6 +290,7 @@ export function TextField({
         value={value}
         // only when invalid: an empty or partly typed code is not an error
         aria-invalid={invalid || undefined}
+        aria-describedby={[hint && id + '-help', invalid && id + '-error'].filter(Boolean).join(' ') || undefined}
         placeholder={placeholder}
         data-field="code"
         spellCheck={false}
@@ -351,30 +343,17 @@ export function SelectField<T extends string>({
   );
 }
 
-export function Check({
-  label,
-  checked,
-  onChange,
-  hint,
-}: {
-  label: ReactNode;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  hint?: string;
+export function Check({ label, checked, onChange, hint }: {
+  label: ReactNode; checked: boolean; onChange: (v: boolean) => void; hint?: string;
 }) {
-  return (
-    <label
-      className="flex min-h-[22px] cursor-pointer items-center gap-2"
-      title={hint}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+  const id = useId();
+  return <div className="flex min-h-[22px] items-center gap-2">
+    <label className="flex cursor-pointer items-center gap-2">
+      <input type="checkbox" checked={checked} aria-describedby={hint ? id + '-help' : undefined} onChange={e => onChange(e.target.checked)} />
       {label}
     </label>
-  );
+    {hint && <FieldHelp label={label} hint={hint} descriptionId={id + '-help'} />}
+  </div>;
 }
 
 export function Segmented<T extends string>({
@@ -411,6 +390,7 @@ export function Segmented<T extends string>({
 }
 
 function CopyResultButton() {
+  const { issues } = useFieldInteraction();
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   useEffect(() => {
     if (status === 'idle') return;
@@ -443,6 +423,7 @@ function CopyResultButton() {
       type="button"
       className="ml-1 inline-flex h-[18px] w-[18px] items-center justify-center align-middle text-faint hover:bg-hover hover:text-ink focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent"
       onClick={copy}
+      disabled={issues.length > 0}
       title={title}
       aria-label={title}
     >
@@ -485,14 +466,16 @@ export function Result({
   strong?: boolean;
   sub?: ReactNode;
 }) {
+  const { issues } = useFieldInteraction();
+  const paused = issues.length > 0;
   return (
     <tr className="result-row" data-copy-result data-primary-result={strong || undefined}>
       <th scope="row" className="text-left font-normal">
         <span data-copy-label>{label}</span>
-        {sub && <div className="result-detail text-faint">{sub}</div>}
+        {sub && !paused && <div className="result-detail text-faint">{sub}</div>}
       </th>
       <td className={`v ${strong ? 'font-semibold' : ''}`}>
-        <span data-copy-value>{value}</span>
+        <span data-copy-value>{paused ? '\u2014' : value}</span>
         <CopyResultButton />
       </td>
       <td className="w-[60px] text-muted">
@@ -544,8 +527,10 @@ export function Big({
   unit: ReactNode;
   busy?: boolean;
 }) {
+  const { issues } = useFieldInteraction();
+  const paused = issues.length > 0;
   return (
-    <div className="headline-result min-w-[130px]" data-copy-result data-result-busy={busy || undefined}>
+    <div className="headline-result min-w-[130px]" data-copy-result data-result-busy={busy || paused || undefined}>
       <div className="text-muted">
         <span data-copy-label>{label}</span>
         <CopyResultButton />
@@ -553,7 +538,7 @@ export function Big({
       <div
         className={`tnum text-[24px] font-semibold leading-tight ${busy ? 'opacity-60' : ''}`}
       >
-        <span data-copy-value>{value}</span>{' '}
+        <span data-copy-value>{paused ? '\u2014' : value}</span>{' '}
         <span className="text-[13px] font-normal text-muted" data-copy-unit>
           {unit}
         </span>

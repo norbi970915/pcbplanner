@@ -326,10 +326,10 @@ export default function Impedance() {
         </div>
       </Section>
       <Section title="Conductor">
-        <LenField label={broadside ? "Width (outer face)" : "Width (bottom)"} symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
-        <LenField label={broadside ? "Etch (W - facing)" : "Etch (W − top)"} value={p.etch} onChange={(v) => set({ etch: v })} allowZero hint={broadside ? "Mirrored etch: each face toward the inter-layer gap is narrower by this amount. Set zero for rectangular copper." : "Trapezoidal etch: the top of the trace is narrower by this amount. 0.5 mil is typical for 1 oz."} />
-        <LenField label="Thickness" symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
-        {diff && <LenField label={broadside ? "Inter-layer gap" : "Spacing"} symbol="S" value={p.s} onChange={(v) => set({ s: v })} />}
+        <LenField label={broadside ? "Width (outer face)" : "Width (bottom)"} hint="Copper trace width. The cross-section is schematic; use the numerical dimensions for fabrication." symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
+        <LenField label={broadside ? "Etch (W - facing)" : "Etch (W − top)"} diagramKey="etch" value={p.etch} onChange={(v) => set({ etch: v })} allowZero hint={broadside ? "Mirrored etch: each face toward the inter-layer gap is narrower by this amount. Set zero for rectangular copper." : "Trapezoidal etch: the top of the trace is narrower by this amount. 0.5 mil is typical for 1 oz."} />
+        <LenField label="Thickness" hint="Copper thickness after processing. Selecting oz converts copper weight to an approximate thickness." symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
+        {diff && <LenField label={broadside ? "Inter-layer gap" : "Spacing"} hint="For edge-coupled pairs, the copper edge-to-edge gap. For broadside pairs, the copper-to-copper inter-layer gap." symbol="S" value={p.s} onChange={(v) => set({ s: v })} />}
         {!broadside && p.cpw && <LenField label="Coplanar gap" symbol="G" value={p.gap} onChange={(v) => set({ gap: v })} />}
       </Section>
       <Section title={broadside ? 'Outer Dielectric (both sides)' : type === 'stripline' ? 'Dielectric Below' : 'Dielectric'}>
@@ -343,10 +343,10 @@ export default function Impedance() {
           <PlyEditor value={raw.dl} onChange={(v) => set({ dl: v })} firstLabel="plane" materials={MAT_OPTIONS.slice(1)} resolve={(m) => ({ dk: erOf(m, 4, raw.fq) })} />
         ) : (
           <>
-            <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
+            <LenField label={type === 'stripline' ? 'Plane to trace' : 'Height to plane'} hint="Dielectric distance from the nearest copper trace face to the reference plane; copper thickness is separate." symbol="H" value={p.h} onChange={(v) => set({ h: v })} />
             <SelectField label="Material" value={raw.mat} onChange={(v) => set({ mat: v })} options={MAT_OPTIONS} width={176} />
             {raw.mat === 'custom' ? (
-              <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
+              <NumField label="Dielectric constant" diagramKey="er" hint="Relative permittivity (Dk). Use a laminate value appropriate for your signal frequency." symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
             ) : (
               <p className="text-faint">εr = {fmt(p.er, 4)} at {fmt(raw.fq, 4)} GHz</p>
             )}
@@ -355,7 +355,7 @@ export default function Impedance() {
       </Section>
       {broadside && <Section title="Between Signal Layers">
         <SelectField label="Material" value={raw.mat2} onChange={(mat2) => set({ mat2 })} options={MAT_OPTIONS} width={176} />
-        {raw.mat2 === 'custom' ? <NumField label="Dielectric constant" symbol="Dk" value={p.er2} onChange={(er2) => set({ er2 })} min={1} allowZero />
+        {raw.mat2 === 'custom' ? <NumField label="Dielectric constant" diagramKey="er2" symbol="Dk" value={p.er2} onChange={(er2) => set({ er2 })} min={1} allowZero />
           : <p className="text-faint">Dk = {fmt(p.er2, 4)} at {fmt(raw.fq, 4)} GHz</p>}
         <p className="text-faint">S is the dielectric gap between the facing copper surfaces. H is the clearance from each outer copper surface to its ground plane.</p>
       </Section>}
@@ -371,10 +371,10 @@ export default function Impedance() {
             <PlyEditor value={raw.dl2} onChange={(v) => set({ dl2: v })} firstLabel="trace" materials={MAT_OPTIONS.slice(1)} resolve={(m) => ({ dk: erOf(m, 4, raw.fq) })} />
           ) : (
             <>
-              <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
+              <LenField label={type === 'stripline' ? 'Trace to plane' : 'Cover thickness'} hint="Dielectric distance between the trace and the upper reference plane or cover boundary." symbol="H2" value={p.h2} onChange={(v) => set({ h2: v })} />
               <SelectField label="Material" value={raw.mat2} onChange={(v) => set({ mat2: v })} options={MAT_OPTIONS} width={176} />
               {raw.mat2 === 'custom' ? (
-                <NumField label="Dielectric constant" symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
+                <NumField label="Dielectric constant" diagramKey="er2" hint="Relative permittivity (Dk). Use a laminate value appropriate for your signal frequency." symbol="εr" value={p.er2} onChange={(v) => set({ er2: v })} min={1} allowZero />
               ) : (
                 <p className="text-faint">εr = {fmt(p.er2, 4)} at {fmt(raw.fq, 4)} GHz</p>
               )}

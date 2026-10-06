@@ -68,8 +68,8 @@ export default function Resistors() {
     <>
       <Section title="Voltage divider">
         <SiField label="Input voltage" symbol="Vin" value={p.vin} onChange={(v) => set({ vin: v })} unit="V" prefixes={['m', '', 'k']} allowNegative />
-        <SiField label="Top resistor" symbol="R1" value={p.r1} onChange={(v) => set({ r1: v })} unit="Ω" prefixes={['', 'k', 'M']} />
-        <SiField label="Bottom resistor" symbol="R2" value={p.r2} onChange={(v) => set({ r2: v })} unit="Ω" prefixes={['', 'k', 'M']} />
+        <SiField label="Top resistor" hint="R1 connects Vin to Vout. The diagram highlights the upper resistor." symbol="R1" value={p.r1} onChange={(v) => set({ r1: v })} unit="Ω" prefixes={['', 'k', 'M']} />
+        <SiField label="Bottom resistor" hint="R2 connects Vout to ground. Any connected load is in parallel with R2." symbol="R2" value={p.r2} onChange={(v) => set({ r2: v })} unit="Ω" prefixes={['', 'k', 'M']} />
         <SiField label="Load" symbol="RL" value={p.rl} onChange={(v) => set({ rl: v })} unit="Ω" prefixes={['', 'k', 'M']} allowZero hint="Load across R2. 0 = no load." />
       </Section>
       <Section title="Divider from standard values">
@@ -81,7 +81,7 @@ export default function Resistors() {
         <SiField label="Supply voltage" symbol="Vs" value={p.vs} onChange={(v) => set({ vs: v })} unit="V" prefixes={['m', '']} />
         <NumField label="LED forward voltage" symbol="Vf" value={p.vf} onChange={(v) => set({ vf: v })} unit="V" />
         <SiField label="LED current" symbol="If" value={p.ifw} onChange={(v) => set({ ifw: v })} unit="A" prefixes={['µ', 'm', '']} />
-        <NumField label="LEDs in series" value={p.n} onChange={(v) => set({ n: v })} min={1} allowZero />
+        <NumField label="LEDs in series" diagramKey="led-count" integer value={p.n} onChange={(v) => set({ n: v })} min={1} allowZero />
         <SelectField label="Series" value={lser} onChange={(v) => set({ lser: v })} options={SERIES} />
       </Section>
       <Section title="Series / parallel">

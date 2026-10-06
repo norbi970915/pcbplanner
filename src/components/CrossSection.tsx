@@ -1,5 +1,5 @@
 import { fmt } from '../lib/units';
-import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
+import { DiagramDimension, DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
 
 export interface XsecSpec {
   type: 'microstrip' | 'embedded' | 'stripline'; diff: boolean; coupling?: 'edge' | 'broadside';
@@ -33,8 +33,8 @@ export function CrossSection({ spec: s, unitLabel, toUnit }: { spec: XsecSpec; u
     ...(s.diff ? [{label:'S \u00b7 Pair gap',value:value(s.s)}] : []),
     ...(s.type !== 'microstrip' ? [{label:'H2 \u00b7 Upper dielectric',value:value(s.h2)}] : []),
     ...(s.cpw ? [{label:'G \u00b7 Coplanar gap',value:value(s.gap)}] : []),
-    {label:'Lower dielectric Dk',value:fmt(s.er,3),color:'var(--laminate)'},
-    ...(s.type !== 'microstrip' ? [{label:'Upper dielectric Dk',value:fmt(s.er2,3),color:'var(--prepreg)'}] : []),
+    {field:'er',label:'Lower dielectric Dk',value:fmt(s.er,3),color:'var(--laminate)'},
+    ...(s.type !== 'microstrip' ? [{field:'er2',label:'Upper dielectric Dk',value:fmt(s.er2,3),color:'var(--prepreg)'}] : []),
   ];
   return <EngineeringDiagram caption="Cross-section schematic; thin features are enlarged for readability. Exact dimensions are listed above."
     legend={[...materials.filter(m=>m.label!=='Upper dielectric'||s.type!=='microstrip'), ...(s.mask && s.type==='microstrip' ? [{label:'Solder mask',color:'var(--mask)'}] : [])]}>
@@ -53,6 +53,10 @@ export function CrossSection({ spec: s, unitLabel, toUnit }: { spec: XsecSpec; u
       {s.type!=='microstrip' && <DiagramDimension x1={right+cpGap+30} x2={right+cpGap+30} y1={upperTop} y2={traceTop} label="H2" arrow={paint.arrow}/>}
       {s.cpw && <DiagramDimension x1={right} x2={right+cpGap} y1={traceTop-25} y2={traceTop-25} label="G" arrow={paint.arrow}/>}
       <path d={'M'+left+' '+(traceTop+t/2)+'H'+(left-24)+'L'+(left-42)+' '+(traceTop-22)} fill="none" stroke="var(--accent-ink)" strokeWidth="1"/>
+      <DiagramFocus field="t" x={left-70} y={traceTop-40} width={72} height={t+48} />
+      <DiagramFocus field="etch" x={left-4} y={traceTop-4} width={right-left+8} height={t+8} />
+      <DiagramFocus field="er" x={28} y={traceBottom+4} width={80} height={h-8} />
+      <DiagramFocus field="er2" x={28} y={upperTop+4} width={80} height={Math.max(0,h2-8)} />
       <text x={left-46} y={traceTop-24} textAnchor="end" className="diagram-label">T</text>
       <text x="32" y="280" className="diagram-note">Ground plane</text>
     </>}</DiagramSvg>
@@ -81,13 +85,17 @@ function BroadsideSection({ spec:s, unitLabel, toUnit }: {spec:XsecSpec; unitLab
       <DiagramDimension x1={x0-42} x2={x0-42} y1={upperBottom} y2={lowerTop} label="S" arrow={paint.arrow}/>
       <DiagramDimension x1={x0} x2={x1} y1={bottom+34} y2={bottom+34} label="W" arrow={paint.arrow}/>
       <path d={'M'+x0+' '+(upperTop+t/2)+'H'+(x0-25)+'L'+(x0-42)+' '+(upperTop-22)} fill="none" stroke="var(--accent-ink)"/>
+      <DiagramFocus field="t" x={x0-70} y={upperTop-40} width={72} height={t+48} />
+      <DiagramFocus field="etch" x={x0-4} y={upperTop-4} width={width+8} height={t+8} />
+      <DiagramFocus field="er" x={28} y={top+4} width={80} height={h-8} />
+      <DiagramFocus field="er2" x={28} y={upperBottom+4} width={80} height={gap-8} />
       <text x={x0-46} y={upperTop-24} textAnchor="end" className="diagram-label">T</text>
       <text x="32" y="29" className="diagram-note">Ground plane</text>
     </>}</DiagramSvg>
     <DiagramValues items={[
       {label:'W \u00b7 Trace width',value:value(s.w)}, {label:'T \u00b7 Copper thickness',value:value(s.t)},
       {label:'S \u00b7 Inter-layer gap',value:value(s.s)}, {label:'H \u00b7 Each outer dielectric',value:value(s.h)},
-      {label:'Outer dielectric Dk',value:fmt(s.er,3),color:'var(--laminate)'}, {label:'Pair dielectric Dk',value:fmt(s.er2,3),color:'var(--prepreg)'},
+      {field:'er',label:'Outer dielectric Dk',value:fmt(s.er,3),color:'var(--laminate)'}, {field:'er2',label:'Pair dielectric Dk',value:fmt(s.er2,3),color:'var(--prepreg)'},
     ]}/>
   </EngineeringDiagram>;
 }

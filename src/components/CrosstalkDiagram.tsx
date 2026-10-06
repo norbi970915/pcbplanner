@@ -1,4 +1,4 @@
-import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
+import { DiagramDimension, DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
 import { fmt } from '../lib/units';
 export function CrosstalkDiagram({width,spacing,length}:{width:number;spacing:number;length:(mm:number)=>string}) {
   const scale=220/Math.max(2*width+spacing,.001),w=Math.min(100,Math.max(34,width*scale)),gap=Math.min(140,Math.max(44,spacing*scale));
@@ -12,6 +12,7 @@ export function CrosstalkDiagram({width,spacing,length}:{width:number;spacing:nu
       <DiagramDimension x1={left+w/2} x2={right+w/2} y1={48} y2={48} label="P" arrow={paint.arrow}/>
       <DiagramDimension x1={left} x2={left+w} y1={91} y2={91} label="W" arrow={paint.arrow}/>
       <DiagramDimension x1={left+w} x2={right} y1={185} y2={185} label="S" arrow={paint.arrow}/>
+      <DiagramFocus field="v" x={left-4} y={104} width={w+8} height={152} />
       <text x={left+w/2} y="278" textAnchor="middle" className="diagram-label">A</text><text x={right+w/2} y="278" textAnchor="middle" className="diagram-label">V</text>
     </>}</DiagramSvg>
     <DiagramValues items={[

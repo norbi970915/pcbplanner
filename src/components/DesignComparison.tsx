@@ -4,12 +4,14 @@ import { Panel } from './ui';
 import { comparisonDelta, comparisonRows, type ComparisonRow } from '../lib/designComparison';
 import type { useDesignComparison } from '../state/useDesignComparison';
 import { fmt } from '../lib/units';
+import { useFieldInteraction } from '../state/fieldInteraction';
 
 type Comparison = ReturnType<typeof useDesignComparison>;
 
 export function ComparisonButton({ comparison }: { comparison: Comparison }) {
+  const { issues } = useFieldInteraction();
   return <Button id={comparison.id + '-trigger'} type="button" variant="ghost" size="sm"
-    className="comparison-trigger" disabled={!comparison.baseline && !comparison.ready}
+    className="comparison-trigger" disabled={!comparison.baseline && (!comparison.ready || issues.length > 0)}
     aria-expanded={comparison.expanded} aria-controls={comparison.baseline ? comparison.id : undefined}
     title={comparison.baseline ? 'Show or hide the saved design comparison' : 'Save these results as a baseline, then change an input to compare'}
     onClick={comparison.toggle}>
@@ -28,13 +30,15 @@ function delta(a?: ComparisonRow, b?: ComparisonRow): string {
   return (d > 0 ? '+' : '') + fmt(d, 4) + (unit ? ' ' + unit : '');
 }
 
-export function ComparisonPanel({ comparison: c }: { comparison: Comparison }) {
+export function ComparisonPanel({ comparison }: { comparison: Comparison }) {
+  const { issues } = useFieldInteraction();
+  const c = { ...comparison, ready: comparison.ready && issues.length === 0 };
   if (!c.baseline || !c.expanded) return null;
   const inputs = comparisonRows(c.baseline.inputs, c.design.inputs).filter(row => row.changed);
   // Never put an old worker result beside the new inputs while a solve is pending.
   const results = comparisonRows(c.baseline.results, c.ready ? c.design.results : []);
   return <section id={c.id} className="design-comparison" aria-label="Design comparison" tabIndex={-1}>
-    <Panel title="Design comparison" right={<Button type="button" variant="ghost" size="sm" onClick={c.close} aria-label="Close comparison"><X size={15} /></Button>}>
+    <Panel title="Design comparison" allowInvalid right={<Button type="button" variant="ghost" size="sm" onClick={c.close} aria-label="Close comparison"><X size={15} /></Button>}>
       <div className="comparison-intro">
         <p role="status">{!c.ready ? 'Waiting for valid results for the current design.' : inputs.length ? 'Baseline A stays fixed while you edit design B.' : 'Baseline saved. Change an input to compare the results.'}</p>
         <div className="comparison-actions">

@@ -1,4 +1,4 @@
-import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
+import { DiagramDimension, DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from '../components/EngineeringDiagram';
 import { useSettings } from '../state/settings';
 import { ToolPage } from '../components/ToolPage';
 import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
@@ -44,9 +44,9 @@ export default function ThermalVias() {
   const properties = (
     <>
       <Section title="Via Array">
-        <NumField label="Number of vias" symbol="N" value={p.n} onChange={(v) => set({ n: Math.round(v) })} unit="" />
-        <LenField label="Finished hole" symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} />
-        <LenField label="Plating thickness" value={p.plating} onChange={(v) => set({ plating: v })} units={['um', 'mil', 'mm', 'oz']} />
+        <NumField label="Number of vias" symbol="N" min={1} max={10000} allowZero integer value={p.n} onChange={(v) => set({ n: v })} unit="" />
+        <LenField label="Finished hole" hint="Hole diameter after copper plating. The pad drawing enlarges via symbols; it does not calculate via pitch." symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} />
+        <LenField label="Plating thickness" diagramKey="plating" hint="Copper deposited on the hole wall. This is radial thickness, not the hole diameter." value={p.plating} onChange={(v) => set({ plating: v })} units={['um', 'mil', 'mm', 'oz']} />
         <LenField label="Board thickness" symbol="h" value={p.len} onChange={(v) => set({ len: v })} />
         <SelectField
           label="Via fill"
@@ -57,8 +57,8 @@ export default function ThermalVias() {
         {fill === 'custom' && <NumField label="Fill conductivity" value={p.fillK} onChange={(v) => set({ fillK: v })} unit="W/m·K" allowZero />}
       </Section>
       <Section title="Pad and Laminate">
-        <LenField label="Thermal pad width" value={p.padW} onChange={(v) => set({ padW: v })} allowZero />
-        <LenField label="Thermal pad length" value={p.padH} onChange={(v) => set({ padH: v })} allowZero />
+        <LenField label="Thermal pad width" diagramKey="pad-w" value={p.padW} onChange={(v) => set({ padW: v })} allowZero />
+        <LenField label="Thermal pad length" diagramKey="pad-l" value={p.padH} onChange={(v) => set({ padH: v })} allowZero />
         <NumField label="Laminate k (through-plane)" value={p.kLam} onChange={(v) => set({ kLam: v })} unit="W/m·K" allowZero hint="FR-4 is about 0.3 W/m·K through the thickness." />
       </Section>
       <Section title="Load">
@@ -104,15 +104,17 @@ export default function ThermalVias() {
                   <rect data-thermal-pad="true" x={x} y={y} width={pw} height={ph} fill={paint.copper} stroke="var(--copper)" strokeWidth="1"/>
                   {Array.from({length:shown},(_,k)=>{
                     const cx=x+pw/cols*((k%cols)+.5),cy=y+ph/rows*(Math.floor(k/cols)+.5),radius=Math.min(pw/cols,ph/rows)*.22;
-                    return <g key={k} data-thermal-via="true"><circle cx={cx} cy={cy} r={radius*1.3} fill="var(--copper)" stroke="var(--ink)" strokeWidth=".7"/>
+                    return <g key={k} data-thermal-via="true">
+                      <DiagramFocus field={["d", "plating"]} x={cx-radius*1.5} y={cy-radius*1.5} width={radius*3} height={radius*3} /><circle cx={cx} cy={cy} r={radius*1.3} fill="var(--copper)" stroke="var(--ink)" strokeWidth=".7"/>
                       <circle cx={cx} cy={cy} r={radius} fill={fillK>100?paint.copper:fillK>0?'var(--muted)':'var(--sheet)'} stroke="var(--ink)" strokeWidth=".6"/>
                     </g>;
                   })}
-                  <DiagramDimension x1={x} x2={x+pw} y1={242} y2={242} label="W" arrow={paint.arrow}/>
-                  <DiagramDimension x1={250} x2={250} y1={y} y2={y+ph} label="L" arrow={paint.arrow}/>
+                  <DiagramFocus field="n" x={x-4} y={y-4} width={pw+8} height={ph+8} />
+                  <DiagramDimension field="pad-w" x1={x} x2={x+pw} y1={242} y2={242} label="W" arrow={paint.arrow}/>
+                  <DiagramDimension field="pad-l" x1={250} x2={250} y1={y} y2={y+ph} label="L" arrow={paint.arrow}/>
                 </> : <text x="140" y="140" textAnchor="middle" className="diagram-note">Pad dimensions not set</text>;
               }}</DiagramSvg>
-              <DiagramValues items={[{label:'W \u00b7 Pad width',value:length(p.padW)},{label:'L \u00b7 Pad length',value:length(p.padH)},{label:'Finished hole',value:length(p.hole)},{label:'Array',value:p.n+' vias'}]}/>
+              <DiagramValues items={[{field:'pad-w',label:'W \u00b7 Pad width',value:length(p.padW)},{field:'pad-l',label:'L \u00b7 Pad length',value:length(p.padH)},{field:'d',label:'Finished hole',value:length(p.hole)},{field:'n',label:'Array',value:p.n+' vias'}]}/>
             </EngineeringDiagram>
           </Panel>
         </div>

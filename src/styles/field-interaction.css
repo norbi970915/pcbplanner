@@ -1,0 +1,28 @@
+/* Input guidance stays quiet until requested or an entry needs correction. */
+.property-field-label-wrap { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.property-field-label-wrap > label { min-width: 0; }
+.field-help-trigger, .field-help-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 5px; color: var(--faint); background: transparent; cursor: pointer; }
+.field-help-trigger:hover, .field-help-trigger[data-state=open], .field-help-close:hover { color: var(--accent-ink); background: var(--hover); }
+.field-help-trigger:focus-visible, .field-help-close:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.field-help-popover { z-index: 90; width: min(300px, calc(100vw - 24px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; padding: 12px; border: 1px solid var(--line-strong); border-radius: 9px; color: var(--ink); background: var(--sheet); box-shadow: 0 8px 30px rgb(0 0 0 / .25); font-size: 12px; line-height: 1.6; }
+.field-help-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.field-help-popover p { margin: 0; color: var(--muted); }
+.field-error { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.5; color: var(--err-line); }
+.property-field:focus-within .property-field-label { color: var(--ink); }
+.inputs-paused { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--err-line); border-radius: 8px; background: var(--err-bg); color: var(--ink); }
+.inputs-paused p { margin: 3px 0 0; color: var(--muted); }
+.panel-inputs-paused { padding: 16px; color: var(--muted); font-size: 12px; }
+.diagram-focus-region { fill: color-mix(in srgb, var(--accent-ink) 16%, transparent); stroke: var(--accent-ink); stroke-width: 2; stroke-dasharray: 5 3; pointer-events: none; }
+.diagram-focus-line { fill: none; stroke: var(--accent-ink); stroke-width: 6; stroke-opacity: .22; stroke-linecap: round; pointer-events: none; }
+.diagram-dimension[data-active=true] > line, .diagram-dimension[data-active=true] .diagram-extension { stroke-width: 2.5; opacity: 1; }
+.diagram-dimension[data-active=true] .diagram-label { fill: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+.diagram-values > [data-active=true] { border-color: var(--accent-ink); background: color-mix(in srgb, var(--accent-ink) 10%, var(--sheet)); }
+.diagram-editing { margin-top: 8px; color: var(--accent-ink); font-size: 11px; }
+@media (pointer: coarse) { .field-help-trigger, .field-help-close { width: 30px; height: 30px; } }
+@media print { .field-help-trigger, .field-help-popover, .diagram-editing { display: none; } }
+
+.diagram-dimension > .diagram-focus-line { stroke-width: 8; }
+
+.properties-section > [hidden], .panel-content[hidden] { display: none !important; }
+
+.properties-panel-is-hidden { display: none !important; }

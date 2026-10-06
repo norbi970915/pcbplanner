@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
+import { DiagramFocus, DiagramSvg, DiagramValues, EngineeringDiagram } from './EngineeringDiagram';
 import { Segmented } from './ui';
 import { fmt, si } from '../lib/units';
 interface Props { kind:'buck'|'boost'; vin:number; vout:number; iout:number; inductance:number; vf:number; ccm:boolean; inputCap:boolean; cout:number; coutRequired:number; }
@@ -39,6 +39,13 @@ export function PowerStageDiagram({kind,vin,vout,iout,inductance,vf,ccm,inputCap
             </>}
             <path d="M290 216V235 M276 235H304 M281 242H299 M286 249H294"/>
           </g>
+          <DiagramFocus field={["vmin","vnom","vmax"]} x={14} y={106} width={52} height={52} />
+          <DiagramFocus field="vout" x={470} y={31} width={57} height={32} />
+          <DiagramFocus field="iout" x={482} y={120} width={36} height={56} />
+          <DiagramFocus field={["l","ltol","isat","irms","dcr","rr"]} x={buck?246:136} y={56} width={88} height={34} />
+          <DiagramFocus field={["cout","ctol","cbias","esr"]} x={388} y={106} width={40} height={60} />
+          {inputCap && <DiagramFocus field={["cin","cintol","cinbias","cinesr"]} x={70} y={106} width={40} height={60} />}
+          <DiagramFocus field="vf" x={buck?210:310} y={buck?120:56} width={buck?36:64} height={buck?34:46} />
           <g className="diagram-label" textAnchor="middle">
             <text x="40" y="55">Vin</text><text x="500" y="55">Vout</text>{inputCap&&<text x="90" y="241">Cin</text>}
             <text x="408" y="241">Cout</text><text x="528" y="152">Load</text><text x={buck?290:180} y="47">L</text><text x={buck?174:291} y={buck?47:157}>Q1</text>
@@ -48,9 +55,9 @@ export function PowerStageDiagram({kind,vin,vout,iout,inductance,vf,ccm,inputCap
         </>}
       </DiagramSvg>
       <DiagramValues items={[
-        {label:'Nominal input',value:fmt(vin,4)+' V'},{label:'Output / load',value:fmt(vout,4)+' V / '+fmt(iout,4)+' A'},
-        {label:'L \u00b7 Inductor used',value:si(inductance,'H',4)},
-        {label:cout>0?'Cout \u00b7 Nominal bank':'Cout \u00b7 Effective needed',value:cout>0?si(cout,'F',4):ccm?si(coutRequired,'F',4):'\u2014'},
+        {field:'vnom',label:'Nominal input',value:fmt(vin,4)+' V'},{label:'Output / load',value:fmt(vout,4)+' V / '+fmt(iout,4)+' A'},
+        {field:'l',label:'L \u00b7 Inductor used',value:si(inductance,'H',4)},
+        {field:'cout',label:cout>0?'Cout \u00b7 Nominal bank':'Cout \u00b7 Effective needed',value:cout>0?si(cout,'F',4):ccm?si(coutRequired,'F',4):'\u2014'},
       ]}/>
     </EngineeringDiagram>
   </>;

@@ -35,12 +35,12 @@ export default function FeedbackDivider() {
   const properties = (
     <>
       <Section title="Regulator">
-        <NumField label="Feedback (reference) voltage" symbol="VFB" value={p.vfb} onChange={(v) => set({ vfb: v })} unit="V" />
-        <NumField label="Target output voltage" symbol="Vout" value={p.vout} onChange={(v) => set({ vout: v })} unit="V" />
-        <NumField label="FB bias current" symbol="IFB" value={p.ifb} onChange={(v) => set({ ifb: v })} unit="nA" allowZero allowNegative hint="Current flowing into the FB pin. Leave 0 if it is negligible." />
+        <NumField label="Feedback (reference) voltage" hint="The regulator holds its FB pin at this voltage. Use the reference specification in its datasheet." symbol="VFB" value={p.vfb} onChange={(v) => set({ vfb: v })} unit="V" />
+        <NumField label="Target output voltage" hint="Desired output voltage. The selected standard resistor pair may produce a slightly different value." symbol="Vout" value={p.vout} onChange={(v) => set({ vout: v })} unit="V" />
+        <NumField label="FB bias current" symbol="IFB" value={p.ifb} onChange={(v) => set({ ifb: v })} unit="nA" allowZero allowNegative hint="Positive current flows into FB; negative current flows out. Use the datasheet sign convention. Leave 0 if negligible." />
       </Section>
       <Section title="Divider">
-        <NumField label="Divider current" value={p.idiv} onChange={(v) => set({ idiv: v })} unit="µA" hint="Sets R2 = VFB / I. Higher current = better noise immunity, more loss." />
+        <NumField label="Divider current" diagramKey="idiv" value={p.idiv} onChange={(v) => set({ idiv: v })} unit="µA" hint="Starting point for R2 = VFB / I. The standard-value search can choose a pair with a different actual divider current." />
         <SelectField
           label="Resistor series"
           value={p.series as ESeries}
