@@ -250,8 +250,8 @@ export function Layout() {
     path === '/tools' ||
     path === '/schematic' ||
     !!toolByPath(path);
-  // article pages (guides) have no inputs: no Properties panel
-  const isDoc = path === '/guides' || path.startsWith('/guides/');
+  // Guides and About have no calculator inputs.
+  const isDoc = path === '/about' || path === '/guides' || path.startsWith('/guides/');
   useEffect(() => {
     if (!known) return;
     setTabs((t) => (t.includes(path) ? t : [...t, path]));
