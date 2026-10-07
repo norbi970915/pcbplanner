@@ -149,7 +149,10 @@ export default function Projects() {
               <button
                 className="btn"
                 onClick={() => {
-                  if (window.confirm(`Delete “${active.name}”? This cannot be undone.`)) projectStore.remove(active.id);
+                  if (window.confirm(`Delete “${active.name}”? This cannot be undone.`)) {
+                    projectStore.remove(active.id);
+                    setMsg(null);
+                  }
                 }}
               >
                 Delete

@@ -1347,6 +1347,23 @@ kbd {
   }
 }
 
+/* Keep the current board visible in desktop and mobile navigation. */
+.active-project-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.active-project-heading > svg { color: var(--copper); }
+.active-project-link { align-items: center; }
+.active-project-link > svg { flex-shrink: 0; color: var(--faint); }
+.active-project-details { flex: 1; min-width: 0; }
+.active-project-details strong { display: block; color: var(--ink); font-size: 12px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.active-project-details > span { display: block; margin-top: 2px; color: var(--faint); font-size: 10px; line-height: 1.5; }
+
 /* Favorites share the workbench navigation and persist per browser. */
 .favorites-heading {
   display: flex;

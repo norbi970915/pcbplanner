@@ -92,18 +92,54 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
-let projects: Project[] = read<Project[]>(KEY, []).filter(isProject);
-let activeId: string | null = read<string | null>(ACTIVE_KEY, null);
+function readProjects(fallback: Project[]): Project[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]');
+    return Array.isArray(stored) ? stored.filter(isProject) : [];
+  } catch {
+    return fallback;
+  }
+}
+
+function validActiveId(stored: unknown, list: Project[]): string | null {
+  return typeof stored === 'string' && list.some((project) => project.id === stored)
+    ? stored
+    : list[0]?.id ?? null;
+}
+
+let projects = readProjects([]);
+let activeId = validActiveId(read<unknown>(ACTIVE_KEY, null), projects);
 let snapshot = { projects, activeId };
 const listeners = new Set<() => void>();
+let hasUnstoredChanges = false;
+
+/** Read the latest state before editing so a stale tab cannot restore a deleted project. */
+function syncFromStorage() {
+  // Keep session changes when storage writes are blocked; later edits retry saving.
+  if (hasUnstoredChanges) return;
+  const nextProjects = readProjects(projects);
+  const nextActiveId = validActiveId(read<unknown>(ACTIVE_KEY, activeId), nextProjects);
+  if (nextActiveId === activeId && JSON.stringify(nextProjects) === JSON.stringify(projects)) return;
+  projects = nextProjects;
+  activeId = nextActiveId;
+  snapshot = { projects, activeId };
+  listeners.forEach((listener) => listener());
+}
+
+function onStorage(event: StorageEvent) {
+  if (event.key === KEY || event.key === ACTIVE_KEY || event.key === null) syncFromStorage();
+}
 
 function commit() {
+  activeId = validActiveId(activeId, projects);
   snapshot = { projects, activeId };
   try {
     localStorage.setItem(KEY, JSON.stringify(projects));
     if (activeId) localStorage.setItem(ACTIVE_KEY, JSON.stringify(activeId));
     else localStorage.removeItem(ACTIVE_KEY);
+    hasUnstoredChanges = false;
   } catch {
+    hasUnstoredChanges = true;
     /* storage unavailable (private window, blocked site data) */
   }
   listeners.forEach((l) => l());
@@ -113,11 +149,23 @@ const newId = () => `p${Date.now().toString(36)}${Math.random().toString(36).sli
 
 export const projectStore = {
   subscribe(l: () => void) {
+    if (!listeners.size && typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage);
+      window.addEventListener('focus', syncFromStorage);
+      syncFromStorage();
+    }
     listeners.add(l);
-    return () => listeners.delete(l);
+    return () => {
+      listeners.delete(l);
+      if (!listeners.size && typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage);
+        window.removeEventListener('focus', syncFromStorage);
+      }
+    };
   },
   get: () => snapshot,
   create(name: string): Project {
+    syncFromStorage();
     const now = Date.now();
     const p: Project = { id: newId(), name: name.trim() || 'New project', created: now, updated: now, tools: [] };
     projects = [...projects, p];
@@ -126,29 +174,35 @@ export const projectStore = {
     return p;
   },
   rename(id: string, name: string) {
+    syncFromStorage();
     projects = projects.map((p) => (p.id === id ? { ...p, name: name.trim() || p.name, updated: Date.now() } : p));
     commit();
   },
   remove(id: string) {
+    syncFromStorage();
     projects = projects.filter((p) => p.id !== id);
     if (activeId === id) activeId = projects[0]?.id ?? null;
     commit();
   },
   setActive(id: string | null) {
+    syncFromStorage();
     activeId = id;
     commit();
   },
   /** Store a tool's current inputs in a project, replacing an earlier entry for the same tool. */
   saveTool(id: string, path: string, query: string, note?: string) {
+    syncFromStorage();
     const entry: SavedTool = { path, query, note, updated: Date.now() };
     projects = projects.map((p) => (p.id === id ? { ...p, updated: Date.now(), tools: [...p.tools.filter((t) => t.path !== path), entry] } : p));
     commit();
   },
   removeTool(id: string, path: string) {
+    syncFromStorage();
     projects = projects.map((p) => (p.id === id ? { ...p, updated: Date.now(), tools: p.tools.filter((t) => t.path !== path) } : p));
     commit();
   },
   import(incoming: Project[]) {
+    syncFromStorage();
     projects = mergeProjects(projects, incoming);
     activeId = activeId ?? projects[0]?.id ?? null;
     commit();
