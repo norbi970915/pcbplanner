@@ -122,11 +122,13 @@ function Item({
   onClick,
   checked,
   hint,
+  disabled,
 }: {
   children: ReactNode;
   onClick: () => void;
   checked?: boolean;
   hint?: string;
+  disabled?: boolean;
 }) {
   const content = (
     <>
@@ -135,7 +137,7 @@ function Item({
     </>
   );
   return checked === undefined ? (
-    <DropdownMenuItem onSelect={onClick}>{content}</DropdownMenuItem>
+    <DropdownMenuItem onSelect={onClick} disabled={disabled}>{content}</DropdownMenuItem>
   ) : (
     <DropdownMenuCheckboxItem checked={checked} onSelect={onClick}>
       {content}
@@ -162,7 +164,7 @@ export function Layout() {
   const [headEl, setHeadEl] = useState<HTMLElement | null>(null);
   const { projects, activeId } = useProjects();
   const activeProject = projects.find((p) => p.id === activeId);
-  const [saved, setSaved] = useState<string | null>(null);
+  const [canSaveTool, setCanSaveTool] = useState(false);
   const [analyticsChoice, setAnalyticsChoice] =
     useState<AnalyticsChoice | null>(readAnalyticsChoice);
   const [consentOpen, setConsentOpen] = useState(
@@ -175,6 +177,7 @@ export function Layout() {
   const actions = useRef<ToolActions | null>(null);
   const setActions = useCallback((a: ToolActions | null) => {
     actions.current = a;
+    setCanSaveTool(!!a?.canSave);
   }, []);
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -260,13 +263,20 @@ export function Layout() {
     writeJson(TABS_KEY, tabs);
   }, [tabs]);
   useEffect(() => {
-    setSaved(null);
-  }, [path]);
-  useEffect(() => {
     writeJson(PANELS_KEY, panels);
   }, [panels]);
 
   const openReport = () => { setMenu(null); actions.current?.report?.(); };
+  const saveTool = () => {
+    setMenu(null);
+    // The stackup manager keeps its own draft/save controls; preserve saving its selected stackup link.
+    if (path === '/stackup') {
+      const id = activeId ?? projectStore.create('My board').id;
+      projectStore.saveTool(id, path, new URL(currentToolUrl()).search.slice(1));
+      return;
+    }
+    actions.current?.save?.();
+  };
   const run = (fn: () => void) => () => {
     setMenu(null);
     fn();
@@ -376,17 +386,7 @@ export function Layout() {
               Reset Inputs
             </Item>
             <div className="menu-sep" />
-            <Item
-              onClick={run(() => {
-                const tool = toolByPath(path);
-                if (!tool) return;
-                const id = activeId ?? projectStore.create('My board').id;
-                projectStore.saveTool(id, path, new URL(currentToolUrl()).search.slice(1));
-                setSaved(
-                  `Saved to ${projects.find((x) => x.id === id)?.name ?? 'project'}`,
-                );
-              })}
-            >
+            <Item onClick={saveTool} disabled={!canSaveTool && path !== '/stackup'}>
               Save Tool to Project
             </Item>
             <Item onClick={run(() => navigate('/projects'))}>Projects…</Item>
@@ -660,13 +660,13 @@ export function Layout() {
               Offline
             </span>
           )}
-          {(saved || activeProject) && (
+          {activeProject && (
             <Link
               to="/projects"
               className="hidden truncate text-muted no-underline hover:text-ink sm:inline"
               title="Projects"
             >
-              {saved ?? `Project: ${activeProject?.name}`}
+              {`Project: ${activeProject.name}`}
             </Link>
           )}
           <button

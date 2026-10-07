@@ -62,3 +62,20 @@
   .property-field { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 }
 @media print { .properties-resizer, .mobile-workbench-bar { display: none !important; } }
+
+/* Keep saving beside the calculation, with status tied to the current inputs. */
+.project-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--sheet); }
+.project-save-destination { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 140px; }
+.project-save-destination > svg { flex-shrink: 0; color: var(--copper); }
+.project-save-destination > div { min-width: 0; }
+.project-save-destination a, .project-save-destination strong { display: block; max-width: 100%; overflow-wrap: anywhere; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.project-save-destination a { color: var(--ink); }
+.project-save-destination a:hover { color: var(--accent-ink); }
+.project-save-status { display: flex; align-items: center; gap: 5px; margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.project-save-status > svg { flex-shrink: 0; }
+.project-save-bar[data-save-status='Saved'] .project-save-status { color: var(--ok); }
+.project-save-bar[data-save-status='Unsaved changes'] .project-save-status > svg { color: var(--copper); fill: currentColor; }
+.project-save-bar[data-save-status='Check inputs'] .project-save-status { color: var(--copper); }
+.project-save-note { flex-basis: 100%; color: var(--muted); font-size: 11px; line-height: 1.5; }
+@media (max-width: 480px) { .project-save-bar { padding: 10px; gap: 10px; } .project-save-bar [data-slot='button'] { font-size: 12px; } }
+@media print { .project-save-bar { display: none !important; } }

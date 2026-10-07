@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { FileText } from 'lucide-react';
 import { HistoryControls } from './HistoryControls';
+import { ProjectSaveBar } from './ProjectSaveBar';
+import { useProjectSave } from '../state/useProjectSave';
 import { useHistoryShortcuts } from '../state/useHistoryShortcuts';
 import { CalculationReport } from './CalculationReport';
 import { captureReport, type ReportSnapshot } from '../lib/calculationReport';
@@ -47,6 +49,7 @@ export function ToolPage({
   const reportReturnFocus = useRef<HTMLElement | null>(null);
   const [reportSnapshot, setReportSnapshot] = useState<ReportSnapshot | null>(null);
   const paused = interaction.issues.length > 0;
+  const projectSave = useProjectSave(pathname, paused);
   const focusIssue = () => {
     showInputs();
     const input = document.getElementById(interaction.issues[0]?.id);
@@ -72,9 +75,9 @@ export function ToolPage({
     });
   };
   useEffect(() => {
-    setActions({ reset: onReset, report: createReport });
+    setActions({ reset: onReset, report: createReport, save: projectSave.available ? projectSave.save : undefined, canSave: projectSave.canSave });
     return () => setActions(null);
-  }, [onReset, setActions, createReport]);
+  }, [onReset, setActions, createReport, projectSave.available, projectSave.save, projectSave.canSave]);
 
   // narrow screens: the header is shown above the inputs (Layout slot), so it is hidden here
   const mobileHead = (
@@ -140,6 +143,7 @@ export function ToolPage({
         </div>
       </div>
 
+      <ProjectSaveBar save={projectSave} settingsOnly={pathname === '/s-parameter-viewer'} />
       {paused && <div className="inputs-paused" role="status">
         <div><strong>Results paused</strong><p>{interaction.issues[0].label}: {interaction.issues[0].message}</p></div>
         <Button type="button" variant="outline" size="sm" onClick={focusIssue}>Go to input</Button>

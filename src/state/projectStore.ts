@@ -164,6 +164,7 @@ export const projectStore = {
     };
   },
   get: () => snapshot,
+  isPersisted: () => !hasUnstoredChanges,
   create(name: string): Project {
     syncFromStorage();
     const now = Date.now();

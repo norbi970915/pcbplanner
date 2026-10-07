@@ -3,45 +3,14 @@ import { useLocation } from 'react-router-dom';
 import { useTrackedState } from './useTrackedState';
 import { REFRESH_INPUTS_EVENT } from './designHistoryStore';
 import { FLUSH_TOOL_URL_EVENT } from '../lib/toolUrl';
+import { encodeToolQuery as encode, parseToolQuery as parse } from '../lib/toolInputs';
+import { toolInputsStore } from './toolInputsStore';
 
 type Primitive = string | number | boolean;
 const SESSION_PREFIX = 'pcbplanner:tool:';
 
 export function toolSessionKey(path: string): string {
   return `${SESSION_PREFIX}${path}`;
-}
-
-function parse<T extends Record<string, Primitive>>(search: string, defaults: T): T {
-  const q = new URLSearchParams(search);
-  const out: Record<string, Primitive> = { ...defaults };
-  for (const [k, def] of Object.entries(defaults)) {
-    const raw = q.get(k);
-    if (raw === null) continue;
-    if (typeof def === 'number') {
-      const n = Number(raw);
-      if (Number.isFinite(n)) out[k] = n;
-    } else if (typeof def === 'boolean') {
-      out[k] = raw === '1' || raw === 'true';
-    } else {
-      out[k] = raw;
-    }
-  }
-  return out as T;
-}
-
-function encode<T extends Record<string, Primitive>>(state: T, defaults: T): string {
-  const q = new URLSearchParams();
-  for (const [k, v] of Object.entries(state)) {
-    if (v === defaults[k]) continue;
-    // the URL keeps 7 significant digits, so a value that rounds to the default is the default
-    // (100 × 1e-9 typed as "100 n" is 1.0000000000000001e-7, not the default 1e-7)
-    const def = defaults[k];
-    if (typeof v === 'number' && typeof def === 'number' && Number(v.toPrecision(7)) === Number(def.toPrecision(7))) continue;
-    if (typeof v === 'number') q.set(k, String(Number(v.toPrecision(7))));
-    else if (typeof v === 'boolean') q.set(k, v ? '1' : '0');
-    else q.set(k, v);
-  }
-  return q.toString();
 }
 
 /** An explicit tool query is a shareable result and takes priority over the session. */
@@ -103,6 +72,7 @@ export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
   }, [location.key, location.search, path, replaceState]);
 
   useEffect(() => {
+    toolInputsStore.publish(path, state, defaultsRef.current);
     saveSession(path, state, defaultsRef.current);
     const writeUrl = () => {
       const q = encode(state, defaultsRef.current);

@@ -1,10 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Dialog } from 'radix-ui';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { FeaturedTools } from '../components/FeaturedTools';
-import { useDocumentMeta } from '../components/ToolPage';
+import { useDocumentMeta } from '../lib/useDocumentMeta';
 import { APP_NAME } from '../config';
 import {
   Search,
@@ -22,7 +21,7 @@ import { Input } from '../components/shadcn/input';
 import { Badge } from '../components/shadcn/badge';
 import { NEWS } from '../data/news';
 import { useShell } from '../state/shell';
-import { projectStore } from '../state/projectStore';
+import { CreateProjectDialog } from '../components/CreateProjectDialog';
 import { GUIDES } from '../guides/registry';
 import { searchEntries, type SearchEntry } from '../lib/siteSearch';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
@@ -54,9 +53,6 @@ function Heading({
 }
 function HomeProjectStart() {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const nameRef = useRef<HTMLInputElement>(null);
 
   return (
     <section className="home-project-start" aria-labelledby="home-project-heading">
@@ -65,42 +61,9 @@ function HomeProjectStart() {
         <h2 id="home-project-heading">Keep your board calculations together</h2>
         <p>Save calculator inputs in a project and reopen them in this browser, even after closing it. No account needed.</p>
         <div className="home-project-actions">
-          <Dialog.Root open={open} onOpenChange={(next) => {
-            if (next) setName('');
-            setOpen(next);
-          }}>
-            <Dialog.Trigger asChild>
-              <Button size="sm"><FolderPlus size={15} />Create a project</Button>
-            </Dialog.Trigger>
-            <Dialog.Portal>
-              <Dialog.Overlay className="workspace-dialog-overlay" />
-              <Dialog.Content className="project-create-dialog" onOpenAutoFocus={(event) => {
-                event.preventDefault();
-                nameRef.current?.focus();
-              }}>
-                <Dialog.Title>Create a project</Dialog.Title>
-                <Dialog.Description>Give your board a name, then save calculator setups to it as you work.</Dialog.Description>
-                <Dialog.Close asChild>
-                  <Button className="project-create-close" variant="ghost" size="icon-sm" aria-label="Close project dialog"><X size={16} /></Button>
-                </Dialog.Close>
-                <form onSubmit={(event) => {
-                  event.preventDefault();
-                  if (!name.trim()) return;
-                  projectStore.create(name.trim());
-                  setOpen(false);
-                  navigate('/projects');
-                }}>
-                  <label htmlFor="home-project-name">Project name</label>
-                  <Input id="home-project-name" ref={nameRef} placeholder="e.g. Motor controller" value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" required />
-                  <p className="project-create-note">Stored on this device. You can export a project file to keep a copy or move it to another browser.</p>
-                  <div className="project-create-actions">
-                    <Dialog.Close asChild><Button type="button" variant="outline" size="sm">Cancel</Button></Dialog.Close>
-                    <Button type="submit" size="sm" disabled={!name.trim()}>Create project<ArrowRight size={14} /></Button>
-                  </div>
-                </form>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </Dialog.Root>
+          <CreateProjectDialog onCreated={() => navigate('/projects')}>
+            <Button size="sm"><FolderPlus size={15} />Create a project</Button>
+          </CreateProjectDialog>
           <Link to="/projects">Your projects<ArrowRight size={13} /></Link>
         </div>
       </div>
