@@ -45,3 +45,6 @@
 @media (pointer: coarse) {
   :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: max(16px, 1em); }
 }
+
+/* No sideways drag-and-bounce of the page on phones; tables and the tab strip scroll in their own boxes. */
+html, body { overscroll-behavior-x: none; }

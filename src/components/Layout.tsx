@@ -589,7 +589,7 @@ export function Layout() {
         </div>
 
         {/* workspace: on narrow screens one scrolling column (title, inputs, results); from lg up, docked panels */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-x-none lg:flex-row lg:overflow-hidden">
           {panels.tools && (
             <aside className="tools-panel hidden shrink-0 flex-col border-r border-line bg-panel lg:flex">
               <div className="panel-heading">
