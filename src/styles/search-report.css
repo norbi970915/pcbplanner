@@ -39,3 +39,9 @@
   .mobile-tool-heading .report-trigger span { display: none; }.mobile-tool-heading .report-trigger { padding: 0 7px; }
 }
 @media print { .global-search-trigger, .workspace-dialog-overlay, .global-search-dialog, .calculation-report-dialog, .report-trigger { display: none !important; } }
+
+/* iOS Safari zooms into any focused field under 16px and leaves the page zoomed, so it then pans
+   sideways. Keep every text field at 16px or more on touch screens, whatever its own style says. */
+@media (pointer: coarse) {
+  :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: max(16px, 1em); }
+}
