@@ -77,7 +77,7 @@ export function PlyEditor({
             <th className="text-right font-normal">Dk</th>
             {withDf && <th className="text-right font-normal">Df</th>}
             {showFrequency && <th className="text-right font-normal">Ref GHz</th>}
-            <th />
+            <th><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>

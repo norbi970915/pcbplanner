@@ -192,7 +192,7 @@ export function FeaturedTools() {
  const visible = [0, 1, 2].map(offset => (selected + offset) % FEATURES.length);
  const reducedMotion = useSyncExternalStore(subscribeToMotion, motionSnapshot, () => false);
  return (
-  <section className="featured-section" aria-labelledby="featured-heading">
+  <section className="featured-section">
    <Carousel
     className="featured-carousel"
     setApi={setApi}

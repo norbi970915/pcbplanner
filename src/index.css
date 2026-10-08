@@ -24,7 +24,7 @@
   --line-strong: #4b4e56;
   --field: #202125;
   --field-line: #454850;
-  --accent: #507aaa; /* selection / focus blue */
+  --accent: #4d77a6; /* selection / focus blue; white text on it is 4.6:1 (WCAG AA) */
   --accent-ink: #6b9bd2;
   --sel: #2a3543; /* selected row / active item */
   --hover: #30343a;
@@ -39,6 +39,7 @@
   /* PCB materials, as in the Layer Stack Manager */
   --copper: #d08a3c;
   --laminate: #6b6a3e;
+  --laminate-ink: #ffffff; /* text on laminate: 5.6:1 */
   --prepreg: #817f4a;
   --mask: #2f7a4f;
   --grid: #2b2c30;
@@ -74,6 +75,7 @@
   --ok: #217a45;
   --copper: #c7782f;
   --laminate: #c9c38d;
+  --laminate-ink: #1a1206; /* text on laminate: 10.3:1 */
   --prepreg: #ddd7a3;
   --mask: #3f8a5c;
   --grid: #e8ebef;

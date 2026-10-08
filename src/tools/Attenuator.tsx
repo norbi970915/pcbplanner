@@ -135,7 +135,7 @@ export default function Attenuator() {
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th />
+                    <th><span className="sr-only">Resistor</span></th>
                     <th className="v">Exact values</th>
                     <th className="v">{ser} values</th>
                   </tr>

@@ -137,7 +137,7 @@ export default function Resistors() {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th />
+                  <th><span className="sr-only">Value</span></th>
                   <th className="v">R</th>
                   <th className="v">LED current</th>
                   <th className="v">Power in R</th>

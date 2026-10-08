@@ -57,7 +57,7 @@ export function ToolPage({
     toggle?.click();
     requestAnimationFrame(() => { input?.focus(); input?.scrollIntoView({ block: 'center' }); });
   };
-  useDocumentMeta(toolByPath(pathname)?.seoTitle ?? title, description);
+  useDocumentMeta(toolByPath(pathname)?.seoTitle ?? title, toolByPath(pathname)?.metaDescription ?? description);
   const { propsEl, statusEl, headEl, setActions, showInputs } = useShell();
   const related = guidesForTool(pathname);
   const relatedT = relatedTools(pathname);

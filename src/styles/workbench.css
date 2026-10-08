@@ -33,6 +33,13 @@ svg {
 .app-shell a:hover:not([class]) {
   text-decoration: underline;
 }
+/* links inside running text need more than colour to stand out (WCAG 1.4.1) */
+.app-shell :is(p, .prose-doc li, .guide li) a:not([class*="btn"]):not([role]):not(:is(.cite, .tryit) a) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+}
 .app-shell a:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--accent);
@@ -1193,6 +1200,8 @@ kbd {
 }
 .featured-tool {
   height: 100%;
+  /* category colours lightened a little so link text stays at 4.5:1 or more on the dark card */
+  --feature-ink: color-mix(in srgb, var(--feature-color), #fff 18%);
   --art-bg: #22272d;
   --art-slab: #2c383f;
   --art-edge: #1e2930;
@@ -1205,7 +1214,7 @@ kbd {
   --art-edge: #ccd9df;
   --art-outline: #b5c6d0;
   --art-axis: #7f949f;
-  --feature-ink: color-mix(in srgb, var(--feature-color), #1d2634 35%);
+  --feature-ink: color-mix(in srgb, var(--feature-color), #1d2634 45%);
 }
 .featured-link {
   display: flex;

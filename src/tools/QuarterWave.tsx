@@ -293,7 +293,7 @@ function TransformerView({ p, lk, n, cheb, gm, r, L, unit }: { p: Params; lk: Li
               <th className="v">εeff</th>
               <th className="v">λ/4 at f0</th>
               <th className="v">{lk === 'eeff' ? 'Width' : 'Width (closed form)'}</th>
-              <th />
+              <th><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>

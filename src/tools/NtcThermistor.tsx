@@ -306,7 +306,7 @@ export default function NtcThermistor() {
           <table className="tbl">
             <thead>
               <tr>
-                <th />
+                <th><span className="sr-only">Quantity</span></th>
                 <th className="v">Steinhart–Hart</th>
                 <th className="v">Beta ({pairLabel})</th>
               </tr>
@@ -362,7 +362,7 @@ export default function NtcThermistor() {
               <th>Pair</th>
               <th className="v">From the points</th>
               {part?.table && <th className="v">From the datasheet table</th>}
-              <th />
+              <th><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -480,7 +480,7 @@ export default function NtcThermistor() {
                     <th className="v">Nearest {series}</th>
                     <th className="v">°C/LSB at {tc(p.tdes, 3)}</th>
                     <th className="v">Span</th>
-                    <th />
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -523,7 +523,7 @@ export default function NtcThermistor() {
                   {lut.rows} rows from {tc(p.tmin)} to {tc(p.tmax)} in {fmt(p.step, 4)} °C steps, {useSh ? 'Steinhart–Hart' : 'Beta'} model. Codes are round(V / LSB). In firmware, search the code array and
                   interpolate linearly between neighbouring entries.
                 </p>
-                <pre className="m-3 max-h-[320px] overflow-auto border border-line bg-field p-2 font-mono text-[12px] leading-snug">{lut.text}</pre>
+                <pre tabIndex={0} className="m-3 max-h-[320px] overflow-auto border border-line bg-field p-2 font-mono text-[12px] leading-snug">{lut.text}</pre>
               </>
             )}
           </Panel>

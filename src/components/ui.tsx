@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Card, CardHeader, CardContent } from './shadcn/card';
 import { Input } from './shadcn/input';
 import { Button } from './shadcn/button';
@@ -79,6 +79,23 @@ export function Panel({
 }) {
   const { issues, inProperties } = useFieldInteraction();
   const paused = issues.length > 0 && !allowInvalid && !inProperties;
+  // a panel that scrolls sideways (wide table on a phone) must be reachable by keyboard; only then is it a tab stop
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scrolls, setScrolls] = useState(false);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const check = () => {
+      setScrolls(el.scrollWidth > el.clientWidth + 1);
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    for (const child of Array.from(el.children)) observer.observe(child);
+    return () => {
+      observer.disconnect();
+    };
+  }, [paused]);
   return (
     <Card className={`min-w-0 border border-line bg-sheet ${className}`}>
       {title && (
@@ -89,7 +106,7 @@ export function Panel({
       )}
       {/* wide tables scroll sideways inside the panel on narrow screens */}
       {paused && <p className="panel-inputs-paused">Waiting for valid inputs.</p>}
-      <CardContent className="panel-content overflow-x-auto p-0" hidden={paused}>
+      <CardContent ref={contentRef} tabIndex={scrolls ? 0 : undefined} className="panel-content overflow-x-auto p-0" hidden={paused}>
         {children}
       </CardContent>
     </Card>
@@ -422,7 +439,7 @@ function CopyResultButton() {
   return (
     <button
       type="button"
-      className="ml-1 inline-flex h-[18px] w-[18px] items-center justify-center align-middle text-faint hover:bg-hover hover:text-ink focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent"
+      className="copy-result ml-1 inline-flex h-[18px] w-[18px] items-center justify-center align-middle text-faint hover:bg-hover hover:text-ink focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent"
       onClick={copy}
       disabled={issues.length > 0}
       title={title}

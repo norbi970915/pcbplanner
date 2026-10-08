@@ -8,6 +8,7 @@ export interface GuideDef {
   title: string; // headline on the page
   seoTitle: string; // shorter title for search results (under ~50 characters before the site name)
   description: string; // meta description and card text
+  metaDescription?: string; // shorter search-result description (≤155 characters) when description is longer
   tools: string[]; // tools used in the guide; those tool pages link back to it
   related: string[]; // curated next guides, closest match first; empty when no close companion exists
   date: string; // ISO date of publication
@@ -29,6 +30,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/thermal-via-array-design',
+    metaDescription: 'Calculate a thermal via array from hole size, plating and board thickness, compare open and filled vias, and separate via drop from junction temperature.',
     related: ['/guides/copper-area-for-cooling', '/guides/ldo-efficiency-power-dissipation', '/guides/pcb-via-current-capacity'],
     title: 'Thermal Via Arrays: Barrel Geometry, Filling and Temperature Drop',
     seoTitle: 'Thermal Via Arrays: Plating, Fill & Resistance',
@@ -39,9 +41,10 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcb-trace-width-current-calculation',
+    metaDescription: 'A worked 3 A PCB trace width calculation with voltage drop and power loss, and the limits of IPC-2221 and the IPC-2152 curve fit.',
     related: ['/guides/pcb-via-current-capacity', '/guides/thermal-via-array-design', '/guides/copper-area-for-cooling'],
     title: 'PCB Trace Width and Current: Temperature Rise, Voltage Drop and Loss',
-    seoTitle: 'PCB Trace Width: Current, Heating & Voltage Drop',
+    seoTitle: 'PCB Trace Width for Current & Voltage Drop',
     description: 'Work through a 3 A PCB trace calculation, check voltage drop and power loss, and understand the limits of IPC-2221 and the implemented IPC-2152 external curve fit.',
     tools: ['/trace-width', '/via'],
     date: '2026-10-05', category: 'Power & Thermal',
@@ -71,7 +74,7 @@ export const GUIDES: GuideDef[] = [
     path: '/guides/i2c-pullup-resistor-calculation',
     related: ['/guides/rc-filter-design', '/guides/controlled-impedance'],
     title: 'I²C Pull-up Resistors: When 4.7 kΩ Works and When It Does Not',
-    seoTitle: 'I2C Pull-up Resistor Calculation & Bus Capacitance',
+    seoTitle: 'I2C Pull-up Resistor Value & Bus Capacitance',
     description: 'Calculate I²C pull-up minimum and maximum resistance from sink current and rise time, estimate bus capacitance, and include parallel module pull-ups.',
     tools: ['/i2c-pullup', '/impedance', '/logic-levels'],
     date: '2026-10-01', category: 'Schematic & Components',
@@ -165,6 +168,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcie-routing-guidelines',
+    metaDescription: 'PCIe Gen3–5 PCB routing checklist: differential impedance, return paths, channel loss budget, via stubs, AC-coupling capacitors and skew.',
     related: ['/guides/pcie-gen3-routing', '/guides/controlled-impedance', '/guides/ac-coupling-capacitors'],
     title: 'PCIe PCB Routing Guidelines: Impedance, Return Paths, Vias, Loss and Skew',
     seoTitle: 'PCIe Routing Guidelines for Gen3, Gen4 & Gen5',
@@ -177,6 +181,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/buck-converter-formulas',
+    metaDescription: 'Buck converter duty cycle, inductor, ripple current, peak current and capacitor equations, worked through for 12 V to 3.3 V at 2 A.',
     related: ['/guides/boost-converter-formulas', '/guides/feedback-divider-resistor-selection', '/guides/ldo-efficiency-power-dissipation'],
     title: 'Buck Converter Formulas: Duty Cycle, Inductor and Capacitors, Worked Through',
     seoTitle: 'Buck Converter Formulas with a Worked Example',
@@ -189,6 +194,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/boost-converter-formulas',
+    metaDescription: 'Boost converter duty cycle, inductor current, peak switch current, maximum load and output capacitor equations, for a Li-ion cell to 5 V at 1 A.',
     related: ['/guides/buck-converter-formulas', '/guides/feedback-divider-resistor-selection', '/guides/decoupling-capacitor-values'],
     title: 'Boost Converter Formulas: Why the Inductor Carries More Current than the Load',
     seoTitle: 'Boost Converter Formulas with a Worked Example',
@@ -201,6 +207,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/via-fence-spacing',
+    metaDescription: 'How far apart to place via fence and stitching vias: wavelength in the laminate, the λ/10 and λ/20 rules, cell resonance and leakage, with a 5 GHz example.',
     related: ['/guides/pcb-crosstalk-3w-rule', '/guides/choosing-a-pcb-stackup', '/guides/pcie-routing-guidelines'],
     title: 'Via Fence and Stitching Via Spacing: From λ/20 to Millimetres',
     seoTitle: 'Via Fence Spacing: λ/10, λ/20 and Via Pitch',
@@ -213,6 +220,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcb-crosstalk-3w-rule',
+    metaDescription: 'What the 3W rule means as edge-to-edge clearance, and how plane distance, coupled length and rise time change crosstalk, with field-solver examples.',
     related: ['/guides/controlled-impedance', '/guides/choosing-a-pcb-stackup', '/guides/via-fence-spacing'],
     title: 'PCB Crosstalk and the 3W Rule: How Much Spacing Is Enough?',
     seoTitle: 'PCB Crosstalk: 3W Rule and Trace Spacing',
@@ -225,6 +233,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcb-via-current-capacity',
+    metaDescription: 'Resistance and current of a 0.3 mm PCB via, the effect of barrel plating, and how many vias a 5 A rail needs, with voltage drop and thermal limits.',
     related: ['/guides/pcb-trace-width-current-calculation', '/guides/thermal-via-array-design', '/guides/copper-area-for-cooling'],
     title: 'How Much Current Can a PCB Via Carry? Worked Examples for Power Rails',
     seoTitle: 'PCB Via Current Capacity: Size and Via Count',
@@ -237,6 +246,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/decoupling-capacitor-values',
+    metaDescription: '100 nF or 10 µF? Compare decoupling capacitors by mounted impedance, series resonance and antiresonance, with DC bias, placement and a PDN budget.',
     related: ['/guides/ldo-efficiency-power-dissipation', '/guides/buck-converter-formulas', '/guides/pcb-via-current-capacity'],
     title: '100 nF or 10 µF? Choosing Decoupling Capacitors for a PCB',
     seoTitle: 'Decoupling Capacitors: 100 nF or 10 µF?',
@@ -249,6 +259,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/controlled-impedance',
+    metaDescription: 'What PCB trace impedance is, when it matters, how microstrip and stripline differ, and why solder mask and etching shift it by several ohms.',
     related: ['/guides/choosing-a-pcb-stackup', '/guides/pcb-crosstalk-3w-rule', '/guides/usb3-85-or-90-ohm'],
     title: 'Controlled Impedance Explained: Microstrip, Stripline and Solder Mask',
     seoTitle: 'Controlled Impedance: Microstrip vs Stripline',
@@ -261,6 +272,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/choosing-a-pcb-stackup',
+    metaDescription: 'How to choose a 4- or 6-layer PCB stackup: layer order, reference planes, and how the prepreg glass style sets 50 Ω trace widths from 0.12 mm to over 1 mm.',
     related: ['/guides/controlled-impedance', '/guides/pcie-gen3-routing', '/guides/pcb-crosstalk-3w-rule'],
     title: 'How to Choose a PCB Stackup (and What 1080, 2116 and 7628 Mean)',
     seoTitle: 'How to Choose a PCB Stackup (1080, 2116, 7628)',
@@ -273,6 +285,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/pcie-gen3-routing',
+    metaDescription: 'PCIe Gen3 on a standard FR-4 six-layer board: impedance, AC coupling, skew, loss budget, vias and reference clock, with trace widths and loss at 4 GHz.',
     related: ['/guides/pcie-routing-guidelines', '/guides/ac-coupling-capacitors', '/guides/choosing-a-pcb-stackup'],
     title: 'PCIe Gen3 Routing on a Hobby Budget: Lessons from an M.2 NVMe Carrier Card',
     seoTitle: 'PCIe Gen3 Routing Guide for M.2 Carrier Cards',
@@ -285,6 +298,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/ac-coupling-capacitors',
+    metaDescription: 'Which links need AC coupling capacitors, the values PCIe, USB 3.2, SATA, SGMII, DisplayPort, HDMI and Ethernet allow, and why package size matters.',
     related: ['/guides/pcie-routing-guidelines', '/guides/usb3-85-or-90-ohm', '/guides/s4p-differential-s-parameters'],
     title: 'AC Coupling Capacitors on High-Speed Links: the Value for Every Interface',
     seoTitle: 'AC Coupling Capacitor Values by Interface',
@@ -297,6 +311,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/usb3-85-or-90-ohm',
+    metaDescription: 'USB 3.2 traces are designed to 90 Ω differential; 85 Ω is the mated Type-C connector target. What the specifications say and why the difference is small.',
     related: ['/guides/controlled-impedance', '/guides/ac-coupling-capacitors', '/guides/s4p-differential-s-parameters'],
     title: 'Is USB 3 85 Ω or 90 Ω? What the Specifications Actually Say',
     seoTitle: 'USB 3 Impedance: 85 Ω or 90 Ω?',
@@ -309,6 +324,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/copper-area-for-cooling',
+    metaDescription: 'Why a hot SOT-223 or DPAK needs copper around it, how thermal resistance falls with pour size and copper weight, and what datasheet θJA really means.',
     related: ['/guides/thermal-via-array-design', '/guides/ldo-efficiency-power-dissipation', '/guides/pcb-trace-width-current-calculation'],
     title: 'How Much Copper Does a Regulator Need? PCB Heat Spreading in Numbers',
     seoTitle: 'How Much Copper Does a Regulator Need?',
@@ -321,6 +337,7 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/creepage-clearance-mains',
+    metaDescription: 'Minimum PCB spacing for 230 V and 120 V mains: impulse voltage, clearance, creepage, pollution degree, material group, reinforced insulation and slots.',
     related: [],
     title: 'Creepage and Clearance for Mains Circuits (IEC 60664-1)',
     seoTitle: 'Creepage and Clearance for Mains (IEC 60664-1)',

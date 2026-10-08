@@ -142,7 +142,7 @@ export default function EmiFilter() {
         <p className="px-3 pb-2 text-faint">Solid: selected circuit. {undamped ? 'Dashed: damping branch removed. ' : ''}Click a plot to move the probe; arrow keys adjust frequency. Peaks refer only to the displayed band. Negative insertion attenuation means amplification.</p>
       </Panel>
       {standard.length > 0 && <Panel title={`Nearby Standard L and C2 (${series})`}>
-        <table className="tbl"><thead><tr><th>L</th><th>C2</th><th className="v">LC reference</th><th className="v">Reference error</th><th className="v">Attenuation at probe</th><th /></tr></thead><tbody>
+        <table className="tbl"><thead><tr><th>L</th><th>C2</th><th className="v">LC reference</th><th className="v">Reference error</th><th className="v">Attenuation at probe</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
           {standard.map(row => <tr key={`${row.l}/${row.c}`}><td>{si(row.l, 'H', 5)}</td><td>{si(row.c, 'F', 5)}</td><td className="v">{si(row.f0, 'Hz', 5)}</td><td className="v">{fmt(row.errorPct, 4)} %</td><td className="v">{db(row.attenuation)}</td>
             <td><button type="button" className="btn" onClick={() => set({ l: row.l, c2: row.c, mode: 'analyse' })} aria-label={`Use ${si(row.l, 'H')} and ${si(row.c, 'F')}`}>Use</button></td></tr>)}
         </tbody></table>

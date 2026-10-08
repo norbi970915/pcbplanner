@@ -68,7 +68,7 @@ export default function CurrentShunt() {
         </Panel>
       </div>
       <Panel title={`Candidate ${series} Values Within Worst-Case Drop Budget`}>
-        {candidates.length ? <table className="tbl"><thead><tr><th className="text-left">Shunt</th><th className="v">Worst drop at Imax</th><th className="v">Nominal power</th><th /></tr></thead><tbody>
+        {candidates.length ? <table className="tbl"><thead><tr><th className="text-left">Shunt</th><th className="v">Worst drop at Imax</th><th className="v">Nominal power</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
           {candidates.map(r => <tr key={r}><td>{fmt(r, 5)} mΩ</td><td className="v">{fmt(p.maxA * r * (1 + result.resistorErrorPct / 100), 5)} mV</td><td className="v">{si(p.maxA ** 2 * r * 1e-3, 'W', 4)}</td><td className="v"><button type="button" className="btn" onClick={() => set({ rMilli: r })}>Use</button></td></tr>)}
         </tbody></table> : <p className="px-3 py-2 text-muted">No candidate in this series fits the current and drop budget.</p>}
         <p className="px-3 py-2 text-faint">Preferred-number candidates are nominal values; confirm that a real shunt with the chosen tolerance, TCR, power rating and package is available.</p>

@@ -246,7 +246,7 @@ export function Method() {
       <table className="tbl my-2 max-w-[560px]">
         <thead>
           <tr>
-            <th className="text-left" />
+            <th><span className="sr-only">Feature</span></th>
             <th className="v">Level A</th>
             <th className="v">Level B</th>
             <th className="v">Level C</th>

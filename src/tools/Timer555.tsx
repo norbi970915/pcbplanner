@@ -103,7 +103,7 @@ export default function Timer555() {
           <table className="tbl">
             <thead>
               <tr>
-                <th />
+                <th><span className="sr-only">Resistor</span></th>
                 <th className="v">Exact</th>
                 <th className="v">Nearest {series}</th>
               </tr>

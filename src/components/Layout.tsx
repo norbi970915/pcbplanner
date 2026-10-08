@@ -267,6 +267,23 @@ export function Layout() {
   }, [panels]);
 
   const openReport = () => { setMenu(null); actions.current?.report?.(); };
+  // On a calculator, Ctrl/Cmd+P opens the calculation report: the docked workbench does not print well,
+  // the report does. Other pages (guides, home) print through the browser with the print stylesheet.
+  const isTool = !!toolByPath(path);
+  useEffect(() => {
+    if (!isTool) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'p' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+      if (!actions.current?.report) return;
+      event.preventDefault();
+      setMenu(null);
+      actions.current.report();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isTool]);
   const saveTool = () => {
     setMenu(null);
     // The stackup manager keeps its own draft/save controls; preserve saving its selected stackup link.
@@ -313,7 +330,6 @@ export function Layout() {
     () => ({ propsEl, statusEl, headEl, setActions, showInputs }),
     [propsEl, statusEl, headEl, setActions, showInputs],
   );
-  const keyboardTab = tabs.includes(path) ? path : tabs[tabs.length - 1];
   const tabTitle = (p: string) =>
     p === '/'
       ? 'Home'
@@ -342,7 +358,7 @@ export function Layout() {
           Skip to content
         </a>
         {/* menu bar */}
-        <div ref={barRef} className="menu-bar">
+        <div ref={barRef} className="menu-bar" role="banner">
           <Link to="/" className="brand" title={`${APP_NAME} – pcbplanner.com`}>
             <img src="/favicon.svg?v=3" width="22" height="22" alt="" />
             <span className="font-semibold">
@@ -392,7 +408,7 @@ export function Layout() {
             <Item onClick={run(() => navigate('/projects'))}>Projects…</Item>
             <div className="menu-sep" />
             {!!toolByPath(path) && <Item onClick={openReport}>Calculation report...</Item>}
-            <Item onClick={run(() => window.print())} hint="Ctrl+P">
+            <Item onClick={isTool ? openReport : run(() => window.print())} hint="Ctrl+P">
               Print…
             </Item>
             {install && (
@@ -516,9 +532,9 @@ export function Layout() {
         </div>
 
         {/* document tabs */}
-        <div
+        {/* open tools switch pages, so this is navigation (aria-current), not an ARIA tab widget */}
+        <nav
           className="document-bar flex shrink-0 items-end gap-px overflow-x-auto border-b border-line bg-chrome px-2"
-          role="tablist"
           aria-label="Open tools"
         >
           {tabs.map((t) => {
@@ -526,7 +542,6 @@ export function Layout() {
             return (
               <div
                 key={t}
-                role="presentation"
                 className={`document-tab group flex h-[29px] shrink-0 items-center gap-1.5 border border-b-0 pr-1 ${
                   active
                     ? 'border-line bg-[var(--tab-active)] text-ink'
@@ -544,11 +559,8 @@ export function Layout() {
                     else tabRefs.current.delete(t);
                   }}
                   type="button"
-                  role="tab"
                   id={tabId(t)}
-                  aria-selected={active}
-                  aria-controls="tool-panel"
-                  tabIndex={t === keyboardTab ? 0 : -1}
+                  aria-current={active ? 'page' : undefined}
                   className="flex h-full items-center gap-1.5 pl-2 focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
                   onClick={() => navigate(t)}
                   onAuxClick={(event) => {
@@ -575,7 +587,7 @@ export function Layout() {
                 <button
                   type="button"
                   aria-label={`Close ${tabTitle(t)}`}
-                  className={`ml-1 grid h-4 w-4 place-items-center text-[10px] hover:bg-btn-hover ${active ? '' : 'opacity-0 group-hover:opacity-100'}`}
+                  className={`tab-close ml-1 grid h-4 w-4 place-items-center text-[10px] hover:bg-btn-hover ${active ? '' : 'opacity-0 group-hover:opacity-100'}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     closeTab(t);
@@ -586,12 +598,12 @@ export function Layout() {
               </div>
             );
           })}
-        </div>
+        </nav>
 
         {/* workspace: on narrow screens one scrolling column (title, inputs, results); from lg up, docked panels */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-x-none lg:flex-row lg:overflow-hidden">
+        <div className="workspace flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-x-none lg:flex-row lg:overflow-hidden">
           {panels.tools && (
-            <aside className="tools-panel hidden shrink-0 flex-col border-r border-line bg-panel lg:flex">
+            <aside aria-label="Tools" className="tools-panel hidden shrink-0 flex-col border-r border-line bg-panel lg:flex">
               <div className="panel-heading">
                 <span>Tools</span>
                 <Badge variant="outline">{TOOLS.length}</Badge>
@@ -607,6 +619,8 @@ export function Layout() {
           {/* narrow screens: the tool's title goes above its inputs */}
           <div
             ref={setHeadEl}
+            role="region"
+            aria-label="Calculator title"
             className="order-first shrink-0 bg-doc lg:hidden"
           />
 
@@ -638,8 +652,6 @@ export function Layout() {
           <main
             ref={mainRef}
             id="tool-panel"
-            role={known ? 'tabpanel' : undefined}
-            aria-labelledby={known ? tabId(path) : undefined}
             className="min-w-0 shrink-0 bg-doc lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
           >
             <ErrorBoundary key={path}>
@@ -653,7 +665,7 @@ export function Layout() {
         </div>
 
         {/* status bar */}
-        <div className="status-bar flex shrink-0 items-center gap-3 border-t border-line bg-chrome px-3 text-muted">
+        <div role="contentinfo" className="status-bar flex shrink-0 items-center gap-3 border-t border-line bg-chrome px-3 text-muted">
           <div ref={setStatusEl} className="min-w-0 flex-1 truncate" />
           {!online && (
             <span title="No network connection: the calculators keep working from the saved copy">

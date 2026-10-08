@@ -10,7 +10,7 @@ import { GUIDE_CATEGORIES, GUIDES, type GuideCategory } from './registry';
 export default function GuidesIndex() {
   useDocumentMeta(
     'PCB Design Guides',
-    'Sourced PCB and electronics guides with worked examples for RF, S-parameters, PCIe routing, stackups, power supplies, RC filters, I²C pull-ups and crystal clocks.',
+    'Sourced PCB and electronics guides with worked examples: RF, S-parameters, PCIe routing, stackups, power supplies, filters, I²C and crystals.',
   );
   const { statusEl } = useShell();
   const [params, setParams] = useSearchParams();

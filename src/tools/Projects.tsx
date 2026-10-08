@@ -166,7 +166,7 @@ export default function Projects() {
                 <tr>
                   <th>Tool</th>
                   <th>Saved</th>
-                  <th />
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -207,7 +207,7 @@ export default function Projects() {
                 <th>Project</th>
                 <th className="v">Tools</th>
                 <th>Last change</th>
-                <th />
+                <th><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>

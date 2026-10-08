@@ -74,7 +74,7 @@ function HomeProjectStart() {
 export default function Home() {
   useDocumentMeta(
     'PCB impedance, stackup and design calculators',
-    'Impedance field solver, stackup advisor, layer stack manager, trace width, via, thermal, crosstalk, PDN and electronics calculators for PCB design. Runs in the browser.',
+    'PCB design calculators: impedance field solver, stackup advisor, trace width, via, thermal, crosstalk, PDN and electronics tools. Runs in your browser.',
   );
   const { statusEl } = useShell();
   const [query, setQuery] = useState(() => {

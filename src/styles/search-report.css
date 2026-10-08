@@ -48,3 +48,72 @@
 
 /* No sideways drag-and-bounce of the page on phones; tables and the tab strip scroll in their own boxes. */
 html, body { overscroll-behavior-x: none; }
+
+/* Touch screens: controls at least 24px (WCAG 2.5.8), larger where they sit close together. Desktop keeps its compact sizes. */
+@media (pointer: coarse) {
+  .copy-result { width: 28px; height: 28px; }
+  .tab-close { width: 28px; height: 28px; opacity: 1; }
+  input[type='checkbox'], input[type='radio'] { width: 24px; height: 24px; }
+  .status-bar button { min-height: 26px; padding: 0 6px; }
+  .menu-bar .brand { min-height: 32px; }
+}
+
+
+/* Printing from the browser (guides, or the browser's own Print on a calculator; File > Print on a
+   calculator opens the calculation report instead). Light colours, no app chrome, nothing clipped. */
+@media print {
+  /* html[...] outranks the theme blocks in index.css, which come after this imported file */
+  html[data-theme],
+  html:root {
+    --chrome: #f8f9fa;
+    --chrome-2: #eef0f3;
+    --panel: #f6f7f9;
+    --panel-head: #fafbfc;
+    --doc: #f0f1f3;
+    --sheet: #ffffff;
+    --ink: #25282e;
+    --muted: #535b66;
+    --faint: #616875;
+    --line: #d9dce1;
+    --line-strong: #c5c9d0;
+    --field: #ffffff;
+    --field-line: #c5c9d0;
+    --accent: #38699f;
+    --accent-ink: #38699f;
+    --sel: #e4edf7;
+    --hover: #f1f3f6;
+    --tab-active: #f0f1f3;
+    --btn: #f8f9fa;
+    --btn-hover: #eef0f3;
+    --note-bg: #fff6d6;
+    --note-line: #d4a72c;
+    --err-bg: #fde8e6;
+    --err-line: #c0392b;
+    --ok: #217a45;
+    --copper: #c7782f;
+    --laminate: #c9c38d;
+    --laminate-ink: #1a1206;
+    --prepreg: #ddd7a3;
+    --mask: #3f8a5c;
+    --grid: #e8ebef;
+    --surface-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 2px 7px rgb(0 0 0 / 0.035);
+    color-scheme: light;
+  }
+  html, body, #root, .app-shell { height: auto !important; overflow: visible !important; background: #fff !important; }
+  .workspace, .overflow-x-auto { overflow: visible !important; height: auto !important; max-height: none !important; }
+  .skip-link, .menu-bar, .document-bar, .tools-panel, .status-bar, .mobile-workbench-bar,
+  .tool-page > .tool-heading:not(.mobile-tool-heading), .tool-actions, .properties-resizer, .properties-heading, .project-save-bar, .global-search-trigger,
+  aside[aria-labelledby='analytics-consent-title'], .content-footer { display: none !important; }
+  .workspace, .properties-panel, main { display: block !important; width: auto !important; max-width: none !important; border: 0 !important; }
+  /* the narrow-screen heading sits above the inputs, so the printout reads title, inputs, results */
+  .mobile-tool-heading { padding: 0 0 12px !important; }
+  .properties-panel { break-after: avoid; }
+  .document-page { padding: 0 !important; max-width: none !important; }
+  svg, figure, tr, .eq { break-inside: avoid; }
+  h1, h2, h3, summary { break-after: avoid; }
+  a { color: inherit !important; }
+}
+
+/* sr-only labels are absolutely positioned: anchor them to their cell, or inside a wide scrolling
+   table they escape the scroll box and widen the whole page on phones. */
+th:has(> .sr-only), td:has(> .sr-only) { position: relative; }

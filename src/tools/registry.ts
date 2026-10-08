@@ -5,6 +5,7 @@ export interface ToolDef {
   path: string;
   title: string; // headline on the page and name in tool lists
   seoTitle?: string; // title for search results and link previews, when it differs (under ~50 characters before the site name)
+  metaDescription?: string; // search-result description (≤155 characters) when the page's own description is longer
   nav: string;
   group: string;
   summary: string;
@@ -28,8 +29,9 @@ export const GROUP_COLORS: Record<string, string> = {
 export const TOOLS: ToolDef[] = [
   {
     path: '/impedance',
+    metaDescription: 'PCB trace impedance from a 2D field solver for microstrip, coated microstrip, stripline, differential pairs and coplanar lines. Solve width or spacing.',
     title: 'Impedance Calculator',
-    seoTitle: 'PCB Impedance Calculator: Microstrip & Stripline',
+    seoTitle: 'PCB Trace Impedance Calculator (Field Solver)',
     nav: 'Impedance',
     group: 'Signal integrity',
     summary: 'Single-ended and differential microstrip, coated and embedded microstrip, stripline, coplanar lines and broadside differential pairs, solved with a 2D field solver.',
@@ -37,6 +39,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/timing',
+    metaDescription: 'Propagation delay and effective Dk of PCB traces, length matching from a skew budget, rise time to bandwidth, critical length and wavelength on the board.',
     title: 'Propagation Delay, εeff & Timing',
     nav: 'Delay & timing',
     group: 'Signal integrity',
@@ -53,6 +56,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/trace-loss',
+    metaDescription: 'PCB trace insertion loss in dB per inch and over the route: conductor loss with copper roughness, and field-solver dielectric loss with laminate Dk/Df.',
     title: 'Trace Loss (Insertion Loss) Calculator',
     nav: 'Trace loss',
     group: 'Signal integrity',
@@ -61,6 +65,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/crosstalk',
+    metaDescription: 'Near-end and far-end crosstalk (NEXT, FEXT) between parallel PCB traces from a field solver, with a sweep over the spacing and the 3W rule.',
     title: 'Crosstalk Calculator',
     nav: 'Crosstalk',
     group: 'Signal integrity',
@@ -69,6 +74,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/differential-via',
+    metaDescription: 'Differential impedance of a via pair through its antipad from a 2D field solution, with odd, even and common mode, stub resonance and delay.',
     title: 'Differential Via',
     seoTitle: 'Differential Via Impedance Calculator',
     nav: 'Differential via',
@@ -78,6 +84,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/via-stitching',
+    metaDescription: 'Via fence and stitching via spacing from the wavelength in the laminate (λ/10, λ/20), via-grid cell resonance, leakage and plane-pair resonances.',
     title: 'Via Stitching & Via Fence Spacing',
     nav: 'Via stitching',
     group: 'Signal integrity',
@@ -86,6 +93,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/interface-rules',
+    metaDescription: 'PCIe, USB, HDMI, Ethernet and DDR routing rules applied to your stackup: width and spacing for the impedance target, loss over the route and skew limits.',
     title: 'Interface Design Rules',
     nav: 'Interface rules',
     group: 'Signal integrity',
@@ -94,8 +102,9 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/clock-jitter',
+    metaDescription: 'RMS phase jitter from an oscillator phase noise curve by exact integration, the jitter-limited SNR and ENOB of an ADC, and a total-jitter budget at a BER.',
     title: 'Phase Noise to Jitter & Jitter Budget',
-    seoTitle: 'Phase Noise to Jitter Calculator & Jitter Budget',
+    seoTitle: 'Phase Noise to Jitter Calculator & Budget',
     nav: 'Phase noise & jitter',
     group: 'Signal integrity',
     summary: 'RMS phase jitter from an oscillator phase noise curve by exact segment integration, jitter-limited ADC SNR and ENOB, and total jitter at a BER from random and deterministic terms.',
@@ -103,6 +112,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/s-parameter-viewer',
+    metaDescription: 'View .s1p to .s16p Touchstone files in the browser: insertion and return loss, phase, group delay, mixed-mode SDD21 and SCD21, TDR impedance. No upload.',
     title: 'S-Parameter Viewer (.s2p, .s4p)',
     seoTitle: 'S2P & S4P Viewer: Mixed-Mode, TDR, Group Delay',
     nav: 'S-parameter viewer',
@@ -112,6 +122,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/vswr-calculator',
+    metaDescription: 'Convert VSWR to return loss, reflection coefficient, mismatch loss and reflected power, find Γ of a complex load, and bound the mismatch of two ports.',
     title: 'VSWR, Return Loss & Mismatch Loss Calculator',
     seoTitle: 'VSWR to Return Loss & Mismatch Loss Calculator',
     nav: 'VSWR & return loss',
@@ -121,8 +132,9 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/coax-impedance',
+    metaDescription: 'Coaxial line impedance from its diameters and dielectric, or the diameter for a target Z0, with an offset centre conductor, delay, TE11 cutoff and loss.',
     title: 'Coaxial Line Impedance Calculator',
-    seoTitle: 'Coax Impedance Calculator (incl. Offset Centre)',
+    seoTitle: 'Coaxial Cable Impedance Calculator',
     nav: 'Coax impedance',
     group: 'RF',
     summary: 'Characteristic impedance of a coaxial line from D, d and εr, or the diameter for a target Z0, with offset centre conductor, delay, C and L per metre, TE11 cutoff and loss.',
@@ -130,6 +142,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/impedance-matching',
+    metaDescription: 'L-network matching of a complex load: every low-pass and high-pass solution with L and C values, node Q, bandwidth, standard parts and a Smith chart.',
     title: 'L-Network Impedance Matching & Smith Chart',
     seoTitle: 'L-Network Impedance Matching Calculator',
     nav: 'L-network matching',
@@ -139,6 +152,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/quarter-wave-transformer',
+    metaDescription: 'Quarter-wave transformers (single, binomial, Chebyshev) with section impedances, bandwidth and exact response, plus stubs and single-stub matching.',
     title: 'Quarter-Wave Transformer & Stub Calculator',
     nav: 'Quarter-wave & stubs',
     group: 'RF',
@@ -147,6 +161,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/stackup-advisor',
+    metaDescription: 'Find rigid, flex and rigid-flex PCB stackups by thickness and layer count, and rank them by impedance requirements with solved trace widths and fab limits.',
     title: 'Stackup Advisor',
     seoTitle: 'PCB Stackup Finder by Thickness & Layer Count',
     nav: 'Stackup advisor',
@@ -156,6 +171,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/stackup',
+    metaDescription: '178 FR-4 stackups from 2 to 12 layers plus flex and rigid-flex starters. Edit materials and thicknesses and see the trace width for each impedance target.',
     title: 'Layer Stack Manager',
     nav: 'Layer stack manager',
     group: 'Stackup',
@@ -164,6 +180,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/pcb-materials',
+    metaDescription: 'Datasheet Dk and Df of PCB laminates at any frequency: FR-4, low-loss and ultra-low-loss materials and RF laminates, solder masks and copper roughness.',
     title: 'PCB Laminate Materials (Dk / Df)',
     nav: 'Materials (Dk/Df)',
     group: 'Stackup',
@@ -180,6 +197,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/thermal-vias',
+    metaDescription: 'Thermal resistance of a plated via array under an exposed pad, with open, epoxy-filled or copper-filled vias, and the temperature drop through the board.',
     title: 'Thermal Via Array',
     seoTitle: 'PCB Thermal Via Calculator',
     nav: 'Thermal vias',
@@ -189,6 +207,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/copper-heat-spreading',
+    metaDescription: 'How much PCB copper a hot part needs: pour thermal resistance by convection and radiation, junction temperature and the smallest pour for a Tj limit.',
     title: 'Copper Area for Heat Spreading',
     nav: 'Copper heat spreading',
     group: 'Thermal',
@@ -197,6 +216,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/trace-width',
+    metaDescription: 'PCB trace width for a current to IPC-2221 or IPC-2152, the current a trace can carry or its temperature rise, with resistance, voltage drop and power loss.',
     title: 'Trace Width, Current & Temperature Rise',
     nav: 'Trace width / current',
     group: 'Power & conductors',
@@ -205,6 +225,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/via',
+    metaDescription: 'PCB via current capacity, DC resistance, voltage drop, thermal resistance, capacitance and inductance, and the rise-time penalty on a high-speed line.',
     title: 'Via Calculator',
     seoTitle: 'PCB Via Current & Resistance Calculator',
     nav: 'Via',
@@ -231,6 +252,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/wire-gauge',
+    metaDescription: 'AWG wire diameter, area and resistance, cable voltage drop and loss, the smallest gauge for a drop limit, and the Preece fusing current.',
     title: 'Wire Gauge & Voltage Drop',
     nav: 'Wire gauge / drop',
     group: 'Power & conductors',
@@ -239,6 +261,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/conductor-spacing',
+    metaDescription: 'Minimum electrical clearance between PCB conductors from IPC-2221 Table 6-1: internal and external layers, coated boards, assemblies and high altitude.',
     title: 'Conductor Spacing (IPC-2221)',
     nav: 'Conductor spacing',
     group: 'Power & conductors',
@@ -247,6 +270,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/creepage-clearance',
+    metaDescription: 'Minimum PCB clearance and creepage per IEC 60664-1 from mains voltage, overvoltage category, pollution degree, material group, insulation and altitude.',
     title: 'Creepage & Clearance (IEC 60664-1)',
     nav: 'Creepage & clearance',
     group: 'Power & conductors',
@@ -255,6 +279,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/pdn',
+    metaDescription: 'PDN target impedance, plane-pair capacitance, decoupling capacitor resonance and the number of capacitors needed, with an impedance-versus-frequency plot.',
     title: 'PDN Impedance Calculator',
     nav: 'PDN',
     group: 'Power integrity',
@@ -263,6 +288,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/emi-filter',
+    metaDescription: 'Differential-mode LC, π and ferrite-bead filters for DC rails, with source and load impedance, component parasitics, resonance and RC damping.',
     title: 'EMI Filter Designer',
     nav: 'EMI filter',
     group: 'Power integrity',
@@ -279,6 +305,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/buck-converter',
+    metaDescription: 'Size a buck converter power stage: inductor, capacitors and IC limits across the input range, with conduction-mode checks and current waveforms.',
     title: 'Buck Converter Calculator',
     nav: 'Buck converter',
     group: 'Power supply',
@@ -287,6 +314,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/boost-converter',
+    metaDescription: 'Size a boost converter power stage: inductor, capacitors and IC limits across the input range, with conduction-mode checks and current waveforms.',
     title: 'Boost Converter Calculator',
     nav: 'Boost converter',
     group: 'Power supply',
@@ -295,6 +323,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/ldo',
+    metaDescription: 'LDO power dissipation, junction temperature, efficiency and dropout headroom, with the maximum load current and the θJA needed for a Tj limit.',
     title: 'LDO Regulator Power Dissipation',
     nav: 'LDO dissipation',
     group: 'Power supply',
@@ -303,6 +332,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/feedback-divider',
+    metaDescription: 'Feedback resistors for adjustable regulators: the best E12/E24/E96 pairs, output voltage error, FB bias-current effect and worst case with tolerance.',
     title: 'Feedback Resistor Divider',
     nav: 'Feedback divider',
     group: 'Power supply',
@@ -311,6 +341,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/planar-inductor',
+    metaDescription: 'Inductance of square, hexagonal, octagonal and circular PCB spiral inductors from the Mohan expressions, with DC resistance and a Q estimate.',
     title: 'Planar Spiral Inductor',
     nav: 'Spiral inductor',
     group: 'Components',
@@ -319,6 +350,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/padstack',
+    metaDescription: 'Plated through-hole padstack per IPC-7251, IPC-2221 and IPC-2222: hole, outer and inner pads, antipad, thermal relief and annular ring for levels A, B, C.',
     title: 'Through-Hole Padstack Calculator',
     nav: 'Padstack',
     group: 'Components',
@@ -327,6 +359,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/smd-land-pattern',
+    metaDescription: 'First-pass chip resistor or MLCC footprint from the exact part dimensions: pad size, pitch, courtyard and solder-mask openings.',
     title: 'Two-Terminal SMD Land Pattern Calculator',
     seoTitle: 'SMD Resistor & Capacitor Footprint Calculator',
     nav: 'SMD land pattern',
@@ -336,6 +369,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/bga-land',
+    metaDescription: 'IPC-7351 BGA land diameter for collapsing and non-collapsing balls, with tolerance, density level, courtyard and how many traces fit between lands.',
     title: 'BGA Land Pattern',
     nav: 'BGA land',
     group: 'Components',
@@ -344,6 +378,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/resistor-color-code',
+    metaDescription: 'Read 4-, 5- and 6-band resistor colour codes (IEC 60062): value, tolerance and temperature coefficient, or find the bands for any value.',
     title: 'Resistor Color Code Calculator',
     nav: 'Resistor color code',
     group: 'Components',
@@ -360,6 +395,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/capacitor-code',
+    metaDescription: 'Decode capacitor markings such as 104K and 2A473J: value, tolerance letter, voltage code and dielectric codes such as X7R and C0G, or find the code.',
     title: 'Capacitor Code Calculator',
     nav: 'Capacitor code',
     group: 'Components',
@@ -376,6 +412,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/reactance',
+    metaDescription: 'Capacitive and inductive reactance at a frequency, LC resonance, the L or C for a target frequency, and series and parallel LC impedance.',
     title: 'Reactance & LC Resonance',
     nav: 'Reactance & resonance',
     group: 'Electronics',
@@ -384,6 +421,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/rc-filter',
+    metaDescription: 'Passive RC low-pass and high-pass filters with source and load resistance, standard component values, tolerance bounds, and gain and phase plots.',
     title: 'RC Low-Pass & High-Pass Filter Calculator',
     nav: 'RC filters',
     group: 'Electronics',
@@ -392,6 +430,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/active-filter',
+    metaDescription: 'Sallen-Key and MFB active filters to 8th order (Butterworth, Bessel, Chebyshev): component values, standard-value response and op amp GBW needs.',
     title: 'Active Filter Designer',
     seoTitle: 'Sallen-Key & MFB Active Filter Calculator',
     nav: 'Active filters',
@@ -401,8 +440,9 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/op-amp-gain',
+    metaDescription: 'Op-amp gain for inverting, non-inverting, difference and summing stages: noise gain, bandwidth, offset, noise, tolerance and standard resistor pairs.',
     title: 'Op-Amp Gain Calculator',
-    seoTitle: 'Op-Amp Gain, Bandwidth, Offset & Noise Calculator',
+    seoTitle: 'Op-Amp Gain, Bandwidth & Noise Calculator',
     nav: 'Op-amp gain',
     group: 'Electronics',
     summary: 'Inverting, non-inverting, difference and summing stages: noise gain, bandwidth, output swing, DC offset, noise and resistor tolerance, with standard-value pairs for a target gain.',
@@ -410,6 +450,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/crystal',
+    metaDescription: 'Crystal load capacitors with E12/E24 values and the pulling they cause, a ppm budget against USB, Ethernet, PCIe and SATA limits, and ppm to clock drift.',
     title: 'Crystal Load Capacitors & PPM Budget',
     seoTitle: 'Crystal Load Capacitor & PPM Budget Calculator',
     nav: 'Crystal & ppm',
@@ -419,6 +460,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/555-timer',
+    metaDescription: '555 timer astable frequency and duty cycle, resistor values for a target frequency, and monostable pulse width, from the TI NE555 equations.',
     title: '555 Timer Calculator',
     nav: '555 timer',
     group: 'Electronics',
@@ -427,6 +469,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/i2c-pullup',
+    metaDescription: 'I²C pull-up resistor range for each SDA or SCL line from bus capacitance, rise-time limit and device sink current, with a bus capacitance estimate.',
     title: 'I²C Pull-up Calculator',
     nav: 'I²C pull-up',
     group: 'Electronics',
@@ -443,8 +486,9 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/comparator-hysteresis',
+    metaDescription: 'Comparator hysteresis and Schmitt trigger thresholds, inverting and non-inverting, with standard resistors and worst-case resistor, offset and reference.',
     title: 'Comparator Hysteresis Calculator',
-    seoTitle: 'Comparator Hysteresis & Schmitt Trigger Calculator',
+    seoTitle: 'Comparator Hysteresis & Schmitt Trigger',
     nav: 'Comparator hysteresis',
     group: 'Electronics',
     summary: 'Inverting and non-inverting switching thresholds: design reference and feedback resistors, choose standard values and check resistor, offset and reference uncertainty.',
@@ -455,14 +499,15 @@ export const TOOLS: ToolDef[] = [
     title: 'ADC Input Settling Checker',
     nav: 'ADC input',
     group: 'Electronics',
-    seoTitle: 'ADC Input Settling & Accuracy Budget Calculator',
+    seoTitle: 'ADC Input Settling & Accuracy Calculator',
     summary: 'SAR ADC source and RC filter settling during acquisition, filter-node recovery, and an optional DC accuracy budget for offset, gain, reference, INL and quantisation.',
     component: lazyPage(() => import('./AdcInput')),
   },
   {
     path: '/ntc-thermistor',
+    metaDescription: 'NTC thermistor Beta and Steinhart–Hart models with fitting, ADC divider resolution, series-resistor choice, self-heating and a firmware lookup table.',
     title: 'NTC Thermistor Calculator',
-    seoTitle: 'NTC Thermistor Calculator: Beta, Steinhart–Hart & ADC',
+    seoTitle: 'NTC Thermistor Calculator: Steinhart–Hart',
     nav: 'NTC thermistor',
     group: 'Electronics',
     summary: 'Beta and Steinhart–Hart models with coefficient fitting, a thermistor divider into an ADC with °C/LSB, series-resistor choice, self-heating, tolerance error and a CSV or C lookup table.',
@@ -478,6 +523,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/resistors',
+    metaDescription: 'Voltage divider with standard-value resistor pairs, LED series resistor and its power, and series or parallel resistors, capacitors and inductors.',
     title: 'Resistor Tools',
     seoTitle: 'Voltage Divider & LED Resistor Calculator',
     nav: 'Resistor tools',
@@ -487,6 +533,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/attenuator',
+    metaDescription: 'Pi, T and bridged-T attenuator resistor values with the nearest standard values, the attenuation and match they give, and the power in each resistor.',
     title: 'Attenuator Pads',
     seoTitle: 'Pi & T Attenuator Calculator',
     nav: 'Attenuator pads',
@@ -496,6 +543,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/projects',
+    metaDescription: 'Save the inputs of every calculator for a board under one name, reopen them later, and export or import a project file. Everything stays in your browser.',
     title: 'Projects',
     nav: 'Projects',
     group: 'Utilities',
@@ -512,6 +560,7 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/reference-charts',
+    metaDescription: 'Drill size charts (number, letter, fractional, metric), ISO metric and Unified threads with tap and clearance drills, and the AWG wire table.',
     title: 'Reference Charts',
     seoTitle: 'Drill Size, Tap Drill & AWG Charts',
     nav: 'Reference charts',

@@ -16,7 +16,7 @@ export function ResizablePropertiesPanel({children,className}:{children:ReactNod
     const frame=requestAnimationFrame(resize);window.addEventListener('resize',resize);
     return()=>{cancelAnimationFrame(frame);window.removeEventListener('resize',resize);};
   },[]);
-  return <aside ref={panel} id="tool-inputs" className={'resizable-properties '+className} style={{'--properties-width':width+'px'} as CSSProperties} data-resizing={dragging||undefined}>
+  return <aside ref={panel} id="tool-inputs" aria-label="Inputs" className={'resizable-properties '+className} style={{'--properties-width':width+'px'} as CSSProperties} data-resizing={dragging||undefined}>
     <div className="properties-resizer" role="separator" aria-label="Resize Properties panel" aria-orientation="vertical" aria-controls="tool-inputs" aria-valuemin={MIN} aria-valuemax={MAX} aria-valuenow={width} tabIndex={0}
       title="Drag to resize. Left/Right arrows resize; double-click restores the default width."
       onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();start.current={x:event.clientX,width:panel.current?.getBoundingClientRect().width??width};event.currentTarget.setPointerCapture(event.pointerId);setDragging(true);}}

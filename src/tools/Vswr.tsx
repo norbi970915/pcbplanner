@@ -238,7 +238,7 @@ export default function Vswr() {
               <th className="v">Mismatch loss (dB)</th>
               <th className="v">Reflected (%)</th>
               <th className="v">Delivered (%)</th>
-              <th />
+              <th><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>

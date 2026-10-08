@@ -136,7 +136,7 @@ export default function RcFilter() {
           </Panel>
           <Panel title="Nearby Standard Values">
             <table className="tbl">
-              <thead><tr><th>R ({series(p.rSeries)})</th><th>C ({series(p.cSeries)})</th><th className="v">Cutoff</th><th className="v">Error</th><th className="v">Passband</th><th /></tr></thead>
+              <thead><tr><th>R ({series(p.rSeries)})</th><th>C ({series(p.cSeries)})</th><th className="v">Cutoff</th><th className="v">Error</th><th className="v">Passband</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>{candidates.map(row => (
                 <tr key={`${row.r}/${row.c}`}>
                   <td className="v">{si(row.r, 'Ω', 5)}</td><td className="v">{si(row.c, 'F', 5)}</td>

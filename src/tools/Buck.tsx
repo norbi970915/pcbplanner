@@ -239,7 +239,7 @@ function RangePlot({ r, load, voltage, onVoltage }: { r: BuckAnalysis; load: num
       {hi === lo && <circle cx={x(lo)} cy={y(r.points[0].boundary)} r={3} fill="var(--accent)" />}
       <line x1={x(voltage)} x2={x(voltage)} y1={top} y2={h - bottom} stroke="var(--ink)" strokeDasharray="2 3" />
     </svg>
-    <p className="text-muted"><span className="text-[var(--copper)]">— Peak inductor current</span> · ··· Input-capacitor RMS · <span className="text-[var(--accent)]">-- CCM boundary load</span> · <span className="text-ok">— Current-limit ceiling</span> · -- Entered output load</p>
+    <p className="text-muted"><span className="text-[var(--copper)]">— Peak inductor current</span> · ··· Input-capacitor RMS · <span className="text-[var(--accent-ink)]">-- CCM boundary load</span> · <span className="text-ok">— Current-limit ceiling</span> · -- Entered output load</p>
   </div>;
 }
 

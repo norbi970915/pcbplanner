@@ -18,6 +18,8 @@ import { stackupStore, useStackups } from '../state/stackupStore';
 
 const TYPE_LABEL: Record<LayerKind, string> = { mask: 'Solder Mask', copper: 'Signal', dielectric: 'Dielectric', coverlay: 'Coverlay film', adhesive: 'Adhesive' };
 const COLOR: Record<LayerKind, string> = { mask: 'var(--mask)', copper: 'var(--copper)', dielectric: 'var(--laminate)', coverlay: '#c9a227', adhesive: '#886d39' };
+// label colour on each layer bar, at 4.5:1 or more against COLOR in both themes
+const LAYER_INK: Record<LayerKind, string> = { mask: '#fff', copper: '#1a1206', dielectric: 'var(--laminate-ink)', coverlay: '#1a1206', adhesive: '#fff' };
 const SESSION = 'pcbplanner:stackup-manager:';
 const readSession = (key: string) => {
   try { return sessionStorage.getItem(SESSION + key); } catch { return null; }
@@ -433,7 +435,7 @@ export default function StackupTool() {
                 <thead>
                   <tr>
                     <th className="w-[30px]">#</th>
-                    <th className="w-[20px]" />
+                    <th className="w-[20px]"><span className="sr-only">Colour</span></th>
                     <th>Name</th>
                     <th>Material</th>
                     <th>Type</th>
@@ -442,7 +444,7 @@ export default function StackupTool() {
                     <th className="v">Dk</th>
                     <th className="v">Df</th>
                     <th>Role</th>
-                    <th />
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -506,7 +508,7 @@ export default function StackupTool() {
                   <th className="v">
                     W for {fmt(targets.diff, 3)} Ω diff @ S {L(targets.s)} ({unit})
                   </th>
-                  <th />
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -553,7 +555,7 @@ export default function StackupTool() {
                 style={{
                   background: l.kind === 'copper' ? 'var(--copper)' : COLOR[l.kind],
                   minHeight: Math.max(7, Math.min(30, (l.t / Math.max(total, 1e-6)) * 420)),
-                  color: l.kind !== 'copper' && l.kind !== 'mask' ? 'var(--ink)' : '#fff',
+                  color: LAYER_INK[l.kind],
                   outline: sel === l.id ? '2px solid var(--accent)' : undefined,
                   opacity: l.kind === 'copper' && l.role === 'plane' ? 0.8 : 1,
                 }}

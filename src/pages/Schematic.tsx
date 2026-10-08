@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { useDocumentMeta } from '../components/ToolPage';
 
 export const SCHEMATIC_DESCRIPTION =
-  'Plan PCB schematic power rails and loads, then check logic-level compatibility, ADC input settling, pull-ups, filters, amplifiers, sensors, RF matching and component values.';
+  'Plan power rails and loads, then check logic levels, ADC inputs, pull-ups, filters, amplifiers, sensors, RF matching and component values.';
 
 const SECTIONS = [
   {

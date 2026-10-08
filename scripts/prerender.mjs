@@ -130,6 +130,7 @@ writeFileSync(
 
 for (const tool of TOOLS) {
   const description = toolDescription(tool);
+  const metaDescription = tool.metaDescription ?? description; // search snippet; the page text keeps the full description
   const url = SITE + tool.path;
   const cross = relatedTools(tool.path).filter((t) => t.group !== tool.group);
   const related = TOOLS.filter((t) => t.group === tool.group && t !== tool);
@@ -156,13 +157,13 @@ for (const tool of TOOLS) {
     page({
       path: tool.path,
       title: `${tool.seoTitle ?? tool.title} – ${APP}`,
-      description,
+      description: metaDescription,
       h1: tool.title,
       body,
       jsonLd: {
         '@context': 'https://schema.org',
         '@graph': [
-          app(`${tool.seoTitle ?? tool.title} – ${APP}`, url, description),
+          app(`${tool.seoTitle ?? tool.title} – ${APP}`, url, metaDescription),
           {
             '@type': 'BreadcrumbList',
             itemListElement: [
@@ -270,7 +271,7 @@ for (const g of GUIDES) {
     page({
       path: g.path,
       title: `${g.seoTitle} – ${APP}`,
-      description: g.description,
+      description: g.metaDescription ?? g.description,
       raw: guideHtml[g.path],
       jsonLd: {
         '@context': 'https://schema.org',
@@ -278,7 +279,7 @@ for (const g of GUIDES) {
           {
             '@type': 'TechArticle',
             headline: g.title,
-            description: g.description,
+            description: g.metaDescription ?? g.description,
             datePublished: g.date,
             dateModified: g.date,
             url,

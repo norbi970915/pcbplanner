@@ -755,7 +755,7 @@ async function flowTabsMenus(page) {
   const route = 'tabs/menus';
   await gotoFresh(page, '/');
   page.drain();
-  const tabNames = () => page.locator('[role=tab]').allInnerTexts().then((a) => a.map((s) => s.replace('✕', '').trim()));
+  const tabNames = () => page.locator('.document-bar button[id^=tool-tab-]').allInnerTexts().then((a) => a.map((s) => s.replace('✕', '').trim()));
   await check(page, JSON.stringify(await tabNames()) === JSON.stringify(['Home', 'Impedance']), route, 'default tabs', JSON.stringify(await tabNames()));
   for (const t of TOOLS) {
     await clickMenu(page, 'Tools', t.nav);
@@ -763,10 +763,10 @@ async function flowTabsMenus(page) {
     await check(page, new URL(page.url()).pathname === t.path, route, `Tools menu "${t.nav}"`, `landed on ${page.url()}`);
     // router navigations render in a transition (the page may still be lazy-loading); wait for the active tab
     await page
-      .waitForFunction((nav) => document.querySelector('[role=tab][aria-selected=true]')?.innerText.replace('✕', '').trim() === nav, t.nav, { timeout: 10000 })
+      .waitForFunction((nav) => document.querySelector('.document-bar button[aria-current=page]')?.innerText.replace('✕', '').trim() === nav, t.nav, { timeout: 10000 })
       .catch(() => {});
     await page.waitForSelector('main h1');
-    const active = await page.locator('[role=tab][aria-selected=true]').innerText().catch(() => '');
+    const active = await page.locator('.document-bar button[aria-current=page]').innerText().catch(() => '');
     await check(page, active.replace('✕', '').trim() === t.nav, route, `tab for "${t.nav}" active`, `active tab "${active}"`);
     const h1 = await page.locator('main h1').first().innerText();
     await check(page, h1 === t.title, route, `"${t.nav}" page heading matches the menu/registry title`, `registry title "${t.title}", page <h1> "${h1}"`);
@@ -781,15 +781,15 @@ async function flowTabsMenus(page) {
   await page.waitForTimeout(200);
   const after = await tabNames();
   await check(page, !after.includes(last), route, 'close tab removes it', JSON.stringify(after));
-  const act = (await page.locator('[role=tab][aria-selected=true]').innerText().catch(() => '')).replace('✕', '').trim();
+  const act = (await page.locator('.document-bar button[aria-current=page]').innerText().catch(() => '')).replace('✕', '').trim();
   await check(page, act === names[names.length - 2], route, 'close tab activates previous', `active "${act}", expected "${names[names.length - 2]}"`);
   // close an inactive tab
   await page.getByRole('button', { name: 'Close Impedance' }).click({ force: true });
   await page.waitForTimeout(200);
   await check(page, !(await tabNames()).includes('Impedance'), route, 'close inactive tab', JSON.stringify(await tabNames()));
-  await check(page, (await page.locator('[role=tab][aria-selected=true]').innerText()).replace('✕', '').trim() === act, route, 'closing inactive tab keeps active', 'active tab changed');
+  await check(page, (await page.locator('.document-bar button[aria-current=page]').innerText()).replace('✕', '').trim() === act, route, 'closing inactive tab keeps active', 'active tab changed');
   // clicking a tab navigates
-  await page.locator('[role=tab]', { hasText: 'Home' }).click();
+  await page.locator('.document-bar button[id^=tool-tab-]', { hasText: 'Home' }).click();
   await check(page, new URL(page.url()).pathname === '/', route, 'click Home tab', page.url());
   // Tools panel links
   for (const t of TOOLS.slice(0, 5)) {

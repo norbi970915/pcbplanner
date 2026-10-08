@@ -276,7 +276,7 @@ export default function OpAmpGain() {
                 <th className="v">Gain</th>
                 <th className="v">Error</th>
                 <th className="v">Rin + Rf</th>
-                <th />
+                <th><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>

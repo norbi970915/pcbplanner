@@ -24,11 +24,27 @@ export function Guide({
 }) {
   const { pathname } = useLocation();
   const g = guideByPath(pathname)!;
-  useDocumentMeta(g.seoTitle, g.description);
+  useDocumentMeta(g.seoTitle, g.metaDescription ?? g.description);
   const { statusEl } = useShell();
   const articleRef = useRef<HTMLElement>(null);
   // start each article at the top (the document area scrolls on desktop, the window on phones).
   // Block body on purpose: scrollTo returns a Promise in current browsers, and an effect must not return one.
+  useEffect(() => {
+    const article = articleRef.current;
+    if (!article || typeof ResizeObserver === 'undefined') return;
+    const mark = () => {
+      for (const table of Array.from(article.querySelectorAll('table'))) {
+        if (table.scrollWidth > table.clientWidth + 1) table.tabIndex = 0;
+        else table.removeAttribute('tabindex');
+      }
+    };
+    mark();
+    const observer = new ResizeObserver(mark);
+    observer.observe(article);
+    return () => {
+      observer.disconnect();
+    };
+  }, [g.path]);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const article = articleRef.current;

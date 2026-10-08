@@ -350,7 +350,7 @@ export default function InterfaceRules() {
     </>
   );
 
-  const statusClass = (s: CheckRow['status']) => (s === 'ok' ? 'text-ok' : s === 'fail' ? 'text-[var(--err-line)]' : s === 'warn' ? 'text-[var(--accent)]' : 'text-muted');
+  const statusClass = (s: CheckRow['status']) => (s === 'ok' ? 'text-ok' : s === 'fail' ? 'text-[var(--err-line)]' : s === 'warn' ? 'text-[var(--accent-ink)]' : 'text-muted');
   const statusText = (s: CheckRow['status']) => (s === 'ok' ? 'OK' : s === 'fail' ? 'Fails' : s === 'warn' ? 'Tight' : '');
   const layerName = coppers.find((l) => l.id === layerId)?.name ?? 'this layer';
 
@@ -417,7 +417,7 @@ export default function InterfaceRules() {
                     <th className="v">{spec.z.kind === 'diff' ? 'Width / spacing' : 'Width'}</th>
                     <th className="v">Loss at {freqLabel(spec.nyquistGHz)}</th>
                     {spec.lossBudgetDb !== undefined && <th className="v">Longest route</th>}
-                    <th />
+                    <th><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
