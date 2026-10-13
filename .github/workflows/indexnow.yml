@@ -1,0 +1,32 @@
+# After each production deploy is live, tell IndexNow search engines (Bing and others) which pages changed.
+# Vercel reports its deploys to GitHub as deployments; this runs when one to Production succeeds.
+name: IndexNow
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Submit every page in the sitemap, not only the recently changed ones
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment.environment, 'Production') &&
+       !contains(github.event.deployment.environment, 'Preview'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # the deployment is reported a moment before the edge serves it everywhere
+      - run: sleep 30
+      - run: node scripts/indexnow.mjs ${{ inputs.all && '--all' || '' }}
