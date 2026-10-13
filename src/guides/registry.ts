@@ -19,6 +19,18 @@ export interface GuideDef {
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/pcb-planar-inductor-design',
+    metaDescription: 'PCB spiral inductor design with the Mohan formulas: a worked 1 µH example, DC resistance and Q, and how turns, width, spacing and planes change L.',
+    related: ['/guides/l-network-impedance-matching', '/guides/pcb-trace-width-current-calculation', '/guides/choosing-a-pcb-stackup'],
+    title: 'Planar Inductor Design: PCB Spiral Inductance, Resistance and Q',
+    seoTitle: 'Planar Inductor Design: PCB Spiral Formulas',
+    description: 'Design a PCB spiral inductor with the Mohan modified Wheeler and current-sheet formulas: a reproducible 1 µH example, DC resistance, Q, and how turns, width, spacing and nearby planes change the result.',
+    tools: ['/planar-inductor', '/skin-effect'],
+    date: '2026-10-13',
+    category: 'RF & Measurement',
+    component: lazyPage(() => import('./PlanarInductorGuide')),
+  },
+  {
     path: '/guides/feedback-divider-resistor-selection',
     related: ['/guides/buck-converter-formulas', '/guides/boost-converter-formulas', '/guides/ldo-efficiency-power-dissipation'],
     title: 'Feedback Divider Resistor Selection: Ratio, Tolerance and Bias Current',
@@ -223,7 +235,7 @@ export const GUIDES: GuideDef[] = [
     metaDescription: 'What the 3W rule means as edge-to-edge clearance, and how plane distance, coupled length and rise time change crosstalk, with field-solver examples.',
     related: ['/guides/controlled-impedance', '/guides/choosing-a-pcb-stackup', '/guides/via-fence-spacing'],
     title: 'PCB Crosstalk and the 3W Rule: How Much Spacing Is Enough?',
-    seoTitle: 'PCB Crosstalk: 3W Rule and Trace Spacing',
+    seoTitle: '3W Rule in PCB Design: Is It Enough?',
     tools: ['/crosstalk', '/impedance', '/timing', '/interface-rules'],
     description:
       'What 3W means in edge-to-edge clearance, how the reference-plane distance changes crosstalk, and why coupled length and rise time matter. With reproducible field-solver examples.',
@@ -288,7 +300,7 @@ export const GUIDES: GuideDef[] = [
     metaDescription: 'PCIe Gen3 on a standard FR-4 six-layer board: impedance, AC coupling, skew, loss budget, vias and reference clock, with trace widths and loss at 4 GHz.',
     related: ['/guides/pcie-routing-guidelines', '/guides/ac-coupling-capacitors', '/guides/choosing-a-pcb-stackup'],
     title: 'PCIe Gen3 Routing on a Hobby Budget: Lessons from an M.2 NVMe Carrier Card',
-    seoTitle: 'PCIe Gen3 Routing Guide for M.2 Carrier Cards',
+    seoTitle: 'PCIe Gen3 Routing Case Study: M.2 Carrier Card',
     tools: ['/impedance', '/trace-loss', '/timing', '/differential-via', '/stackup', '/interface-rules'],
     description:
       'Impedance, AC coupling, skew, loss budget, vias and the reference clock for PCIe Gen3 on a standard FR-4 six-layer board, with numbers for trace width and loss per inch at 4 GHz.',

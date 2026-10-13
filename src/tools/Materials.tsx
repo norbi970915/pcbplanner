@@ -3,6 +3,7 @@ import { Sources } from '../components/Sources';
 import { ToolPage } from '../components/ToolPage';
 import { NumField, Panel, Section } from '../components/ui';
 import { FOILS, HURAY_SR, hurayRadius, LAMINATE_SOURCES, LAMINATES, MASKS, type Laminate } from '../data/laminates';
+import { materialPageOfEntry, materialPath } from '../data/materialPages';
 import { djordjevicSarkar } from '../lib/dielectric';
 import { fmt } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
@@ -43,7 +44,18 @@ export default function Materials() {
           return (
             <tr key={l.id}>
               <td>
-                {l.vendor} {l.name}
+                {(() => {
+                  const page = materialPageOfEntry(l.id);
+                  return page ? (
+                    <Link to={materialPath(page.slug)}>
+                      {l.vendor} {l.name}
+                    </Link>
+                  ) : (
+                    <>
+                      {l.vendor} {l.name}
+                    </>
+                  );
+                })()}
               </td>
               <td className="v">{l.dk}</td>
               <td className="v">{l.df}</td>

@@ -30,7 +30,10 @@ import DifferentialSParameters from './DifferentialSParameters';
 import FeedbackDividerGuide from './FeedbackDividerGuide';
 import ThermalViaGuide from './ThermalViaGuide';
 import TraceWidthGuide from './TraceWidthGuide';
+import PlanarInductorGuide from './PlanarInductorGuide';
 import About from '../pages/About';
+import MaterialPage from '../pages/MaterialPage';
+import { MATERIAL_PAGES, materialPath } from '../data/materialPages';
 import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
 import Home from '../tools/Home';
@@ -41,6 +44,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/tools': ToolsIndex,
   '/schematic': Schematic,
   '/guides': GuidesIndex,
+  '/guides/pcb-planar-inductor-design': PlanarInductorGuide,
   '/guides/feedback-divider-resistor-selection': FeedbackDividerGuide,
   '/guides/thermal-via-array-design': ThermalViaGuide,
   '/guides/pcb-trace-width-current-calculation': TraceWidthGuide,
@@ -71,6 +75,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/usb3-85-or-90-ohm': Usb3Impedance,
   '/about': About,
   '/404': NotFound,
+  ...Object.fromEntries(MATERIAL_PAGES.map((m) => [materialPath(m.slug), MaterialPage])),
 };
 
 // every tool module, so its exported Method (formulas, explanation, references) can be rendered

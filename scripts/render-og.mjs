@@ -9,6 +9,7 @@ import { createServer } from 'vite';
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { TOOLS, GROUP_COLORS } = await vite.ssrLoadModule('/src/tools/registry.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
+const { MATERIAL_PAGES, materialPath, materialTitle, materialDescription } = await vite.ssrLoadModule('/src/data/materialPages.ts');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
 const { SCHEMATIC_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Schematic.tsx');
 await vite.close();
@@ -20,6 +21,7 @@ const ACCENT = '#e0953f';
 const cards = [
   ...TOOLS.map((t) => ({ path: t.path, label: t.group, color: GROUP_COLORS[t.group] ?? ACCENT, title: t.title, text: t.summary })),
   ...GUIDES.map((g) => ({ path: g.path, label: 'Guide', color: ACCENT, title: g.title, text: g.description })),
+  ...MATERIAL_PAGES.map((m) => ({ path: materialPath(m.slug), label: 'Material datasheet', color: GROUP_COLORS.Stackup ?? ACCENT, title: materialTitle(m), text: materialDescription(m) })),
   { path: '/tools', label: 'All tools', color: ACCENT, title: 'PCB Design Calculators', text: `${TOOLS.length} free calculators for signal integrity, stackups, thermal design, power and components.` },
   { path: '/schematic', label: 'Schematic design', color: ACCENT, title: 'Schematic Design Tools', text: SCHEMATIC_DESCRIPTION },
   { path: '/guides', label: 'Guides', color: ACCENT, title: 'PCB Design Guides', text: 'Practical PCB design guides with worked examples and reproducible calculations.' },

@@ -46,6 +46,24 @@ export function ToolPage({
   const historyMessage = useHistoryShortcuts();
   const resultsRef = useRef<HTMLDivElement>(null);
   const methodRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  // a table wider than a phone scrolls inside itself (results or Method); make that box reachable by keyboard
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page || typeof ResizeObserver === 'undefined') return;
+    const mark = () => {
+      for (const table of Array.from(page.querySelectorAll('table'))) {
+        if (table.scrollWidth > table.clientWidth + 1) table.tabIndex = 0;
+        else table.removeAttribute('tabindex');
+      }
+    };
+    mark();
+    const observer = new ResizeObserver(mark);
+    observer.observe(page);
+    return () => {
+      observer.disconnect();
+    };
+  }, [pathname]);
   const reportReturnFocus = useRef<HTMLElement | null>(null);
   const [reportSnapshot, setReportSnapshot] = useState<ReportSnapshot | null>(null);
   const paused = interaction.issues.length > 0;
@@ -114,7 +132,7 @@ export function ToolPage({
 
   return (
     <FieldInteractionContext.Provider value={interaction}>
-    <div className="document-page tool-page" style={{ '--tool-accent': GROUP_COLORS[tool?.group ?? ''] ?? 'var(--accent-ink)' } as CSSProperties}>
+    <div ref={pageRef} className="document-page tool-page" style={{ '--tool-accent': GROUP_COLORS[tool?.group ?? ''] ?? 'var(--accent-ink)' } as CSSProperties}>
       {headEl && createPortal(mobileHead, headEl)}
       <span className="sr-only" role="status" aria-live="polite">{historyMessage}</span>
       <div className="tool-heading mb-4 hidden flex-wrap items-end justify-between gap-3 lg:flex">

@@ -254,7 +254,7 @@ export function Layout() {
     path === '/schematic' ||
     !!toolByPath(path);
   // Guides and About have no calculator inputs.
-  const isDoc = path === '/about' || path === '/guides' || path.startsWith('/guides/');
+  const isDoc = path === '/about' || path === '/guides' || path.startsWith('/guides/') || path.startsWith('/pcb-materials/');
   useEffect(() => {
     if (!known) return;
     setTabs((t) => (t.includes(path) ? t : [...t, path]));
@@ -512,7 +512,7 @@ export function Layout() {
           </Link>
           <Link
             to="/guides"
-            className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${isDoc ? 'bg-sel' : ''}`}
+            className={`flex h-[26px] items-center px-2.5 text-ink no-underline hover:bg-chrome-2 ${path === '/guides' || path.startsWith('/guides/') ? 'bg-sel' : ''}`}
           >
             Guides
           </Link>

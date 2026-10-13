@@ -14,12 +14,13 @@ const { TOOLS, GROUPS, relatedTools } = await vite.ssrLoadModule('/src/tools/reg
 const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
 const { FLEX_PRESETS } = await vite.ssrLoadModule('/src/data/flexStackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
+const { MATERIAL_PAGES, materialPath, materialSeoTitle, materialTitle, materialDescription } = await vite.ssrLoadModule('/src/data/materialPages.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
 const { SCHEMATIC_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Schematic.tsx');
 const { NOT_FOUND_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/NotFound.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/404', ...GUIDES.map((g) => g.path)].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/404', ...GUIDES.map((g) => g.path), ...MATERIAL_PAGES.map((m) => materialPath(m.slug))].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -294,6 +295,35 @@ for (const g of GUIDES) {
               { '@type': 'ListItem', position: 1, name: APP, item: `${SITE}/` },
               { '@type': 'ListItem', position: 2, name: 'Guides', item: `${SITE}/guides` },
               { '@type': 'ListItem', position: 3, name: g.title, item: url },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+}
+// Material datasheet pages: one per laminate or solder-mask product
+mkdirSync('dist/pcb-materials', { recursive: true });
+for (const m of MATERIAL_PAGES) {
+  const path = materialPath(m.slug);
+  const url = SITE + path;
+  writeFileSync(
+    `dist${path}.html`,
+    page({
+      path,
+      title: `${materialSeoTitle(m)} – ${APP}`,
+      description: materialDescription(m),
+      raw: guideHtml[path],
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          { '@type': 'WebPage', name: materialTitle(m), url, description: materialDescription(m) },
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: APP, item: `${SITE}/` },
+              { '@type': 'ListItem', position: 2, name: 'PCB Laminate Materials', item: `${SITE}/pcb-materials` },
+              { '@type': 'ListItem', position: 3, name: materialTitle(m), item: url },
             ],
           },
         ],

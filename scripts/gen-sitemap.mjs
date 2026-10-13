@@ -22,6 +22,7 @@ const pages = [
   ['/guides', ['src/guides/GuidesIndex.tsx', 'src/guides/registry.ts']],
   ...imports(guides, 'src/guides'),
   ['/about', ['src/pages/About.tsx']],
+  ...[...readFileSync('src/data/materialPages.ts', 'utf8').matchAll(/slug: '([^']+)'/g)].map((m) => [`/pcb-materials/${m[1]}`, ['src/pages/MaterialPage.tsx', 'src/data/materialPages.ts', 'src/data/laminates.ts']]),
 ];
 
 const today = new Date().toISOString().slice(0, 10);

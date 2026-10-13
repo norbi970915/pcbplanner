@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Cite, Guide, TryIt } from './Guide';
 
 export default function PcieRouting() {
@@ -15,6 +16,10 @@ export default function PcieRouting() {
         { text: 'NXP (Philips) AN10373, PCI Express PCB routing guidelines, 2005.', url: 'https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/powerquicc/2284/2/philips_PCIe_pcb_routing_guide.pdf' },
       ]}
     >
+      <p>
+        This is a worked case study for one Gen3 board. For the general checklist that applies to Gen3, Gen4 and Gen5, see the{' '}
+        <Link to="/guides/pcie-routing-guidelines">PCIe routing guidelines</Link>.
+      </p>
       <p>
         An M.2 NVMe carrier card is a good first high-speed project: a PCIe x4 edge connector, an M.2 Key M socket, four differential lanes each way and a reference clock. There is no
         chip to configure, but every trace carries 8 GT/s, so the layout is the whole design. This guide collects what the PCI Express specifications and public layout guides actually

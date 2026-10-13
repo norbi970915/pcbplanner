@@ -5,6 +5,8 @@ import { GUIDES } from './guides/registry';
 import { SettingsProvider } from './state/settings';
 import Home from './tools/Home';
 import { TOOLS } from './tools/registry';
+import { MATERIAL_PAGES, materialPath } from './data/materialPages';
+import { MaterialPageRoute } from './pages/materialRoute';
 
 const GuidesIndex = lazy(() => import('./guides/GuidesIndex'));
 const ToolsIndex = lazy(() => import('./tools/ToolsIndex'));
@@ -28,6 +30,9 @@ export default function App() {
             <Route path="/about" element={<About />} />
             {GUIDES.map((g) => (
               <Route key={g.path} path={g.path} element={<g.component />} />
+            ))}
+            {MATERIAL_PAGES.map((m) => (
+              <Route key={m.slug} path={materialPath(m.slug)} element={<MaterialPageRoute />} />
             ))}
             <Route path="*" element={<NotFound />} />
           </Route>
