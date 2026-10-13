@@ -143,9 +143,15 @@ for (const tool of TOOLS) {
     throw new Error('prerender: export Method from ' + file + ' so the static explanation is included.');
   }
   const guides = GUIDES.filter((g) => g.tools.includes(tool.path));
+  // the material library links every datasheet page, so the static page does too
+  const datasheets =
+    tool.path === '/pcb-materials'
+      ? `<h2>Material datasheet pages</h2><ul>${MATERIAL_PAGES.map((m) => `<li><a href="${materialPath(m.slug)}">${esc(materialTitle(m))}</a></li>`).join('')}</ul>`
+      : '';
   const body =
     `<p>${esc(description)}</p>` +
     (method ? `<section><h2>Method, formulas and references</h2>${method}</section>` : '') +
+    datasheets +
     (guides.length ? `<h2>Related guides</h2><ul>${guides.map((g) => `<li><a href="${g.path}">${esc(g.title)}</a></li>`).join('')}</ul>` : '') +
     (cross.length ? `<h2>Related tools</h2><ul>${cross.map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`).join('')}</ul>` : '') +
     (related.length
@@ -153,7 +159,7 @@ for (const tool of TOOLS) {
           .map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`)
           .join('')}</ul>`
       : '') +
-    `<nav><h2>All calculators</h2>${toolNav}</nav>`;
+    `<nav><p><a href="/">Home</a> · <a href="/tools">All tools</a> · <a href="/schematic">Schematic design</a> · <a href="/guides">Guides</a> · <a href="/about">About</a></p><h2>All calculators</h2>${toolNav}</nav>`;
   writeFileSync(
     `dist${tool.path}.html`,
     page({
@@ -183,7 +189,7 @@ writeFileSync(
   page({
     path: '/tools',
     title: `PCB Design Calculators \u2013 ${APP}`,
-    description: 'Browse PCB design calculators by category: signal integrity, stackups, thermal design, power, components and electronics.',
+    description: 'PCB calculators: impedance field solver, trace width and current, vias, creepage and clearance, stackups, PDN, buck and boost converters, filters.',
     raw: guideHtml['/tools'],
     jsonLd: {
       '@context': 'https://schema.org',
@@ -380,5 +386,33 @@ for (const file of outputPages) {
   if (!html.includes('__PAGE_METADATA_URL__')) throw new Error('prerender: missing metadata link in ' + file);
   writeFileSync(file,html.replace('__PAGE_METADATA_URL__',metadataUrl));
 }
+// Atom feed of the guides, newest first (linked from every page's <head>)
+const feedGuides = [...GUIDES].sort((a, b) => b.date.localeCompare(a.date));
+const xmlEsc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+writeFileSync(
+  'dist/guides/feed.xml',
+  `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>${APP} guides</title>
+  <subtitle>PCB design guides with worked examples and sources.</subtitle>
+  <link href="${SITE}/guides/feed.xml" rel="self"/>
+  <link href="${SITE}/guides"/>
+  <id>${SITE}/guides</id>
+  <updated>${feedGuides[0].date}T00:00:00Z</updated>
+  <author><name>${APP}</name></author>
+${feedGuides
+  .map(
+    (g) => `  <entry>
+    <title>${xmlEsc(g.title)}</title>
+    <link href="${SITE}${g.path}"/>
+    <id>${SITE}${g.path}</id>
+    <updated>${g.date}T00:00:00Z</updated>
+    <summary>${xmlEsc(g.description)}</summary>
+  </entry>`,
+  )
+  .join('\n')}
+</feed>
+`,
+);
 await vite.close();
-console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages, about, 404`);
+console.log(`prerender: ${TOOLS.length + 1} tool pages, ${GUIDES.length + 1} guide pages, about, 404, guides feed`);

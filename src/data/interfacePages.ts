@@ -1,7 +1,7 @@
 // One layout-guideline page per interface, built only from the verified rules in interfaces.ts.
 // Versions of the same interface (HDMI 1.4 and 2.0, USB 3.2 Gen 1 and Gen 2, …) share a page.
 // PCI Express has its own guides and is left out here so the pages do not compete with them.
-import { interfaceById, type InterfaceSpec } from './interfaces';
+// The specs themselves are in interfacePageSpecs.ts: this list is loaded on every page (routes), the specs only on the interface pages.
 
 export interface InterfacePageDef {
   slug: string;
@@ -29,20 +29,11 @@ export const INTERFACE_PAGES: InterfacePageDef[] = [
 ];
 
 export const interfacePagePath = (slug: string) => `/interface-rules/${slug}`;
-export const specsOf = (p: InterfacePageDef): InterfaceSpec[] => p.ids.map(interfaceById).filter((s): s is InterfaceSpec => !!s);
 export const interfacePageByPath = (path: string) =>
   path.startsWith('/interface-rules/') ? INTERFACE_PAGES.find((p) => interfacePagePath(p.slug) === path) : undefined;
 export const interfacePageOfSpec = (id: string) => INTERFACE_PAGES.find((p) => p.ids.includes(id));
 
 export const interfaceTitle = (p: InterfacePageDef) => `${p.product} PCB Layout Guidelines`;
 export const interfaceSeoTitle = (p: InterfacePageDef) => p.seoTitle ?? `${p.product} PCB Layout & Routing Guidelines`;
-
-/** "100 Ω differential" when every version shares the target, otherwise undefined. */
-export function sharedImpedance(p: InterfacePageDef): string | undefined {
-  const specs = specsOf(p);
-  const z = specs[0].z;
-  if (!specs.every((s) => s.z.target === z.target && s.z.kind === z.kind)) return undefined;
-  return `${z.target} Ω ${z.kind === 'diff' ? 'differential' : 'single-ended'}`;
-}
 
 export const interfaceDescription = (p: InterfacePageDef) => p.description;

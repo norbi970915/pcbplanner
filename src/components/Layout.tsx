@@ -394,7 +394,6 @@ export function Layout() {
               onClick={run(() =>
                 navigator.clipboard?.writeText(currentToolUrl()),
               )}
-              hint="Ctrl+L"
             >
               Copy Link to Inputs
             </Item>

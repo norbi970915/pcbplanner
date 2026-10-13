@@ -1,5 +1,5 @@
 import { lazyPage, type LazyPage } from '../lib/lazyPage';
-import { PRESETS } from '../lib/stackups';
+import { FAB_STACKUP_COUNT } from '../data/fabStackupCount';
 
 export interface ToolDef {
   path: string;
@@ -175,7 +175,7 @@ export const TOOLS: ToolDef[] = [
     title: 'Layer Stack Manager',
     nav: 'Layer stack manager',
     group: 'Stackup',
-    summary: `${PRESETS.length} rigid fab stackups plus six flex and rigid-flex design starters, with linked regions, editable materials and per-layer impedance.`,
+    summary: `${FAB_STACKUP_COUNT} rigid fab stackups plus six flex and rigid-flex design starters, with linked regions, editable materials and per-layer impedance.`,
     component: lazyPage(() => import('./StackupTool')),
   },
   {

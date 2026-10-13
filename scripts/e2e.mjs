@@ -845,7 +845,7 @@ async function mobileRoute(page, route) {
     await check(page, m.sw <= m.iw + 1 && m.bw <= m.iw + 1, route, '10 mobile no horizontal overflow', JSON.stringify(m));
     const aside = page.locator(PROPS);
     const vis = (await aside.count()) && (await aside.isVisible());
-    await check(page, !!vis, route, '10 mobile properties panel visible', 'panel not visible');
+    if (!NO_PROPS.has(route)) await check(page, !!vis, route, '10 mobile properties panel visible', 'panel not visible');
     if (vis && !NO_PROPS.has(route)) {
       const c = aside.locator('input:visible, select:visible').first();
       await c.scrollIntoViewIfNeeded();

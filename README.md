@@ -6,15 +6,18 @@ Browser-based calculators for PCB design with a compact shadcn/ui workbench: men
 
 | Group | Tools |
 |---|---|
-| Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential (edge-coupled and balanced shielded broadside), solve W or S, laminate library), Delay & timing, Trace loss (conductor loss by incremental inductance with Hammerstad / Groiss / Huray roughness, dielectric loss from the field-energy split, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing |
-| Stackup | Stackup advisor, Layer stack manager (178 standard FR-4 stackups, 2–12 layers), Laminate materials library (datasheet Dk/Df, solder masks, copper foil roughness) |
-| Thermal | Junction temperature, Thermal via array |
-| Power & conductors | Trace width / current (IPC-2221, IPC-2152), Via, Skin effect, Fusing current, Wire gauge, Conductor spacing (IPC-2221), Creepage & clearance (IEC 60664-1) |
-| Power integrity | PDN target impedance, plane capacitance, decoupling |
-| Power supply | Buck converter (TI SLVA477B), Boost converter (TI SLVA372D), LDO dissipation, Feedback divider |
-| Components | Planar spiral inductor, Padstack, BGA land |
-| Electronics | Ohm's law, Reactance & resonance, Crystal & ppm, Resistor tools (E-series), Attenuator pads |
-| Utilities | Unit converter, Reference charts |
+| Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential (edge-coupled and balanced shielded broadside), solve W or S, laminate library), Delay & timing, Termination, Trace loss (incremental-inductance conductor loss with Hammerstad / Groiss / Huray roughness, field-energy dielectric loss, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing, Interface rules, Phase noise & jitter, S-parameter viewer |
+| RF | VSWR & return loss, Coax impedance, L-network matching, Quarter-wave & stubs |
+| Stackup | Stackup advisor, Layer stack manager (178 rigid fabricator stackups, 2–12 layers, plus flex and rigid-flex starters), Materials (datasheet Dk/Df, solder masks, copper foil roughness) |
+| Thermal | Junction temperature, Thermal vias, Copper heat spreading |
+| Power & conductors | Trace width / current (IPC-2221, IPC-2152), Via, Skin effect, Fusing current, Wire gauge / drop, Conductor spacing (IPC-2221), Creepage & clearance (IEC 60664-1) |
+| Power integrity | PDN, EMI filter |
+| Power supply | Power tree, Buck converter (TI SLVA477B), Boost converter (TI SLVA372D), LDO dissipation, Feedback divider |
+| Components | Spiral inductor, Padstack, SMD land pattern, BGA land, Resistor color code, SMD resistor code, Capacitor code |
+| Electronics | Ohm's law, Reactance & resonance, RC filters, Active filters, Op-amp gain, Crystal & ppm, 555 timer, I²C pull-up, Logic levels, Comparator hysteresis, ADC input, NTC thermistor, Current-sense shunt, Resistor tools, Attenuator pads |
+| Utilities | Projects, Unit converter, Reference charts |
+
+The site also has 34 guides (`src/guides/`), a page per laminate datasheet (`src/data/materialPages.ts`) and a layout-guideline page per interface (`src/data/interfacePages.ts`).
 
 Every tool keeps its inputs in the URL, so any result can be shared as a link.
 
@@ -68,11 +71,14 @@ node scripts/shots.mjs <outDir>   # browser smoke test + screenshots (needs Edge
 
 ## Deployment
 
-`dist/` is a static single-page app. The host must serve `index.html` for unknown paths:
+Vercel builds `main` on every push (`vercel.json`). The build writes a static HTML page per route, so no SPA fallback is needed:
 
-- **Netlify:** `public/_redirects` is included.
-- **Cloudflare Pages:** SPA fallback is automatic.
-- **Nginx:** `try_files $uri /index.html;`
+1. `scripts/gen-sitemap.mjs`: `public/sitemap.xml` and `robots.txt`. `lastmod` comes from each page's git history; without history the committed dates are kept, so commit the sitemap.
+2. `tsc -b` and `vite build`.
+3. `scripts/prerender.mjs`: one HTML file per tool, guide, material and interface page with its title, description, canonical URL, share image and JSON-LD; `404.html` (served with status 404); the guides Atom feed `/guides/feed.xml`.
+4. `scripts/gen-sw.mjs`: `sw.js`, the service worker for offline use and installation.
+
+Share images in `public/og/` are rendered by `node scripts/render-og.mjs` (needs Edge); run it after changing a title or summary. Search engines are notified through IndexNow after each production deploy (`.github/workflows/indexnow.yml`, `scripts/indexnow.mjs`).
 
 ## Monetisation hooks
 

@@ -165,6 +165,18 @@ export default function MaterialPage() {
             </>
           )}
 
+          <p>
+            Other datasheet pages:{' '}
+            {MATERIAL_PAGES.filter((o) => o !== m && !similar.includes(o)).map((o, i) => (
+              <span key={o.slug}>
+                {i > 0 && ' · '}
+                <Link to={materialPath(o.slug)}>
+                  {o.vendor} {o.product}
+                </Link>
+              </span>
+            ))}
+          </p>
+
           <h2>Sources</h2>
           <ol className="sources">
             {sources.map((s) => (

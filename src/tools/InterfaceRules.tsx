@@ -186,7 +186,32 @@ export default function InterfaceRules() {
   }, [scanKey]);
 
   const L = (mm: number) => `${fmt(fromMm(mm, unit), 3)} ${unit}`;
-  const rows: CheckRow[] = spec && line ? evaluateInterface(spec, line, { minW: p.minW, minS: p.minS, maxW: p.maxW }, p.len, L, second ?? undefined) : [];
+  const fab = { minW: p.minW, minS: p.minS, maxW: p.maxW };
+  const rows: CheckRow[] = spec && line ? evaluateInterface(spec, line, fab, p.len, L, second ?? undefined) : [];
+  // Until the first solve finishes, the same rule rows are drawn without values, so the panels below
+  // do not jump when the results arrive. The stand-in line only selects which rows exist.
+  const pendingRows: CheckRow[] =
+    spec && sg && !line && !error
+      ? evaluateInterface(
+          spec,
+          { w: p.minW, s: spec.z.kind === 'diff' ? p.minS : undefined, z: spec.z.target, eeff: 3.5, dbPerMm: 0.02 },
+          fab,
+          p.len,
+          L,
+          spec.z2 ? { w: p.minW, s: spec.z2.kind === 'diff' ? p.minS : undefined } : undefined,
+        )
+      : [];
+  // layers the scan will design, known before it runs
+  const scanLayers = useMemo(
+    () =>
+      stack
+        ? stack.layers
+            .filter((l) => l.kind === 'copper' && l.role !== 'plane')
+            .map((l) => ({ layer: l, g: geometryForLayer(stack, l.id) }))
+            .filter((x): x is { layer: Layer; g: StackupGeometry } => !!x.g)
+        : [],
+    [stack],
+  );
 
   const errors: string[] = [];
   if (stack && !sg) errors.push('That layer has no reference plane marked in the stackup. Open the Layer Stack Manager and mark the neighbouring copper as a plane.');
@@ -374,7 +399,7 @@ export default function InterfaceRules() {
               <Big label={`Loss at ${freqLabel(spec.nyquistGHz)}`} value={line ? fmt(line.dbPerMm * 25.4, 3) : '—'} unit="dB/in" busy={busy} />
               <Big label="Over your route" value={line ? fmt(line.dbPerMm * p.len, 2) : '—'} unit="dB" busy={busy} />
             </div>
-            {rows.length > 0 && (
+            {(rows.length > 0 || pendingRows.length > 0) && (
               <table className="tbl">
                 <thead>
                   <tr>
@@ -385,31 +410,52 @@ export default function InterfaceRules() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.label}>
-                      <td>
-                        {r.label}
-                        {r.note && <div className="text-faint">{r.note}</div>}
-                      </td>
-                      <td className="text-muted">{r.required}</td>
-                      <td className="v">{r.value}</td>
-                      <td className={statusClass(r.status)}>{statusText(r.status)}</td>
-                    </tr>
-                  ))}
+                  {rows.length > 0
+                    ? rows.map((r) => (
+                        <tr key={r.label}>
+                          <td>
+                            {r.label}
+                            {r.note && <div className="text-faint">{r.note}</div>}
+                          </td>
+                          <td className="text-muted">{r.required}</td>
+                          <td className="v">{r.value}</td>
+                          <td className={statusClass(r.status)}>{statusText(r.status)}</td>
+                        </tr>
+                      ))
+                    : pendingRows.map((r) => (
+                        <tr key={r.label}>
+                          <td>
+                            {r.label}
+                            {r.note && <div className="text-faint">{'\u00a0'}</div>}
+                          </td>
+                          <td className="text-muted">{r.required}</td>
+                          <td className="v text-faint">—</td>
+                          <td />
+                        </tr>
+                      ))}
                 </tbody>
               </table>
             )}
           </Panel>
-          {handoff && <Panel title="Continue the Design" className="mt-3">
+          {sg && !errors.length && <Panel title="Continue the Design" className="mt-3">
             <div className="flex flex-wrap gap-2 px-3 py-3">
-              <Link className="btn no-underline" to={handoff.impedance}>Check this trace in Impedance</Link>
-              <Link className="btn no-underline" to={handoff.loss}>See this route in Trace Loss</Link>
+              {handoff ? (
+                <>
+                  <Link className="btn no-underline" to={handoff.impedance}>Check this trace in Impedance</Link>
+                  <Link className="btn no-underline" to={handoff.loss}>See this route in Trace Loss</Link>
+                </>
+              ) : (
+                <>
+                  <button className="btn" disabled>Check this trace in Impedance</button>
+                  <button className="btn" disabled>See this route in Trace Loss</button>
+                </>
+              )}
               <Link className="btn no-underline" to={`/s-parameter-viewer?f=${spec.nyquistGHz}`}>Inspect a connector or via .s2p</Link>
             </div>
             <p className="px-3 pb-3 text-faint">The impedance and trace-loss links carry the solved geometry and route length; the .s2p viewer carries the Nyquist frequency as its marker. Check the laminate loss data and foil against your fab materials.</p>
           </Panel>}
           <Panel title="Which layer to route it on" className="mt-3">
-            {scan ? (
+            {scan || scanLayers.length ? (
               <table className="tbl">
                 <thead>
                   <tr>
@@ -422,7 +468,20 @@ export default function InterfaceRules() {
                   </tr>
                 </thead>
                 <tbody>
-                  {scan.map((f) => {
+                  {!scan &&
+                    scanLayers.map(({ layer, g }) => (
+                      <tr key={layer.id} className={layer.id === layerId ? 'sel' : ''}>
+                        <td>{layer.name}</td>
+                        <td className="text-muted">{g.type === 'microstrip' ? 'Microstrip' : g.type === 'stripline' ? 'Stripline' : 'Embedded microstrip'}</td>
+                        <td className="v text-faint">—</td>
+                        <td className="v text-faint">—</td>
+                        {spec.lossBudgetDb !== undefined && <td className="v text-faint">—</td>}
+                        <td className="text-right">
+                          {layer.id === layerId ? <span className="text-muted">shown above</span> : <button className="btn" disabled>Use</button>}
+                        </td>
+                      </tr>
+                    ))}
+                  {scan?.map((f) => {
                     const ok = f.w >= p.minW && f.w <= p.maxW && (f.s === undefined || f.s >= p.minS);
                     return (
                       <tr key={f.id} className={f.id === layerId ? 'sel' : ''}>

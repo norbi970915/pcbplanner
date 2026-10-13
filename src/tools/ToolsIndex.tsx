@@ -10,7 +10,7 @@ import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
 export default function ToolsIndex() {
   useDocumentMeta(
     'PCB Design Calculators',
-    'Browse PCB design calculators by category: signal integrity, stackups, thermal design, power, components and electronics.',
+    'PCB calculators: impedance field solver, trace width and current, vias, creepage and clearance, stackups, PDN, buck and boost converters, filters.',
   );
   const { statusEl } = useShell();
   const [params] = useSearchParams(),
