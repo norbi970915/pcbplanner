@@ -5,6 +5,7 @@ import { stackupGroup } from '../components/StackupPicker';
 import { ToolPage } from '../components/ToolPage';
 import { Big, LenField, Notes, NumField, Panel, Section, SelectField } from '../components/ui';
 import { INTERFACES, interfaceById } from '../data/interfaces';
+import { INTERFACE_PAGES, interfacePagePath } from '../data/interfacePages';
 import { FOILS, LAMINATES, laminateById, maskById } from '../data/laminates';
 import type { Accuracy } from '../lib/fieldsolver';
 import { evaluateInterface, freqLabel, interfaceLossRequest, rateLabel, type CheckRow, type LineMetrics } from '../lib/interfaceRules';
@@ -519,6 +520,18 @@ export function Method() {
       <p>
         Use the <Link to="/impedance">impedance calculator</Link> to finish the geometry, <Link to="/trace-loss">trace loss</Link> to see the loss across frequency, and the{' '}
         <Link to="/stackup-advisor">stackup advisor</Link> when no layer of your stackup can carry the width an interface needs.
+      </p>
+      <h2>Layout guidelines by interface</h2>
+      <p>
+        Each interface’s rules on one page, with the specification and vendor sources:{' '}
+        {INTERFACE_PAGES.map((p, i) => (
+          <span key={p.slug}>
+            {i > 0 && ' · '}
+            <Link to={interfacePagePath(p.slug)}>{p.product}</Link>
+          </span>
+        ))}
+        {' · '}
+        <Link to="/guides/pcie-routing-guidelines">PCIe</Link>.
       </p>
       {spec && <Sources items={spec.sources} />}
     </>

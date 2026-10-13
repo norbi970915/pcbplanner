@@ -7,13 +7,15 @@ import { registerServiceWorker } from './lib/pwa'
 import { toolByPath } from './tools/registry'
 import { materialPageByPath } from './data/materialPages'
 import { MaterialPageRoute } from './pages/materialRoute'
+import { interfacePageByPath } from './data/interfacePages'
+import { InterfacePageRoute } from './pages/interfaceRoute'
 
 registerServiceWorker()
 
 // fetch the first page's chunk before rendering, so React replaces the prerendered
 // HTML with the finished page in one step rather than an empty shell (layout shift)
 const path = window.location.pathname.replace(/(.)\/$/, '$1')
-const first = (toolByPath(path) ?? guideByPath(path))?.component.preload() ?? (materialPageByPath(path) ? MaterialPageRoute.preload() : Promise.resolve())
+const first = (toolByPath(path) ?? guideByPath(path))?.component.preload() ?? (materialPageByPath(path) ? MaterialPageRoute.preload() : interfacePageByPath(path) ? InterfacePageRoute.preload() : Promise.resolve())
 
 first
   .catch(() => {}) // a failed fetch is retried by the lazy route and shown by its error boundary

@@ -254,7 +254,7 @@ export function Layout() {
     path === '/schematic' ||
     !!toolByPath(path);
   // Guides and About have no calculator inputs.
-  const isDoc = path === '/about' || path === '/guides' || path.startsWith('/guides/') || path.startsWith('/pcb-materials/');
+  const isDoc = path === '/about' || path === '/guides' || path.startsWith('/guides/') || path.startsWith('/pcb-materials/') || path.startsWith('/interface-rules/');
   useEffect(() => {
     if (!known) return;
     setTabs((t) => (t.includes(path) ? t : [...t, path]));

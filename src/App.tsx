@@ -7,6 +7,8 @@ import Home from './tools/Home';
 import { TOOLS } from './tools/registry';
 import { MATERIAL_PAGES, materialPath } from './data/materialPages';
 import { MaterialPageRoute } from './pages/materialRoute';
+import { INTERFACE_PAGES, interfacePagePath } from './data/interfacePages';
+import { InterfacePageRoute } from './pages/interfaceRoute';
 
 const GuidesIndex = lazy(() => import('./guides/GuidesIndex'));
 const ToolsIndex = lazy(() => import('./tools/ToolsIndex'));
@@ -33,6 +35,9 @@ export default function App() {
             ))}
             {MATERIAL_PAGES.map((m) => (
               <Route key={m.slug} path={materialPath(m.slug)} element={<MaterialPageRoute />} />
+            ))}
+            {INTERFACE_PAGES.map((p) => (
+              <Route key={p.slug} path={interfacePagePath(p.slug)} element={<InterfacePageRoute />} />
             ))}
             <Route path="*" element={<NotFound />} />
           </Route>

@@ -33,6 +33,8 @@ import TraceWidthGuide from './TraceWidthGuide';
 import PlanarInductorGuide from './PlanarInductorGuide';
 import About from '../pages/About';
 import MaterialPage from '../pages/MaterialPage';
+import InterfacePage from '../pages/InterfacePage';
+import { INTERFACE_PAGES, interfacePagePath } from '../data/interfacePages';
 import { MATERIAL_PAGES, materialPath } from '../data/materialPages';
 import NotFound from '../pages/NotFound';
 import Schematic from '../pages/Schematic';
@@ -76,6 +78,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/about': About,
   '/404': NotFound,
   ...Object.fromEntries(MATERIAL_PAGES.map((m) => [materialPath(m.slug), MaterialPage])),
+  ...Object.fromEntries(INTERFACE_PAGES.map((p) => [interfacePagePath(p.slug), InterfacePage])),
 };
 
 // every tool module, so its exported Method (formulas, explanation, references) can be rendered

@@ -15,12 +15,13 @@ const { PRESETS } = await vite.ssrLoadModule('/src/lib/stackups.ts');
 const { FLEX_PRESETS } = await vite.ssrLoadModule('/src/data/flexStackups.ts');
 const { GUIDES } = await vite.ssrLoadModule('/src/guides/registry.ts');
 const { MATERIAL_PAGES, materialPath, materialSeoTitle, materialTitle, materialDescription } = await vite.ssrLoadModule('/src/data/materialPages.ts');
+const { INTERFACE_PAGES, interfacePagePath, interfaceSeoTitle, interfaceTitle, interfaceDescription } = await vite.ssrLoadModule('/src/data/interfacePages.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
 const { SCHEMATIC_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Schematic.tsx');
 const { NOT_FOUND_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/NotFound.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/404', ...GUIDES.map((g) => g.path), ...MATERIAL_PAGES.map((m) => materialPath(m.slug))].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/404', ...GUIDES.map((g) => g.path), ...MATERIAL_PAGES.map((m) => materialPath(m.slug)), ...INTERFACE_PAGES.map((p) => interfacePagePath(p.slug))].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -324,6 +325,44 @@ for (const m of MATERIAL_PAGES) {
               { '@type': 'ListItem', position: 1, name: APP, item: `${SITE}/` },
               { '@type': 'ListItem', position: 2, name: 'PCB Laminate Materials', item: `${SITE}/pcb-materials` },
               { '@type': 'ListItem', position: 3, name: materialTitle(m), item: url },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+}
+// Interface layout-guideline pages
+mkdirSync('dist/interface-rules', { recursive: true });
+for (const p of INTERFACE_PAGES) {
+  const path = interfacePagePath(p.slug);
+  const url = SITE + path;
+  writeFileSync(
+    `dist${path}.html`,
+    page({
+      path,
+      title: `${interfaceSeoTitle(p)} – ${APP}`,
+      description: interfaceDescription(p),
+      raw: guideHtml[path],
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'TechArticle',
+            headline: interfaceTitle(p),
+            description: interfaceDescription(p),
+            url,
+            mainEntityOfPage: url,
+            image: ogImage(path),
+            author: { '@type': 'Organization', name: APP, url: `${SITE}/` },
+            publisher: { '@type': 'Organization', name: APP, url: `${SITE}/`, logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png?v=3` } },
+          },
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: APP, item: `${SITE}/` },
+              { '@type': 'ListItem', position: 2, name: 'Interface Design Rules', item: `${SITE}/interface-rules` },
+              { '@type': 'ListItem', position: 3, name: interfaceTitle(p), item: url },
             ],
           },
         ],

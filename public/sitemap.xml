@@ -10,7 +10,7 @@
   <url><loc>https://www.pcbplanner.com/crosstalk</loc><lastmod>2026-10-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/differential-via</loc><lastmod>2026-09-22</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/via-stitching</loc><lastmod>2026-09-22</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.pcbplanner.com/interface-rules</loc><lastmod>2026-10-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/clock-jitter</loc><lastmod>2026-10-01</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/s-parameter-viewer</loc><lastmod>2026-10-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/vswr-calculator</loc><lastmod>2026-10-08</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
@@ -93,6 +93,18 @@
   <url><loc>https://www.pcbplanner.com/guides/copper-area-for-cooling</loc><lastmod>2026-09-22</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/guides/creepage-clearance-mains</loc><lastmod>2026-10-01</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/about</loc><lastmod>2026-10-06</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/hdmi</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/displayport</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/usb-3</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/usb-2</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/ddr4</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/lpddr4</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/rgmii</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/rmii</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/sgmii</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/ethernet-1000base-t</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/mipi-d-phy</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.pcbplanner.com/interface-rules/sata</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/pcb-materials/megtron-6</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/pcb-materials/megtron-4</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.pcbplanner.com/pcb-materials/megtron-7</loc><lastmod>2026-10-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
