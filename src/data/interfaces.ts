@@ -61,7 +61,7 @@ const TI_SNLA387: DataSource = {
   note: 'MDI and MII trace rules: 100 Ω ±10 % / 50 Ω to ground, 20 mil pair matching at 1 Gb/s, 2 in MDI and 6 in MII length limits, 3W/5W keep-out, 20 mil earth-ground moat, magnetics keep-out, ESD diode placement.',
 };
 const TI_DP83867: DataSource = {
-  title: 'TI DP83867IR/CR data sheet SNLS484 (§9.2, §9.4 layout)',
+  title: 'TI DP83867IR/CR data sheet SNLS484 (layout in §9.2.2.1.1 of revision J, 2026; §9.2 and §9.4 in earlier revisions)',
   url: 'https://www.ti.com/lit/ds/symlink/dp83867ir.pdf',
   note: 'MDI 50 Ω to ground and 100 Ω differential, 0.1 µF per isolated centre tap, no metal under the transformer, RGMII 11 ps (60 mil) intra-group skew, internal RGMII delay in 0.25 ns steps.',
 };

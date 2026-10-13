@@ -31,6 +31,11 @@ import FeedbackDividerGuide from './FeedbackDividerGuide';
 import ThermalViaGuide from './ThermalViaGuide';
 import TraceWidthGuide from './TraceWidthGuide';
 import PlanarInductorGuide from './PlanarInductorGuide';
+import RgmiiDelayGuide from './RgmiiDelayGuide';
+import ViaStubGuide from './ViaStubGuide';
+import PrepregGlassGuide from './PrepregGlassGuide';
+import PthHoleGuide from './PthHoleGuide';
+import BobSmithGuide from './BobSmithGuide';
 import About from '../pages/About';
 import MaterialPage from '../pages/MaterialPage';
 import InterfacePage from '../pages/InterfacePage';
@@ -46,6 +51,11 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/tools': ToolsIndex,
   '/schematic': Schematic,
   '/guides': GuidesIndex,
+  '/guides/bob-smith-termination': BobSmithGuide,
+  '/guides/rgmii-clock-delay': RgmiiDelayGuide,
+  '/guides/via-stub-back-drilling': ViaStubGuide,
+  '/guides/prepreg-glass-styles': PrepregGlassGuide,
+  '/guides/pth-hole-pad-size': PthHoleGuide,
   '/guides/pcb-planar-inductor-design': PlanarInductorGuide,
   '/guides/feedback-divider-resistor-selection': FeedbackDividerGuide,
   '/guides/thermal-via-array-design': ThermalViaGuide,

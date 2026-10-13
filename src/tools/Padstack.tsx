@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { DiagramDimension, DiagramSvg, DiagramValues, EngineeringDiagram, type DiagramPaint } from '../components/EngineeringDiagram';
 import { ToolPage } from '../components/ToolPage';
@@ -237,6 +238,14 @@ function PadstackDrawing({ r, spokes, fmtLen, square }: { r: PadResult; spokes: 
 export function Method() {
   return (
     <>
+      <p>
+        A note on names: this calculator labels the density-level values “IPC-7251”, the name land-pattern libraries publish them under. IPC-7251 itself was never released; the
+        committee stopped work on it in October 2014 and moved through-hole land patterns into IPC-7351C (
+        <a href="https://www.pcblibraries.com/forum/printer_friendly_posts.asp?TID=1463" target="_blank" rel="noopener noreferrer">
+          T. Hausherr, PCB Libraries forum, 2014
+        </a>
+        ). The <Link to="/guides/pth-hole-pad-size">through-hole hole and pad size guide</Link> traces each value to its source.
+      </p>
       <h2>Hole</h2>
       <p>
         The finished (plated) hole is the maximum lead diameter plus an allowance that depends on the density level. A rectangular lead uses its diagonal √(<i>W</i>
