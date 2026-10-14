@@ -8,5 +8,5 @@ export const TAGLINE = 'PCB impedance, stackup and design calculators';
  */
 // Shown only on /privacy and /terms (both noindex). The address is split so it never appears whole
 // in the HTML or the bundle; ContactEmail assembles it in the browser.
-export const OPERATOR = { name: 'Buchmüller Norbert', email: { user: 'norbi970915', domain: 'gmail.com' }, country: 'Romania' };
+export const OPERATOR = { name: 'Buchmüller Norbert', email: { user: 'pcbplanner.info', domain: 'gmail.com' }, country: 'Romania' };
 export const LEGAL_UPDATED = '2026-10-14';
