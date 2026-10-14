@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CrossSection } from '../components/CrossSection';
 import { FieldMap } from '../components/FieldMap';
+import { ImpedanceSweep } from '../components/ImpedanceSweep';
+import { ResultImageButtons } from '../components/ResultImageButtons';
+import type { ResultCard } from '../lib/resultImage';
 import { ToolPage } from '../components/ToolPage';
 import { ComparisonButton, ComparisonPanel } from '../components/DesignComparison';
 import { useDesignComparison } from '../state/useDesignComparison';
@@ -55,6 +58,7 @@ const DEFAULTS = {
   tolLimit: 10,
   dl: '', // stacked dielectric below the trace: "t:dk,…" from the plane up to the trace
   dl2: '', // stacked dielectric above the trace, from the trace outward
+  sw: '', // parameter swept in the Sweep panel ('' = none)
 };
 
 /** εr from the material library at the design frequency, or the entered value. */
@@ -140,6 +144,7 @@ export default function Impedance() {
   const [solving, setSolving] = useState<null | 'w' | 's'>(null);
   const [solveErr, setSolveErr] = useState<string | null>(null);
   const [view, setView] = useState<'section' | 'field'>('section');
+  const drawingRef = useRef<HTMLDivElement>(null);
 
   const broadside = p.mode === 'diff' && p.coupling === 'broadside';
   const type = (broadside ? 'stripline' : p.type) as LineType;
@@ -255,6 +260,40 @@ export default function Impedance() {
   const toleranceLowLimit = p.target * (1 - raw.tolLimit / 100);
   const toleranceHighLimit = p.target * (1 + raw.tolLimit / 100);
   const tolerancePass = toleranceMin !== null && toleranceMax !== null && toleranceMin >= toleranceLowLimit && toleranceMax <= toleranceHighLimit;
+
+  // the PNG card: headline result, the inputs that define the line, and the drawing on screen
+  const resultCard = (): ResultCard | null => {
+    if (!z || !eeff) return null;
+    const L = (mm: number) => `${fmt(fromMm(mm, unit), 4)} ${unit}`;
+    const structure = [
+      type === 'microstrip' ? (p.mask ? 'Surface microstrip, solder-mask coated' : 'Surface microstrip') : type === 'embedded' ? 'Embedded microstrip' : 'Stripline',
+      ...(diff ? [broadside ? 'broadside differential pair' : 'differential pair'] : []),
+      ...(!broadside && p.cpw ? ['coplanar ground'] : []),
+    ].join(', ');
+    const rows: [string, string][] = [
+      ['Structure', structure],
+      ['Trace width W', L(p.w) + (p.etch > 0 ? ` (etch ${L(p.etch)})` : '')],
+      ['Copper thickness T', L(p.t)],
+      ['Dielectric below H', `${L(hShown)}, Dk ${fmt(erShown, 3)}`],
+      ...(type !== 'microstrip' && !broadside ? [['Dielectric above H2', `${L(h2Shown)}, Dk ${fmt(er2Shown, 3)}`] as [string, string]] : []),
+      ...(diff ? [[broadside ? 'Inter-layer gap S' : 'Pair spacing S', L(p.s)] as [string, string]] : []),
+      ...(!broadside && p.cpw ? [['Gap to coplanar ground G', L(p.gap)] as [string, string]] : []),
+      ...(type === 'microstrip' && p.mask ? [['Solder mask', `${L(p.c2)} over the trace, Dk ${fmt(p.erm, 3)}`] as [string, string]] : []),
+    ];
+    const sub = [
+      ...(dev !== null && Number.isFinite(dev) ? [`${dev >= 0 ? '+' : ''}${fmt(dev, 3)} % from the ${fmt(p.target, 4)} Ω target`] : []),
+      `εeff ${fmt(eeff, 4)}`,
+      `${fmt(delayPsPerMm(eeff), 4)} ps/mm`,
+    ].join(' · ');
+    return {
+      tool: 'Impedance Calculator',
+      headline: { label: diff ? 'Differential impedance Zdiff' : 'Characteristic impedance Z0', value: fmt(z, 4), unit: 'Ω' },
+      sub,
+      rows,
+      drawing: drawingRef.current?.querySelector('svg, canvas') as SVGSVGElement | HTMLCanvasElement | null,
+      path: '/impedance',
+    };
+  };
 
   const comparison = useDesignComparison('/impedance', {
     state: raw,
@@ -446,7 +485,15 @@ export default function Impedance() {
     >
       <Notes kind="error" items={[...errors, ...(solveState.error && geom ? [solveState.error] : []), ...(solveErr ? [solveErr] : [])]} />
       <div className="grid gap-3 2xl:grid-cols-2">
-        <Panel title="Results" right={<ComparisonButton comparison={comparison} />}>
+        <Panel
+          title="Results"
+          right={
+            <span className="flex items-center gap-1">
+              <ResultImageButtons card={resultCard} fileName={`pcbplanner-impedance-${z ? fmt(z, 4).replace(/[^0-9.]/g, '') : 'result'}-ohm.png`} disabled={!z || busy} />
+              <ComparisonButton comparison={comparison} />
+            </span>
+          }
+        >
           <div className="flex flex-wrap items-end gap-x-8 gap-y-2 px-2.5 pb-1 pt-2">
             <Big label={diff ? 'Differential impedance Zdiff' : 'Characteristic impedance Z0'} value={z ? fmt(z, 4) : '—'} unit="Ω" busy={busy} />
             <Big label="Effective εr" value={eeff ? fmt(eeff, 4) : '—'} unit="" busy={busy} />
@@ -502,7 +549,7 @@ export default function Impedance() {
             />
           }
         >
-          <div className="p-2">
+          <div className="p-2" ref={drawingRef}>
             {view === 'section' || !r?.field || !geom ? (
               <CrossSection
                 spec={{ type, diff, coupling: broadside ? 'broadside' : 'edge', w: p.w, wTop: p.w - p.etch, t: p.t, s: p.s, h: hShown, h2: broadside ? hShown : h2Shown, er: erShown, er2: broadside ? p.er2 : er2Shown, mask: p.mask, cpw: !broadside && p.cpw, gap: p.gap }}
@@ -515,6 +562,7 @@ export default function Impedance() {
           </div>
         </Panel>
       </div>
+      <ImpedanceSweep geom={geom} acc={acc} param={raw.sw} onParam={(sw) => set({ sw })} target={p.target} currentZ={busy ? undefined : z} unit={unit} />
       <ComparisonPanel comparison={comparison} />
       {raw.tolEnabled && <Panel title="Fabrication Tolerance Check" className="mt-3">
         {tolerance.error ? <p className="px-3 py-3 text-muted">{tolerance.error}</p> : toleranceState.error && toleranceState.key === toleranceKey ? <p className="px-3 py-3 text-[var(--err-line)]">{toleranceState.error}</p> : toleranceMin === null || toleranceMax === null ? <p aria-busy="true" className="px-3 py-3 text-muted">Checking {tolerance.corners?.length ?? 0} fabrication corners…</p> : <>
