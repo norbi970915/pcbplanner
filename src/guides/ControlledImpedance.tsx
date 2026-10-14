@@ -9,7 +9,7 @@ export default function ControlledImpedance() {
         { text: 'D. M. Pozar, Microwave Engineering, 4th ed., Wiley, 2012 (transmission-line theory, reflection coefficient).' },
         { text: 'E. Hammerstad, Ø. Jensen, “Accurate Models for Microstrip Computer-Aided Design,” IEEE MTT-S International Microwave Symposium Digest, 1980.' },
         { text: 'IPC-2141A, Design Guide for High-Speed Controlled Impedance Circuit Boards, IPC, 2004.' },
-        { text: 'pcbplanner impedance calculator: method and validation against a Polar SI9000 field solver (within 1 % on coated microstrip).', url: '/impedance' },
+        { text: 'pcbplanner impedance calculator: method and validation against a commercial 2D field solver (within 1 % on coated microstrip).', url: '/impedance' },
       ]}
     >
       <p>

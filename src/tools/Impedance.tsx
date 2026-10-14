@@ -617,7 +617,7 @@ export function Method() {
       <p>Offset traces, unequal copper widths or thicknesses, asymmetric dielectrics, and unshielded broadside pairs are outside this model. The fabrication corner check varies both traces together and keeps the pair balanced; it does not model registration error or imbalance between layers.</p>
       <p>Broadside tests check the odd-mode symmetry against an equivalent half-height stripline, homogeneous-dielectric scaling, the wide-trace parallel-plate limits for both modes, and mesh convergence. The coated-microstrip comparison below is a separate validation and does not establish broadside accuracy against commercial tools. See <a href="https://www.polarinstruments.com/support/cits/AP143.pdf" target="_blank" rel="noreferrer">Polar application note 143</a> for the distinction between balanced and unbalanced pairs.</p>
       <h3>Validation</h3>
-      <p>These results were compared with a commercial 2D field solver (Polar SI9000) on solder-mask coated microstrip:</p>
+      <p>These results were compared with a commercial 2D field solver on solder-mask coated microstrip:</p>
       <table className="tbl mb-4 font-sans text-[13px]">
         <thead>
           <tr>

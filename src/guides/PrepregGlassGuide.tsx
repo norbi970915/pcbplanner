@@ -11,7 +11,7 @@ export default function PrepregGlassGuide() {
         { text: 'Shengyi Technology, S1141/S0401 Based Material Line Up CN-LU-2106-S03 (June 2021): section 2, prepreg (B-stage), p. 2; SPDR method.', url: 'https://www.syst.com.cn/ajax/download.aspx?name=2021/06/20210624182306479.pdf&type=&itemid=1670' },
         { text: 'D. Parsons, Prepreg Selection: Individual Dielectric Space, Isola application note, 2013.', url: 'https://www.isola-group.com/wp-content/uploads/Prepreg-Selection-Individulal-Dielectric-Space.pdf' },
         { text: 'R. Dudek, J. Kuhn, P. Goldman, “Opening Eyes on Fiber Weave and CAF”, IPC technical paper, 2009: Figure 1, Tables I and II.', url: 'https://www.electronics.org/system/files/technical_resource/E8%26S06_03.pdf' },
-        { text: 'pcbplanner impedance calculator: 2D field solver, method and validation against a Polar SI9000 field solver.', url: '/impedance' },
+        { text: 'pcbplanner impedance calculator: 2D field solver, method and validation against a commercial 2D field solver.', url: '/impedance' },
         { text: 'Isola, 370HR data sheet (last updated 15 April 2021): Tg 180 °C (DSC), Dk 4.04 and Df 0.021 at 2 GHz (Bereskin stripline).', url: 'https://isola-group.com/wp-content/uploads/data-sheets/370hr.pdf' },
       ]}
     >
