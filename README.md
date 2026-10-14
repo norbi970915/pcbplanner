@@ -45,7 +45,7 @@ The solver runs in Web Workers; batch jobs such as the advisor use a worker pool
 
 It has been checked against:
 - Hammerstad–Jensen and Wheeler formulas (within 2 %)
-- a commercial 2D field solver for coated microstrip (within 1 %)
+- a commercial 2D field solver for coated microstrip (within 1 % in six test cases)
 
 ## Stackup data
 

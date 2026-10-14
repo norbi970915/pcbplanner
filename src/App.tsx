@@ -13,6 +13,8 @@ import { InterfacePageRoute } from './pages/interfaceRoute';
 const GuidesIndex = lazy(() => import('./guides/GuidesIndex'));
 const ToolsIndex = lazy(() => import('./tools/ToolsIndex'));
 const About = lazy(() => import('./pages/About'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
 const Schematic = lazy(() => import('./pages/Schematic'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -30,6 +32,8 @@ export default function App() {
             <Route path="/schematic" element={<Schematic />} />
             <Route path="/guides" element={<GuidesIndex />} />
             <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             {GUIDES.map((g) => (
               <Route key={g.path} path={g.path} element={<g.component />} />
             ))}

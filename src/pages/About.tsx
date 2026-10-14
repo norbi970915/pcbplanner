@@ -125,7 +125,7 @@ export default function About() {
             >
               Vercel's Web Analytics privacy information
             </a>
-            .
+            . The full details, including your rights, are in the <Link to="/privacy">privacy policy</Link>.
           </p>
           </section>
 
@@ -138,7 +138,8 @@ export default function About() {
               Confirm controlled-impedance geometry and finished stackups with your fabricator,
               and validate clearance, creepage and thermal requirements for the actual product.
               The calculations support engineering decisions; they do not replace measurements,
-              fabrication review or qualification testing.
+              fabrication review or qualification testing. Results are provided as is, without warranty;
+              see the <Link to="/terms">terms of use</Link>.
             </p>
           </section>
 

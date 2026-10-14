@@ -194,6 +194,9 @@ export function ToolPage({
           <div ref={methodRef} className="prose-doc px-4 py-3">{method}</div>
         </details>
       )}
+      <p className="mt-3 px-1 text-faint">
+        Results are engineering estimates, provided as is without warranty. Verify them before use. <Link to="/terms">Terms</Link> · <Link to="/privacy">Privacy</Link>
+      </p>
 
       {propsEl && properties && createPortal(<FieldInteractionContext.Provider value={{ ...interaction, inProperties: true }}>{properties}</FieldInteractionContext.Provider>, propsEl)}
       {statusEl && status && createPortal(paused ? 'Results paused \u00b7 Check the inputs' : status, statusEl)}

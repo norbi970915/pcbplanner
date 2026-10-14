@@ -50,6 +50,7 @@ export default function ConductorSpacing() {
       method={<Method />}
     >
       <Notes kind="error" items={ok ? [] : ['Enter a voltage.']} />
+      <Notes items={ok ? ['IPC-2221 minimum design spacing. Where a product safety standard applies, for example to mains-connected equipment, its creepage and clearance requirements govern and are often larger; see the creepage and clearance tool.'] : []} />
       {ok && (
         <>
           <Panel title="Result">
@@ -65,50 +66,20 @@ export default function ConductorSpacing() {
               </tbody>
             </table>
           </Panel>
-          <Panel title="IPC-2221 Table 6-1 (minimum spacing, mm)">
-            <div className="overflow-x-auto">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Voltage (DC / AC peak)</th>
-                    {SPACING_COLUMNS.map((c) => (
-                      <th key={c} className={`v ${c === col ? 'sel' : ''}`} title={SPACING_COLUMN_LABELS[c]}>
-                        {c}
-                      </th>
-                    ))}
+          <Panel title={`Every conductor category at ${vPeak > 500 ? fmt(vPeak, 4) + ' V' : IPC2221_SPACING_BANDS[bandIdx].vMin + '–' + IPC2221_SPACING_BANDS[bandIdx].vMax + ' V'}`}>
+            <table className="tbl">
+              <tbody>
+                {SPACING_COLUMNS.map((c) => (
+                  <tr key={c} className={c === col ? 'sel' : ''}>
+                    <td>
+                      <b>{c}</b> {SPACING_COLUMN_LABELS[c]}
+                    </td>
+                    <td className="v">{L(ipc2221Spacing(vPeak, c))}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {IPC2221_SPACING_BANDS.map((b, i) => (
-                    <tr key={b.vMin} className={i === bandIdx && vPeak <= 500 ? 'sel' : ''}>
-                      <td>
-                        {b.vMin}–{b.vMax} V
-                      </td>
-                      {SPACING_COLUMNS.map((c) => (
-                        <td key={c} className="v">
-                          {b.mm[c]}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  <tr className={vPeak > 500 ? 'sel' : ''}>
-                    <td>&gt; 500 V (per volt)</td>
-                    {SPACING_COLUMNS.map((c) => (
-                      <td key={c} className="v">
-                        {IPC2221_SPACING_PER_VOLT_ABOVE_500[c]}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="grid gap-x-6 px-2.5 py-2 text-muted md:grid-cols-2">
-              {SPACING_COLUMNS.map((c) => (
-                <div key={c}>
-                  <b className="text-ink">{c}</b> {SPACING_COLUMN_LABELS[c]}
-                </div>
-              ))}
-            </div>
+                ))}
+              </tbody>
+            </table>
+            <p className="px-2.5 py-1.5 text-faint">Minimum spacing at your voltage in each IPC-2221 conductor category. The complete table, with all voltage bands, is in the standard.</p>
           </Panel>
         </>
       )}

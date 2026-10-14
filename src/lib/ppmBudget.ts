@@ -104,7 +104,7 @@ const SATA31: DataSource = {
 
 const PCIE_BASE2: DataSource = {
   title: 'PCI Express Base Specification Rev. 2.0 (December 2006)',
-  url: 'https://archive.org/download/os-dev-manuals/pcie%20spec%20rev%202.0.pdf',
+  url: 'https://pcisig.com/specifications',
   note: '§4.3.7.4: Refclk 100 MHz ±300 ppm with spread spectrum off; SSC adds +0 to −5000 ppm at 30–33 kHz. §4.2.7: clocks at the limits give a 600 ppm difference between the two ends of a link, which the SKP ordered sets absorb.',
 };
 

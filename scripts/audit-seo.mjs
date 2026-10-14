@@ -38,7 +38,8 @@ try {
   const url=decode(get(homeHtml,/<meta name="pcbplanner:metadata" content="([^"]+)"/));assert.match(url,/^\/assets\/page-metadata-[a-f0-9]+\.json$/);
   const metaResponse=await fetch(base+url);assert.equal(metaResponse.status,200);const catalogue=await metaResponse.json();
   const paths=[...readFileSync('public/sitemap.xml','utf8').matchAll(/<loc>https:\/\/www.pcbplanner.com([^<]*)<\/loc>/g)].map(m=>m[1]);
-  assert.deepEqual(Object.keys(catalogue).filter(p=>p!=='/404').sort(),[...paths].sort());
+  assert.deepEqual(Object.keys(catalogue).filter(p=>!catalogue[p].noindex).sort(),[...paths].sort());
+  for(const p of ['/404','/privacy','/terms'])assert.equal(catalogue[p]?.noindex,true,p);
   const staticPages=new Map();let next=0;
   await Promise.all(Array.from({length:6},async()=>{while(next<paths.length){const path=paths[next++],r=await fetch(base+path),h=await r.text(),expected=catalogue[path];assert.equal(r.status,200,path);
     staticPages.set(path,h);assert.equal(decode(get(h,/<title>([^<]+)<\/title>/)),expected.title,path);
@@ -47,7 +48,7 @@ try {
     assert.deepEqual(schemas(h),expected.jsonLd,path);assert.equal(get(h,/<link rel="canonical" href="([^"]+)"/),'https://www.pcbplanner.com'+path);
     assert.ok(!/\$\{(?:PRESETS|FLEX_PRESETS)\.length\}/.test(h),path+' unresolved count');
   }}));
-  assert.ok(catalogue['/stackup'].description.includes('plus 6 flex and rigid-flex'));
+  assert.ok(catalogue['/stackup'].description.includes('plus flex and rigid-flex'));
   for(const path of ['/i2c-pullup','/termination','/current-sense-shunt','/s-parameter-viewer'])assert.ok(staticPages.get(path).includes('Method, formulas and references'),path+' missing method');
   assert.ok(staticPages.get('/s-parameter-viewer').includes('Group delay'));assert.ok(staticPages.get('/i2c-pullup').includes('0.8473'));
   for(const [,file]of [...readFileSync('src/tools/registry.ts','utf8').matchAll(/path:\s*'([^']+)'[\s\S]*?import\('\.\/(\w+)'\)/g)].map(m=>[m[1],m[2]])){
@@ -74,7 +75,7 @@ try {
   await race.route('**/page-metadata-*.json',async route=>{await new Promise(r=>setTimeout(r,300));await route.continue();});
   await race.goto(base+'/',{waitUntil:'networkidle'});
   await race.evaluate(()=>{history.pushState({},'','/impedance');dispatchEvent(new PopStateEvent('popstate'));});
-  await race.waitForFunction(()=>document.title.includes('Microstrip'));
+  await race.waitForFunction(t=>document.title===t,catalogue['/impedance'].title);
   await race.evaluate(()=>{history.pushState({},'','/about');dispatchEvent(new PopStateEvent('popstate'));});
   await race.waitForFunction(()=>document.querySelector('script[type="application/ld+json"]')?.dataset.pagePath==='/about');
   await race.waitForTimeout(400);assert.equal(await race.title(),catalogue['/about'].title);await raceContext.close();

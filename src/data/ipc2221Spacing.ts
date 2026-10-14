@@ -22,15 +22,15 @@ export type SpacingColumn = 'B1' | 'B2' | 'B3' | 'B4' | 'A5' | 'A6' | 'A7';
 
 export const SPACING_COLUMNS: readonly SpacingColumn[] = ['B1', 'B2', 'B3', 'B4', 'A5', 'A6', 'A7'];
 
-/** Column legends as printed under the table (IPC-2221A wording). */
+/** What each IPC-2221 conductor category covers, in our own words. */
 export const SPACING_COLUMN_LABELS: Record<SpacingColumn, string> = {
-  B1: 'Bare board: internal conductors',
-  B2: 'Bare board: external conductors, uncoated, sea level to 3050 m',
-  B3: 'Bare board: external conductors, uncoated, over 3050 m',
-  B4: 'Bare board: external conductors, with permanent polymer coating (any elevation)',
-  A5: 'Assembly: external conductors, with conformal coating over assembly (any elevation)',
-  A6: 'Assembly: external component lead/termination, uncoated, sea level to 3050 m',
-  A7: 'Assembly: external component lead/termination, with conformal coating (any elevation)',
+  B1: 'Inner-layer conductors on a bare board',
+  B2: 'Outer-layer conductors without coating, up to 3050 m altitude',
+  B3: 'Outer-layer conductors without coating, above 3050 m altitude',
+  B4: 'Outer-layer conductors under a permanent polymer coating',
+  A5: 'Assembled board: outer conductors under conformal coating',
+  A6: 'Assembled board: uncoated component leads and terminations, up to 3050 m',
+  A7: 'Assembled board: component leads and terminations under conformal coating',
 };
 
 export interface SpacingBand {
@@ -101,13 +101,13 @@ export function ipc2221Spacing(vPeak: number, column: SpacingColumn): number {
 export const SOURCES: readonly DataSource[] = [
   {
     title: 'IPC-2221 Generic Standard on Printed Board Design (February 1998), Table 6-1',
-    url: 'https://snebulos.mit.edu/projects/reference/commercial/ipc-2221-1998.pdf',
+    url: 'https://www.electronics.org/',
     note: 'Primary. All rows/columns and the >500 V per-volt row transcribed from p. 39; worked 600 V example in 6.3.',
   },
   {
     title: 'IPC-2221A Generic Standard on Printed Board Design (May 2003), Table 6-1',
     url: 'https://www.electronics.org/TOC/IPC-2221A.pdf',
-    note: 'Primary, read from a scanned copy of the full standard (p. 43; the URL is IPC\'s official TOC). Numeric values identical to 1998; A6 legend adds "sea level to 3050 m".',
+    note: 'Primary (p. 43; the URL is IPC\'s official table of contents). Numeric values identical to 1998; A6 legend adds "sea level to 3050 m".',
   },
   {
     title: 'smpspowersupply.com: IPC-2221B PCB trace spacing / clearance by voltage (L. Rozenblat)',

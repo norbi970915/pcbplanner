@@ -88,7 +88,7 @@ const PCIE_CEM3: DataSource = {
 };
 const PCIE_BASE2: DataSource = {
   title: 'PCI Express Base Specification Rev. 2.0 (December 2006)',
-  url: 'https://archive.org/download/os-dev-manuals/pcie%20spec%20rev%202.0.pdf',
+  url: 'https://pcisig.com/specifications',
   note: 'Table 4-9: AC coupling capacitor 75–200 nF, transmitter lane-to-lane skew, unit interval; Table 4-12 receiver skew; §4.3.7.1 spread spectrum, 0 to −0.5 % at 30–33 kHz.',
 };
 const TI_SNLA426: DataSource = {

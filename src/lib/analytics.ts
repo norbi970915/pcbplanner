@@ -10,16 +10,24 @@ type GoogleWindow = Window & {
 
 let tagLoaded = false;
 
+/** Raise when the analytics vendors or purposes change, so everyone is asked again. */
+export const CONSENT_VERSION = 2;
+/** A stored choice is asked again after this long. */
+const CONSENT_MAX_AGE_MS = 365 * 24 * 3600 * 1000;
+
 export function readAnalyticsChoice(): AnalyticsChoice | null {
   try {
     const record = JSON.parse(localStorage.getItem(ANALYTICS_CONSENT_KEY) || 'null');
-    return record?.choice === 'accepted' || record?.choice === 'declined' ? record.choice : null;
+    if (record?.version !== CONSENT_VERSION) return null;
+    const age = Date.now() - Date.parse(record.updatedAt);
+    if (!(age >= 0 && age < CONSENT_MAX_AGE_MS)) return null;
+    return record.choice === 'accepted' || record.choice === 'declined' ? record.choice : null;
   } catch { return null; }
 }
 
 export function saveAnalyticsChoice(choice: AnalyticsChoice) {
   try {
-    localStorage.setItem(ANALYTICS_CONSENT_KEY, JSON.stringify({ choice, updatedAt: new Date().toISOString() }));
+    localStorage.setItem(ANALYTICS_CONSENT_KEY, JSON.stringify({ choice, version: CONSENT_VERSION, updatedAt: new Date().toISOString() }));
   } catch { /* storage unavailable; the choice still applies for this page */ }
 }
 
@@ -37,7 +45,11 @@ export function enableAnalytics(): boolean {
   }
 
   googleWindow.dataLayer = googleWindow.dataLayer || [];
-  googleWindow.gtag = (...args: unknown[]) => { googleWindow.dataLayer?.push(args); };
+  // gtag.js only processes the `arguments` object, not an array: a rest parameter here sends nothing
+  googleWindow.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    googleWindow.dataLayer?.push(arguments);
+  };
   googleWindow.gtag('consent', 'default', {
     ad_storage: 'denied',
     ad_user_data: 'denied',

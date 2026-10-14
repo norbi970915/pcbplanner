@@ -9,7 +9,7 @@ export default function ControlledImpedance() {
         { text: 'D. M. Pozar, Microwave Engineering, 4th ed., Wiley, 2012 (transmission-line theory, reflection coefficient).' },
         { text: 'E. Hammerstad, Ø. Jensen, “Accurate Models for Microstrip Computer-Aided Design,” IEEE MTT-S International Microwave Symposium Digest, 1980.' },
         { text: 'IPC-2141A, Design Guide for High-Speed Controlled Impedance Circuit Boards, IPC, 2004.' },
-        { text: 'pcbplanner impedance calculator: method and validation against a commercial 2D field solver (within 1 % on coated microstrip).', url: '/impedance' },
+        { text: 'pcbplanner impedance calculator: method and validation against a commercial 2D field solver (within 1 % in six coated-microstrip cases).', url: '/impedance' },
       ]}
     >
       <p>
@@ -162,7 +162,7 @@ export default function ControlledImpedance() {
         Closed-form equations such as IPC-2141 <Cite n={5} /> or Hammerstad–Jensen <Cite n={4} /> are fits to limited ranges of geometry. For the uncoated 0.12 mm trace above,
         Hammerstad–Jensen gives 54.6 Ω against the solver's 53.4 Ω, about 2 % high. That is still good, but these formulas have no term for solder mask, embedded traces or mixed
         dielectrics at all, and the older IPC-2141 microstrip formula is known to lose accuracy on thin dielectrics <Cite n={2} />. A 2D field solver computes the actual cross-section;
-        the one in pcbplanner agrees with a commercial solver within about 1 % on coated microstrip <Cite n={6} />.
+        the one in pcbplanner agrees with a commercial solver within about 1 % in six coated-microstrip test cases <Cite n={6} />.
       </p>
 
       <h2>Checklist</h2>

@@ -39,6 +39,7 @@ export default function CreepageClearance() {
   if (pd === 3 && mg === 'IIIb' && p.vw > 630) notes.push('Material group IIIb is not recommended at pollution degree 3 above 630 V (Table F.4, footnote 2).');
   if (p.pwb && mg === 'IIIb' && pd === 2) notes.push('The printed-wiring PD2 column excludes material group IIIb, so the general PD2 column is used.');
   if (Number.isFinite(crBase) && Number.isFinite(clMm) && clMm > crBase) notes.push('The creepage is raised to the clearance: a creepage distance can never be shorter than the associated clearance (5.2.2.6).');
+  if (ins !== 'functional') notes.push('IEC 60664-1 base values only. The safety standard for your end product (for example IEC 62368-1, IEC 61010-1 or IEC 60335-1) governs and may require more. This is not a certification or a substitute for a safety assessment.');
   if (ins === 'functional') notes.push('Functional insulation: use the impulse and working voltages that actually occur across it. Safety standards (IEC 62368-1, 61010-1, 60335-1) may set their own values.');
   if (p.src === 'mains' && ins !== 'functional') notes.push('For creepage of mains-connected basic insulation, enter the rationalised voltage of Table F.3 or the rated insulation voltage (e.g. 250 V for 230 V mains).');
   if (alt && alt.k > 1) notes.push(`Clearance multiplied by ${alt.k} for ${fmt(p.alt, 5)} m (Table A.2, next tabulated altitude ${alt.row} m). Creepage does not need an altitude correction.`);
@@ -181,33 +182,33 @@ export default function CreepageClearance() {
           </Panel>
         </div>
       )}
-      <Panel title="Table F.1 – Rated Impulse Voltage for Mains-Connected Equipment" className="mt-3">
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Line-to-neutral ≤</th>
-              <th>Typical systems</th>
-              <th className="v">OVC I</th>
-              <th className="v">OVC II</th>
-              <th className="v">OVC III</th>
-              <th className="v">OVC IV</th>
-            </tr>
-          </thead>
-          <tbody>
-            {F1.map((r) => (
-              <tr key={r.v}>
-                <td>{r.v} V</td>
+      {p.src === 'mains' && imp && F1.filter((r) => r.v === imp.row).map((r) => (
+        <Panel key={r.v} title={`Rated impulse voltage for mains up to ${r.v} V line-to-neutral`} className="mt-3">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Typical systems</th>
+                {[1, 2, 3, 4].map((c) => (
+                  <th key={c} className={`v ${c === p.ovc ? 'sel' : ''}`}>
+                    OVC {['I', 'II', 'III', 'IV'][c - 1]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
                 <td>{r.systems}</td>
                 {r.ovc.map((v, i) => (
-                  <td key={i} className="v">
+                  <td key={i} className={`v ${i + 1 === p.ovc ? 'font-semibold' : ''}`}>
                     {v} V
                   </td>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Panel>
+            </tbody>
+          </table>
+          <p className="px-2.5 py-1.5 text-faint">The row of IEC 60664-1 Table F.1 that applies to your supply; the overvoltage category you selected is highlighted.</p>
+        </Panel>
+      ))}
     </ToolPage>
   );
 }

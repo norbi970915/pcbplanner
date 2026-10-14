@@ -16,7 +16,7 @@ export const IEC60664_SOURCES: DataSource[] = [
   },
   {
     title: 'IEC TC109 committee draft 109/166/CD for IEC 60664-1 Ed. 3',
-    url: 'https://www.beama.org.uk/static/c1c7dfdf-7e2b-4d9d-9340e9962f25c83c/Insulation-coordination-for-equipment-within-low-voltage-supply-systems-Part-1-Principlesrequirements-and-tests-Proposed-horizontal-standard.pdf',
+    url: 'https://webstore.iec.ch/',
     note: 'Ed. 3 draft: Tables F.2, F.5 and A.2 identical to Ed. 2; F.1 adds a 1500 V DC row.',
   },
   {

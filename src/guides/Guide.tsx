@@ -100,6 +100,7 @@ export function Guide({
             </>
           )}
           <p><Link to="/guides">Browse all guides</Link></p>
+          <p className="text-faint">Guides explain published methods and data with their sources; check the values for your own design. <Link to="/terms">Terms</Link> · <Link to="/privacy">Privacy</Link></p>
   </>);
   return (
     <article ref={articleRef} className="document-page">

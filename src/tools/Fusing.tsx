@@ -25,13 +25,16 @@ export default function Fusing() {
   return (
     <ToolPage
       title="Fusing Current"
-      description="Current that melts a copper trace within a given time (Onderdonk's equation). For fault, inrush and surge analysis, or to design a deliberate trace fuse."
+      description="Current that melts a copper trace within a given time (Onderdonk's equation). For fault, inrush and surge analysis."
       onReset={reset}
       properties={properties}
       status={ok ? `Fusing current ${fmt(i, 4)} A in ${si(p.sec, 's', 3)}` : 'Check the inputs'}
       method={<Method />}
     >
-      <Notes items={p.sec > 10 ? ['Beyond about 10 s heat flows into the board, so a real trace survives more current than this (the result is conservative). Use the trace-width tool for steady-state current.'] : []} />
+      <Notes items={[
+        ...(p.sec > 10 ? ['Beyond about 10 s heat flows into the board, so a real trace survives more current than this. That is conservative for checking that a trace survives a fault, but a trace meant to open takes longer than predicted. Use the trace-width tool for steady-state current.'] : []),
+        'A PCB trace is not a rated protective device. Where overcurrent protection is required, use a rated fuse.',
+      ]} />
       <Panel title="Results">
         <div className="px-2.5 py-2">
           <Big label={`Fusing current for ${si(p.sec, 's', 3)}`} value={fmt(i, 4)} unit="A" />
@@ -74,7 +77,9 @@ export function Method() {
         <i>A</i> is the cross-section in circular mils, <i>T</i>
         <sub>m</sub> the melting point of copper (1084.6 °C), <i>T</i>
         <sub>a</sub> the ambient temperature and <i>t</i> the pulse duration in seconds. The equation assumes all the heat stays in the conductor. That holds for short pulses. For longer
-        pulses heat escapes into the laminate and planes, so a real trace survives more current than predicted and the result is conservative.
+        pulses heat escapes into the laminate and planes, so a real trace survives more current than predicted. That makes the result conservative when you check that a trace survives a fault. For a trace
+        meant to act as a fuse it is the opposite: the real trace takes longer to open than predicted, and it is not a rated protective device, so use a rated fuse
+        wherever a safety standard requires overcurrent protection.
       </p>
       <h2>References</h2>
       <ol>

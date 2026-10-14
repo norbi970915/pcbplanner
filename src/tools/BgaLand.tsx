@@ -77,7 +77,7 @@ export default function BgaLand() {
       <Notes kind="error" items={errors} />
       <Notes items={notes} />
       {ok && (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid gap-3">
           <Panel title="Land">
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
               <Big label="Nominal land diameter" value={fmt(fromMm(land, unit), 4)} unit={unit} />
@@ -91,32 +91,6 @@ export default function BgaLand() {
                 <Result label="Gap between lands (row)" value={L(gap)} sub={`${traces} trace(s) of ${L(p.w)} with ${L(p.s)} spacing`} />
                 <Result label="Gap between lands (diagonal)" value={L(diagGap)} sub={`${diagTraces} trace(s)`} />
                 {pitchRow && <Result label="Typical pitches for this ball (J-STD-032)" value={pitchRow.pitches.map((x) => `${x} mm`).join(', ')} />}
-              </tbody>
-            </table>
-          </Panel>
-          <Panel title={kind === 'collapsing' ? 'IPC-7351A Table 14-5 (collapsing balls, mm)' : 'Non-collapsing balls (mm)'}>
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th className="v">Ball</th>
-                  <th className="v">%</th>
-                  <th>Level</th>
-                  <th className="v">Land</th>
-                  <th className="v">Max</th>
-                  <th className="v">Min</th>
-                </tr>
-              </thead>
-              <tbody>
-                {table.map((r) => (
-                  <tr key={r.ball} className={row === r ? 'sel' : ''} onClick={() => set({ ball: r.ball })}>
-                    <td className="v">{r.ball}</td>
-                    <td className="v">{r.percent}</td>
-                    <td>{r.level}</td>
-                    <td className="v">{r.land}</td>
-                    <td className="v">{r.landMax}</td>
-                    <td className="v">{r.landMin}</td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </Panel>

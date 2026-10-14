@@ -160,5 +160,5 @@ export function buildReportHtml(snapshot: ReportSnapshot, options: ReportOptions
     (options.method && snapshot.method ? '<h2>Method, assumptions and references</h2><section class="method">' + omitDiagrams(snapshot.method) + '</section>' : '') +
     '<footer><p><strong>Calculation link</strong><br><a href="' + escapeHtml(snapshot.url) + '">' + escapeHtml(snapshot.url) + '</a></p>' +
     (snapshot.usesLocalData ? '<p class="footnote">Uploaded files and browser-saved design data are not included in this link. Keep the original files with this report.</p>' : '') +
-    '<p class="footnote">This report records the displayed estimates and their assumptions. Check the relevant tool method, component datasheets and fabrication requirements when applying the results.</p></footer></main></body></html>';
+    '<p class="footnote">This report records the displayed estimates and their assumptions. Check the relevant tool method, component datasheets and fabrication requirements when applying the results. Provided as is, without warranty.</p></footer></main></body></html>';
 }

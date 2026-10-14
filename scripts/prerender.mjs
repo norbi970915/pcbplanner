@@ -18,10 +18,15 @@ const { MATERIAL_PAGES, materialPath, materialSeoTitle, materialTitle, materialD
 const { INTERFACE_PAGES, interfacePagePath, interfaceSeoTitle, interfaceTitle, interfaceDescription } = await vite.ssrLoadModule('/src/data/interfacePages.ts');
 const { renderGuide, renderToolMethod } = await vite.ssrLoadModule('/src/guides/ssr.tsx');
 const { ABOUT_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/About.tsx');
+const { PRIVACY_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Privacy.tsx');
+const { TERMS_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Terms.tsx');
+const { OPERATOR } = await vite.ssrLoadModule('/src/config.ts');
+// the legal pages must name the operator and a contact (GDPR Art. 13)
+if (!OPERATOR.name.trim() || !/^[^@\s]+$/.test(OPERATOR.email.user) || !/^[^@\s]+\.[^@\s]+$/.test(OPERATOR.email.domain)) throw new Error('prerender: set OPERATOR.name and OPERATOR.email in src/config.ts before building the legal pages.');
 const { SCHEMATIC_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/Schematic.tsx');
 const { NOT_FOUND_DESCRIPTION } = await vite.ssrLoadModule('/src/pages/NotFound.tsx');
 // full article HTML, rendered with React on the server side
-const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/404', ...GUIDES.map((g) => g.path), ...MATERIAL_PAGES.map((m) => materialPath(m.slug)), ...INTERFACE_PAGES.map((p) => interfacePagePath(p.slug))].map((p) => [p, renderGuide(p)]));
+const guideHtml = Object.fromEntries(['/', '/tools', '/schematic', '/guides', '/about', '/privacy', '/terms', '/404', ...GUIDES.map((g) => g.path), ...MATERIAL_PAGES.map((m) => materialPath(m.slug)), ...INTERFACE_PAGES.map((p) => interfacePagePath(p.slug))].map((p) => [p, renderGuide(p)]));
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -63,7 +68,8 @@ function ogImage(path) {
 function page({ path, title, description, h1, body, jsonLd, raw }) {
   const url = SITE + path;
   const image = ogImage(path);
-  const noindex = path === '/404';
+  // not indexed: the 404 page, and the legal pages (they carry the operator's name and contact)
+  const noindex = ['/404', '/privacy', '/terms'].includes(path);
   if (/\$\{/.test(JSON.stringify({title,description,jsonLd}))) throw new Error('prerender: unresolved metadata for ' + path);
   metadata[path] = { path, title, description, image, jsonLd, ...(noindex ? { noindex: true } : {}) };
   outputPages.push(path === '/' ? 'dist/index.html' : 'dist' + path + '.html');
@@ -88,6 +94,11 @@ function page({ path, title, description, h1, body, jsonLd, raw }) {
     `<meta name="pcbplanner:metadata" content="__PAGE_METADATA_URL__" />\n<script type="application/ld+json" data-page-path="${path}">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`,
   );
   html = set(html, /<div id="root"><\/div>/, `<div id="root">${raw ?? `<main class="prerender"><h1>${esc(h1)}</h1>${body}</main>`}</div>`);
+  if (noindex)
+    html = html
+      .replace(/\s*<link rel="canonical"[^>]*>/, '')
+      .replace(/\s*<meta property="og:url"[^>]*>/, '')
+      .replace('<meta name="viewport"', '<meta name="robots" content="noindex" />\n    <meta name="viewport"');
   return html;
 }
 
@@ -159,7 +170,7 @@ for (const tool of TOOLS) {
           .map((t) => `<li><a href="${t.path}">${esc(t.title)}</a></li>`)
           .join('')}</ul>`
       : '') +
-    `<nav><p><a href="/">Home</a> · <a href="/tools">All tools</a> · <a href="/schematic">Schematic design</a> · <a href="/guides">Guides</a> · <a href="/about">About</a></p><h2>All calculators</h2>${toolNav}</nav>`;
+    `<nav><p><a href="/">Home</a> · <a href="/tools">All tools</a> · <a href="/schematic">Schematic design</a> · <a href="/guides">Guides</a> · <a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p><h2>All calculators</h2>${toolNav}</nav>`;
   writeFileSync(
     `dist${tool.path}.html`,
     page({
@@ -237,6 +248,20 @@ writeFileSync(
   }),
 );
 
+// Privacy and terms, rendered into the HTML like About
+for (const [path, title, description] of [['/privacy', 'Privacy Policy', PRIVACY_DESCRIPTION], ['/terms', 'Terms of Use', TERMS_DESCRIPTION]]) {
+  writeFileSync(
+    `dist${path}.html`,
+    page({
+      path,
+      title: `${title} – ${APP}`,
+      description,
+      raw: guideHtml[path],
+      jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: `${title} – ${APP}`, url: SITE + path, description },
+    }),
+  );
+}
+
 // 404: served by the host for unknown URLs (with a 404 status); not indexed and has no canonical URL
 writeFileSync(
   'dist/404.html',
@@ -246,10 +271,7 @@ writeFileSync(
     description: NOT_FOUND_DESCRIPTION,
     raw: guideHtml['/404'],
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: 'Page not found' },
-  })
-    .replace(/\s*<link rel="canonical"[^>]*>/, '')
-    .replace(/\s*<meta property="og:url"[^>]*>/, '')
-    .replace('<meta name="viewport"', '<meta name="robots" content="noindex" />\n    <meta name="viewport"'),
+  }),
 );
 
 // Guides: index and articles, with the full article text rendered into the page

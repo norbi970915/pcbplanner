@@ -37,6 +37,8 @@ import PrepregGlassGuide from './PrepregGlassGuide';
 import PthHoleGuide from './PthHoleGuide';
 import BobSmithGuide from './BobSmithGuide';
 import About from '../pages/About';
+import Privacy from '../pages/Privacy';
+import Terms from '../pages/Terms';
 import MaterialPage from '../pages/MaterialPage';
 import InterfacePage from '../pages/InterfacePage';
 import { INTERFACE_PAGES, interfacePagePath } from '../data/interfacePages';
@@ -86,6 +88,8 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/ac-coupling-capacitors': AcCouplingCaps,
   '/guides/usb3-85-or-90-ohm': Usb3Impedance,
   '/about': About,
+  '/privacy': Privacy,
+  '/terms': Terms,
   '/404': NotFound,
   ...Object.fromEntries(MATERIAL_PAGES.map((m) => [materialPath(m.slug), MaterialPage])),
   ...Object.fromEntries(INTERFACE_PAGES.map((p) => [interfacePagePath(p.slug), InterfacePage])),

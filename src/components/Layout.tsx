@@ -228,14 +228,14 @@ export function Layout() {
       const pageTitle = title.endsWith(` – ${APP_NAME}`)
         ? title
         : `${title} – ${APP_NAME}`;
+      // our own pages as origin + path; other sites as their origin only (no paths or queries)
       let pageReferrer = lastPageView.current ?? document.referrer;
       if (pageReferrer) {
         try {
           const referrer = new URL(pageReferrer);
-          if (referrer.origin === window.location.origin)
-            pageReferrer = referrer.origin + referrer.pathname;
+          pageReferrer = referrer.origin === window.location.origin ? referrer.origin + referrer.pathname : referrer.origin;
         } catch {
-          /* preserve a browser-supplied referrer we cannot parse */
+          pageReferrer = '';
         }
       }
       gtag('set', { page_location: pageLocation, page_title: pageTitle });
@@ -499,6 +499,8 @@ export function Layout() {
               About {APP_NAME}
             </Item>
             <div className="menu-sep" />
+            <Item onClick={run(() => navigate('/privacy'))}>Privacy policy</Item>
+            <Item onClick={run(() => navigate('/terms'))}>Terms of use</Item>
             <Item onClick={run(() => setConsentOpen(true))}>
               Analytics preferences
             </Item>
@@ -731,7 +733,7 @@ export function Layout() {
                   measure visits and pages viewed? Google Analytics uses
                   cookies; Vercel Web Analytics does not. You can change your
                   choice under Help &gt; Analytics preferences.{' '}
-                  <Link to="/about">How your data is used</Link>.
+                  <Link to="/privacy">Privacy policy</Link>.
                 </p>
                 {analyticsChoice && (
                   <p className="mt-1 text-faint">
@@ -751,7 +753,7 @@ export function Layout() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-primary h-[30px] flex-1 sm:flex-none"
+                  className="btn h-[30px] flex-1 sm:flex-none"
                   onClick={() => chooseAnalytics('accepted')}
                 >
                   Accept analytics

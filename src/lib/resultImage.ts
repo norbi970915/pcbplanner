@@ -99,7 +99,7 @@ export function cardSvg(c: ResultCard): { svg: string; width: number; height: nu
 <line x1="${colX - 20}" x2="${colX - 20}" y1="${top}" y2="${top + bodyH}" stroke="${t.line}"/>
 ${drawing}
 ${rows}
-<text x="${pad}" y="${H - 44}" font-size="18" fill="${t.muted}">2D field solver · recalculate at pcbplanner.com${esc(c.path)}</text>
+<text x="${pad}" y="${H - 44}" font-size="18" fill="${t.muted}">Estimate, provided as is · verify before use · recalculate at pcbplanner.com${esc(c.path)}</text>
 </svg>`;
   return { svg, width: W, height: H };
 }

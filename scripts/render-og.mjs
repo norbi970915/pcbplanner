@@ -28,6 +28,8 @@ const cards = [
   { path: '/schematic', label: 'Schematic design', color: ACCENT, title: 'Schematic Design Tools', text: SCHEMATIC_DESCRIPTION },
   { path: '/guides', label: 'Guides', color: ACCENT, title: 'PCB Design Guides', text: 'Practical PCB design guides with worked examples and reproducible calculations.' },
   { path: '/about', label: 'About', color: ACCENT, title: 'About PCB Planner', text: ABOUT_DESCRIPTION },
+  { path: '/privacy', label: 'Privacy', color: ACCENT, title: 'Privacy Policy', text: 'No account, calculations in your browser, and analytics only with your consent.' },
+  { path: '/terms', label: 'Terms', color: ACCENT, title: 'Terms of Use', text: 'Results are engineering estimates, provided as is; verify them before use.' },
 ];
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

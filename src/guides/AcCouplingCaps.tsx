@@ -5,7 +5,7 @@ export default function AcCouplingCaps() {
     <Guide
       sources={[
         { text: 'PCI-SIG, PCI Express Card Electromechanical (CEM) Specification, Revision 3.0, 2013 (§4.7.1 AC coupling on the transmit pair).', url: 'https://pcisig.com/specifications' },
-        { text: 'PCI-SIG, PCI Express Base Specification, Revision 2.0, 2006 (Table 4-9, AC coupling capacitor 75–200 nF).', url: 'https://archive.org/download/os-dev-manuals/pcie%20spec%20rev%202.0.pdf' },
+        { text: 'PCI-SIG, PCI Express Base Specification, Revision 2.0, 2006 (Table 4-9, AC coupling capacitor 75–200 nF).', url: 'https://pcisig.com/specifications' },
         { text: 'USB 3.2 Specification, Revision 1.1, June 2022 (Table 6-18 transmitter, Table 6-22 receiver).', url: 'https://www.usb.org/document-library/usb-32-revision-11-june-2022' },
         { text: 'Universal Serial Bus Specification, Revision 2.0, 2000 (§7.1.6.1, edge-rate capacitance).', url: 'https://www.usb.org/document-library/usb-20-specification' },
         { text: 'SATA-IO, Serial ATA Revision 3.1, Gold Revision (Table 35; §7.2.2.1.10 capacitor size and return loss).', url: 'https://sata-io.org/system/files/specifications/SerialATA_Revision_3_1_Gold.pdf' },
