@@ -225,7 +225,7 @@ export default function PrepregGlassGuide() {
       <p>
         The weave matters as much as the style number: the same 1080 style can be a traditional or a spread fabric. Isola now describes spread glass in both directions as the industry
         standard, and states that all 370HR glass is spread weave in both directions <Cite n={[2, 3]} />. For multi-gigabit pairs, ask your fabricator which glass its prepreg uses, and
-        see the <Link to="/guides/choosing-a-pcb-stackup">stackup guide</Link> for routing at an angle to the weave.
+        see the <Link to="/guides/glass-weave-skew">glass weave skew guide</Link> for the skew budget per data rate and routing at an angle to the weave.
       </p>
 
       <h2>Choosing a style</h2>

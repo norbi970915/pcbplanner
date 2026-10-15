@@ -19,6 +19,18 @@ export interface GuideDef {
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/glass-weave-skew',
+    metaDescription: 'Glass weave skew: up to 16 ps/in (0.63 ps/mm) worst case, the safe pair length at 5–32 GT/s, a PCIe Gen 4 example, spread glass and routing at an angle.',
+    related: ['/guides/prepreg-glass-styles', '/guides/pcie-routing-guidelines', '/guides/via-stub-back-drilling'],
+    title: 'Glass Weave Skew: How Much It Costs a Differential Pair, and How to Avoid It',
+    seoTitle: 'Glass Weave Skew: Budget and Mitigation',
+    description: 'How glass-weave (fibre-weave) skew arises, the formula and the 16 ps/in worst case from Intel’s measurements, how long a pair can be at 5, 8, 16 and 32 GT/s, a worked PCIe Gen 4 example, and what spread glass, square weaves and angled routing are worth.',
+    tools: ['/timing', '/interface-rules', '/stackup', '/impedance'],
+    date: '2026-10-15',
+    category: 'Signal Integrity & Interfaces',
+    component: lazyPage(() => import('./GlassWeaveSkew')),
+  },
+  {
     path: '/guides/bob-smith-termination',
     metaDescription: 'Bob Smith termination: 75 Ω per centre tap and 1000 pF / 2 kV to chassis. What the patent claims, what vendors draw, and the evidence on whether it helps.',
     related: ['/guides/ac-coupling-capacitors', '/guides/creepage-clearance-mains', '/guides/controlled-impedance'],
@@ -57,7 +69,7 @@ export const GUIDES: GuideDef[] = [
   {
     path: '/guides/prepreg-glass-styles',
     metaDescription: 'Thickness per ply, resin content and Dk/Df of 106, 1080, 3313, 2116 and 7628 prepreg from Isola 370HR and Shengyi S1141 tables, with 50 Ω trace widths.',
-    related: ['/guides/choosing-a-pcb-stackup', '/guides/controlled-impedance', '/guides/pcie-gen3-routing'],
+    related: ['/guides/glass-weave-skew', '/guides/choosing-a-pcb-stackup', '/guides/controlled-impedance'],
     title: 'PCB Prepreg Glass Styles: 106, 1080, 2116, 3313 and 7628 Compared',
     seoTitle: 'Prepreg Glass Styles: 106, 1080, 2116, 7628',
     description: 'What prepreg glass style numbers mean, with thickness per ply, resin content and Dk/Df for 106, 1080, 3313, 2116 and 7628 from manufacturer tables, 50 Ω microstrip widths over one ply, resin fill and glass-weave skew.',

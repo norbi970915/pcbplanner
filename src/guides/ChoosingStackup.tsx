@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Cite, Guide, TryIt } from './Guide';
 
 export default function ChoosingStackup() {
@@ -167,7 +168,8 @@ export default function ChoosingStackup() {
       <p>
         A coarse weave such as 7628 has visible bundles of glass with resin-rich gaps between them. If one trace of a differential pair runs over glass and the other over resin, the two
         see different Dk and arrive at different times. This “fibre-weave effect” can create picoseconds of skew per inch, which matters at multi-gigabit data rates <Cite n={4} />. Fine and
-        spread-glass styles (1080, 1078, 1067, 2116, 3313) reduce it; routing pairs at a small angle to the weave is another mitigation described in the same study.
+        spread-glass styles (1080, 1078, 1067, 2116, 3313) reduce it; routing pairs at a small angle to the weave is another mitigation described in the same study. The{' '}
+        <Link to="/guides/glass-weave-skew">glass weave skew guide</Link> works out how long a pair can be at each data rate.
       </p>
 
       <h2>A practical order of decisions</h2>
