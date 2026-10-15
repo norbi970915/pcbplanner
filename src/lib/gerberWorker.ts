@@ -36,7 +36,11 @@ function gerberWorkerMain(normalise:typeof normaliseGerberCoordinates) {
               renderedBytes+=svg.length;layers.push({name:file.name,svg,bounds,warnings});resolve();
             }catch(error){reject(error);}
           });
-          converter.on('warning',(warning:unknown)=>{const value=warning as {message?:string};const message=value.message??String(warning);if(/^block "%T[FAD][.,*]/i.test(message))return;if(/not recognized|unrecognized|not supported|unsupported|ignored|ignoring|not defined|cannot change|overwriting|backup units|quadrant mode unspecified/i.test(message))fatalWarning=message;if(warnings.length<12)warnings.push(message);});
+          converter.on('warning',(warning:unknown)=>{const value=warning as {message?:string};const message=value.message??String(warning);if(/^block "%T[FAD][.,*]/i.test(message))return;
+            // Ucamco Gerber 2026.05, section 8.1.4: IPPOS is the default image polarity.
+            // Allow only this exact legacy declaration; IPNEG and unknown commands remain errors.
+            if(message==='block "%IPPOS" was not recognized and was ignored')return;
+            if(/not recognized|unrecognized|not supported|unsupported|ignored|ignoring|not defined|cannot change|overwriting|backup units|quadrant mode unspecified/i.test(message))fatalWarning=message;if(warnings.length<12)warnings.push(message);});
         });
       }catch(error){errors.push(file.name+': '+(error instanceof Error?error.message:String(error)));}
       scope.postMessage({progress:index+1,total:event.data.inputs.length});
