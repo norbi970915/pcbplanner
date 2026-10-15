@@ -4,7 +4,7 @@ import { DiagramDimension, DiagramFocus, DiagramSvg, DiagramValues, EngineeringD
 export interface XsecSpec {
   type: 'microstrip' | 'embedded' | 'stripline'; diff: boolean; coupling?: 'edge' | 'broadside';
   w: number; wTop: number; t: number; s: number; h: number; h2: number; er: number; er2: number;
-  mask: boolean; cpw: boolean; gap: number;
+  mask: boolean; cpw: boolean; gap: number; resin?: { above: number; er: number };
 }
 const materials = [
   { label: 'Copper', color: 'var(--copper)' },
@@ -24,6 +24,7 @@ export function CrossSection({ spec: s, unitLabel, toUnit }: { spec: XsecSpec; u
   const h = Math.min(80, Math.max(46, s.h*scale*.9));
   const h2 = s.type === 'microstrip' ? 0 : Math.min(66, Math.max(46, s.h2*scale*.9));
   const bottom = 250, traceBottom = bottom-h, traceTop = traceBottom-t, upperTop = traceTop-h2;
+  const resinHeight = s.resin && s.resin.above > 0 ? Math.min(h2, Math.max(12, h2 * s.resin.above / s.h2)) : 0;
   const traces = s.diff ? [{ a:260-gap/2-w, b:260-gap/2 }, { a:260+gap/2, b:260+gap/2+w }] : [{ a:260-w/2, b:260+w/2 }];
   const left=traces[0].a, right=traces[traces.length-1].b;
   const items = [
@@ -33,14 +34,16 @@ export function CrossSection({ spec: s, unitLabel, toUnit }: { spec: XsecSpec; u
     ...(s.diff ? [{label:'S \u00b7 Pair gap',value:value(s.s)}] : []),
     ...(s.type !== 'microstrip' ? [{label:'H2 \u00b7 Upper dielectric',value:value(s.h2)}] : []),
     ...(s.cpw ? [{label:'G \u00b7 Coplanar gap',value:value(s.gap)}] : []),
+    ...(s.resin ? [{field:'resinabove',label:'R \u00b7 Resin above copper',value:value(s.resin.above)}, {field:'resindk',label:'Resin-region Dk',value:fmt(s.resin.er,3),color:'var(--mask)'}] : []),
     {field:'er',label:'Lower dielectric Dk',value:fmt(s.er,3),color:'var(--laminate)'},
     ...(s.type !== 'microstrip' ? [{field:'er2',label:'Upper dielectric Dk',value:fmt(s.er2,3),color:'var(--prepreg)'}] : []),
   ];
-  return <EngineeringDiagram caption="Cross-section schematic; thin features are enlarged for readability. Exact dimensions are listed above."
-    legend={[...materials.filter(m=>m.label!=='Upper dielectric'||s.type!=='microstrip'), ...(s.mask && s.type==='microstrip' ? [{label:'Solder mask',color:'var(--mask)'}] : [])]}>
+  return <EngineeringDiagram caption={s.resin ? "Flat resin-rich band beside and above the copper. H and H2 are unchanged. Thin features are enlarged; use the listed dimensions." : "Cross-section schematic; thin features are enlarged for readability. Exact dimensions are listed above."}
+    legend={[...materials.filter(m=>m.label!=='Upper dielectric'||s.type!=='microstrip'), ...(s.resin ? [{label:'Resin-rich region',color:'var(--mask)'}] : []), ...(s.mask && s.type==='microstrip' ? [{label:'Solder mask',color:'var(--mask)'}] : [])]}>
     <DiagramSvg viewBox="0 0 520 292" label="Cross-section of the transmission line">{paint=><>
       <rect x="24" y={traceBottom} width="472" height={h} fill={paint.laminate} />
       {s.type!=='microstrip' && <rect x="24" y={upperTop} width="472" height={h2+t} fill={paint.prepreg} />}
+      {s.resin && <rect data-resin-band="true" x="24" y={traceTop-resinHeight} width="472" height={t+resinHeight} fill="var(--mask)" fillOpacity="0.7" />}
       <line x1="24" x2="496" y1={traceBottom} y2={traceBottom} className="diagram-interface" />
       <rect x="24" y={bottom} width="472" height="7" rx="1" fill={paint.copper} />
       {s.type==='stripline' && <rect x="24" y={upperTop-7} width="472" height="7" rx="1" fill={paint.copper} />}
@@ -55,6 +58,8 @@ export function CrossSection({ spec: s, unitLabel, toUnit }: { spec: XsecSpec; u
       <path d={'M'+left+' '+(traceTop+t/2)+'H'+(left-24)+'L'+(left-42)+' '+(traceTop-22)} fill="none" stroke="var(--accent-ink)" strokeWidth="1"/>
       <DiagramFocus field="t" x={left-70} y={traceTop-40} width={72} height={t+48} />
       <DiagramFocus field="etch" x={left-4} y={traceTop-4} width={right-left+8} height={t+8} />
+      {s.resin && <DiagramFocus field={["resindk", "resinabove"]} x={26} y={traceTop-resinHeight-2} width={468} height={t+resinHeight+4} />}
+      {s.resin && resinHeight > 0 && <DiagramDimension x1={48} x2={48} y1={traceTop-resinHeight} y2={traceTop} label="R" field="resinabove" arrow={paint.arrow}/>}
       <DiagramFocus field="er" x={28} y={traceBottom+4} width={80} height={h-8} />
       <DiagramFocus field="er2" x={28} y={upperTop+4} width={80} height={Math.max(0,h2-8)} />
       <text x={left-46} y={traceTop-24} textAnchor="end" className="diagram-label">T</text>

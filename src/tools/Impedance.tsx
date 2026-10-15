@@ -12,124 +12,20 @@ import { comparisonRow as row } from '../lib/designComparison';
 import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, Segmented, SelectField } from '../components/ui';
 import { StackupPicker } from '../components/StackupPicker';
 import { microstripHJ, striplineAsym, striplineWheeler } from '../lib/closedform';
-import type { Accuracy, Geometry } from '../lib/fieldsolver';
+import type { Accuracy } from '../lib/fieldsolver';
 import { delayPsPerMm, lineLC, nextCoefficient } from '../lib/signal';
 import { runPooled, runSolver, useFieldSolve } from '../lib/solverClient';
 import { geometryForLayer, type Stackup } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
 import { PlyEditor } from '../components/PlyEditor';
-import { LAMINATES, laminateById } from '../data/laminates';
-import { averageDk, formatPlies, parsePlies, pliesThickness, slabsAbove, slabsBelow } from '../lib/plies';
-import { djordjevicSarkar } from '../lib/dielectric';
+import { LAMINATES } from '../data/laminates';
+import { averageDk, formatPlies, parsePlies, pliesThickness } from '../lib/plies';
+import { IMPEDANCE_DEFAULTS as DEFAULTS, buildImpedanceGeometry as buildGeometry, materialDk as erOf } from '../lib/impedanceGeometry';
 import { impedanceToleranceCorners } from '../lib/impedanceTolerance';
 import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
 
-type LineType = 'microstrip' | 'embedded' | 'stripline';
-
-const DEFAULTS = {
-  type: 'microstrip',
-  mode: 'se',
-  coupling: 'edge',
-  mask: true,
-  cpw: false,
-  w: 0.15,
-  etch: 0.0127,
-  t: 0.035,
-  h: 0.1,
-  er: 4.1,
-  h2: 0.1,
-  er2: 4.1,
-  c1: 0.0305,
-  c2: 0.0152,
-  erm: 3.8,
-  s: 0.15,
-  gap: 0.2,
-  acc: 'normal',
-  target: 50,
-  mat: 'custom',
-  mat2: 'custom',
-  fq: 1,
-  tolEnabled: false,
-  tolW: 0,
-  tolH: 0,
-  tolDk: 0,
-  tolS: 0,
-  tolLimit: 10,
-  dl: '', // stacked dielectric below the trace: "t:dk,…" from the plane up to the trace
-  dl2: '', // stacked dielectric above the trace, from the trace outward
-  sw: '', // parameter swept in the Sweep panel ('' = none)
-};
-
-/** εr from the material library at the design frequency, or the entered value. */
-function erOf(mat: string, er: number, fGHz: number): number {
-  const l = mat !== 'custom' ? laminateById(mat) : undefined;
-  return l ? +djordjevicSarkar({ dk: l.dk, df: l.df, f0: l.fGHz * 1e9 }).dk(fGHz * 1e9).toFixed(4) : er;
-}
-
 const MAT_OPTIONS = [{ value: 'custom', label: 'Custom εr', group: 'Custom' }, ...LAMINATES.map((l) => ({ value: l.id, label: `${l.vendor} ${l.name}`, group: l.cls }))];
-
-function buildGeometry(p: typeof DEFAULTS): { geom: Geometry | null; errors: string[] } {
-  const errors: string[] = [];
-  const broadside = p.mode === 'diff' && p.coupling === 'broadside';
-  const type = (broadside ? 'stripline' : p.type) as LineType;
-  const diff = p.mode === 'diff';
-  const pos = (v: number, name: string) => {
-    if (!(v > 0)) errors.push(`${name} must be greater than 0.`);
-  };
-  pos(p.w, 'Width W');
-  pos(p.t, 'Thickness T');
-  if (!p.dl.trim()) pos(p.h, 'Height H');
-  if (!(p.er >= 1)) errors.push('εr must be at least 1.');
-  if (type !== 'microstrip' && !broadside) {
-    if (!p.dl2.trim()) pos(p.h2, 'Height H2');
-    if (!(p.er2 >= 1)) errors.push('Upper εr must be at least 1.');
-  }
-  if (diff) pos(p.s, 'Spacing S');
-  if (!broadside && p.cpw) pos(p.gap, 'Coplanar gap G');
-  if (p.etch < 0 || p.etch >= p.w) errors.push('Etch must be between 0 and the trace width.');
-  const below = parsePlies(p.dl);
-  const above = parsePlies(p.dl2);
-  if (below === null) errors.push('Check the dielectric plies below the trace: each needs a thickness and a Dk of at least 1.');
-  if (!broadside && above === null) errors.push('Check the dielectric plies above the trace: each needs a thickness and a Dk of at least 1.');
-  if (type === 'microstrip' && p.mask) {
-    if (!(p.c1 >= 0 && p.c2 >= 0)) errors.push('Mask thickness cannot be negative.');
-    if (!(p.erm >= 1)) errors.push('Mask εr must be at least 1.');
-  }
-  if (errors.length || !below || (!broadside && !above)) return { geom: null, errors };
-
-  // stacked plies model each prepreg / core exactly; a single Dk is the simple case
-  const lib = (ps: typeof below) => ps.map((x) => (x.mat ? { ...x, dk: erOf(x.mat, x.dk, p.fq) } : x));
-  const belowR = lib(below);
-  const aboveR = lib(above ?? []);
-  const hBelow = below.length ? pliesThickness(below) : p.h;
-  const hAbove = above?.length ? pliesThickness(above) : p.h2;
-  const g: Geometry = {
-    w: p.w,
-    wTop: p.etch > 0 ? p.w - p.etch : undefined,
-    t: p.t,
-    yTrace: hBelow,
-    diff,
-    s: diff ? p.s : undefined,
-    coplanarGap: !broadside && p.cpw ? p.gap : undefined,
-    slabs: below.length ? slabsBelow(belowR) : [{ y0: 0, y1: hBelow, er: p.er }],
-  };
-  if (broadside) {
-    if (!(p.er2 >= 1)) return { geom: null, errors: ['Inter-layer Dk must be at least 1.'] };
-    const topPlane = 2 * hBelow + 2 * p.t + p.s;
-    g.coupling = 'broadside';
-    g.topPlane = topPlane;
-    g.slabs = [...g.slabs, { y0: hBelow, y1: topPlane - hBelow, er: p.er2 },
-      ...g.slabs.map(sl => ({ y0: topPlane - sl.y1, y1: topPlane - sl.y0, er: sl.er }))];
-  } else if (type === 'microstrip') {
-    if (p.mask && (p.c1 > 0 || p.c2 > 0)) g.mask = { surfaceY: hBelow, overSubstrate: p.c1, overTrace: p.c2, er: p.erm };
-  } else {
-    if (above?.length) g.slabs.push(...slabsAbove(aboveR, hBelow, p.t));
-    else g.slabs.push({ y0: hBelow, y1: hBelow + p.t + hAbove, er: p.er2 });
-    if (type === 'stripline') g.topPlane = hBelow + p.t + hAbove;
-  }
-  return { geom: g, errors };
-}
 
 export default function Impedance() {
   const [raw, set, reset] = useUrlState(DEFAULTS);
@@ -147,7 +43,8 @@ export default function Impedance() {
   const drawingRef = useRef<HTMLDivElement>(null);
 
   const broadside = p.mode === 'diff' && p.coupling === 'broadside';
-  const type = (broadside ? 'stripline' : p.type) as LineType;
+  const type = (broadside ? 'stripline' : p.type) as 'microstrip' | 'embedded' | 'stripline';
+  const resinActive = raw.resin && !broadside && type !== 'microstrip';
   const diff = p.mode === 'diff';
   const acc = p.acc as Accuracy;
   // stacked plies: the drawing and the closed-form check use the weighted average Dk
@@ -208,7 +105,7 @@ export default function Impedance() {
 
   // closed-form cross-check (single-ended, no coplanar ground)
   let cf: { z: number; name: string } | null = null;
-  if (!diff && !p.cpw && geom && !plyBelow.length && !plyAbove.length) {
+  if (!diff && !p.cpw && geom && !plyBelow.length && !plyAbove.length && !resinActive) {
     const wAvg = p.w - p.etch / 2;
     if (type === 'microstrip' && !p.mask) cf = { z: microstripHJ(wAvg, p.h, p.t, p.er).z0, name: 'Hammerstad–Jensen' };
     if (type === 'stripline' && Math.abs(p.er - p.er2) < 1e-9) {
@@ -229,6 +126,7 @@ export default function Impedance() {
     set({
       type: g.type,
       coupling: 'edge',
+      resin: false,
       h: g.h,
       er: g.er,
       dl: asPlies(g.below),
@@ -274,6 +172,7 @@ export default function Impedance() {
       ['Structure', structure],
       ['Trace width W', L(p.w) + (p.etch > 0 ? ` (etch ${L(p.etch)})` : '')],
       ['Copper thickness T', L(p.t)],
+      ...(resinActive ? [['Resin-region Dk', fmt(raw.resinDk, 4)], ['Resin above copper R', L(raw.resinAbove)]] as [string, string][] : []),
       ['Dielectric below H', `${L(hShown)}, Dk ${fmt(erShown, 3)}`],
       ...(type !== 'microstrip' && !broadside ? [['Dielectric above H2', `${L(h2Shown)}, Dk ${fmt(er2Shown, 3)}`] as [string, string]] : []),
       ...(diff ? [[broadside ? 'Inter-layer gap S' : 'Pair spacing S', L(p.s)] as [string, string]] : []),
@@ -307,6 +206,7 @@ export default function Impedance() {
       ...(broadside ? [row('er2', 'Inter-layer Dk', p.er2)] : []),
       ...(type === 'microstrip' ? [row('mask', 'Solder mask', p.mask), ...(p.mask ? [row('c1', 'Mask over substrate', p.c1, 'mm'), row('c2', 'Mask over trace', p.c2, 'mm'), row('erm', 'Mask Dk', p.erm)] : [])] : []),
       ...(!broadside ? [row('cpw', 'Coplanar ground', p.cpw), ...(p.cpw ? [row('gap', 'Coplanar gap', p.gap, 'mm')] : [])] : []),
+      ...(!broadside && type !== 'microstrip' ? [row('resin', 'Planar resin-rich layer', resinActive), ...(resinActive ? [row('resinDk', 'Resin-region Dk', raw.resinDk), row('resinAbove', 'Resin above copper', raw.resinAbove, 'mm')] : [])] : []),
       row('target', 'Target impedance', p.target, '\u03a9'), row('acc', 'Mesh accuracy', p.acc),
       ...(usesLib ? [row('fq', 'Material frequency', p.fq, 'GHz')] : []),
     ],
@@ -325,7 +225,7 @@ export default function Impedance() {
         {!broadside && <SelectField
           label="Line type"
           value={type}
-          onChange={(v) => set({ type: v })}
+          onChange={(v) => set({ type: v, ...(v === 'microstrip' ? { resin: false } : {}) })}
           options={[
             { value: 'microstrip', label: 'Surface microstrip' },
             { value: 'embedded', label: 'Embedded microstrip' },
@@ -345,7 +245,7 @@ export default function Impedance() {
           />
         </div>
         {diff && <SelectField label="Pair coupling" value={broadside ? 'broadside' : 'edge'}
-          onChange={(coupling) => set({ coupling, ...(coupling === 'broadside' ? { type: 'stripline', cpw: false } : {}) })}
+          onChange={(coupling) => set({ coupling, ...(coupling === 'broadside' ? { type: 'stripline', cpw: false, resin: false } : {}) })}
           options={[{ value: 'edge', label: 'Edge-coupled (same layer)' }, { value: 'broadside', label: 'Broadside (two layers)' }]} />}
         {broadside ? <p className="text-faint">Balanced shielded stripline: matching, aligned traces on two signal layers between ground planes. Outer dielectric plies and trace etch are mirrored.</p>
           : <Check label="Coplanar ground on trace layer" checked={p.cpw} onChange={(v) => set({ cpw: v })} />}
@@ -421,6 +321,18 @@ export default function Impedance() {
           )}
         </Section>
       )}
+      {!broadside && type !== 'microstrip' && <Section title="Resin-rich Layer">
+        <Check label="Model a planar resin-rich layer" checked={raw.resin} onChange={(resin) => set({ resin })}
+          hint="Replace the dielectric beside the copper and, optionally, just above it with a separate Dk. The plane positions stay fixed." />
+        {raw.resin && <>
+          <NumField label="Resin-region Dk" diagramKey="resindk" value={raw.resinDk} onChange={(resinDk) => set({ resinDk })} min={1} max={1000} allowZero
+            hint="Enter the Dk of the local resin-rich region at your signal frequency. The laminate library describes glass/resin composites, not this region." />
+          <LenField label="Resin above copper" diagramKey="resinabove" symbol="R" value={raw.resinAbove} onChange={(resinAbove) => set({ resinAbove })} allowZero max={h2Shown}
+            hint="Extra resin thickness above the trace top, included within H2. Zero still models resin beside the full copper height T. H and H2 do not increase." />
+          <p className="text-faint">Use fabricator data, or treat these as assumptions. This is a flat band across the signal layer; it does not predict resin flow or glass-weave skew.</p>
+          <Link to="/guides/resin-rich-layer-impedance">How to choose and interpret these inputs</Link>
+        </>}
+      </Section>}
       {usesLib && (
         <Section title="Material Library">
           <NumField label="Design frequency" value={raw.fq} onChange={(v) => set({ fq: v })} unit="GHz" hint="Laminate Dk falls slowly with frequency; use the frequency of your signal (Nyquist for digital links)." />
@@ -552,7 +464,7 @@ export default function Impedance() {
           <div className="p-2" ref={drawingRef}>
             {view === 'section' || !r?.field || !geom ? (
               <CrossSection
-                spec={{ type, diff, coupling: broadside ? 'broadside' : 'edge', w: p.w, wTop: p.w - p.etch, t: p.t, s: p.s, h: hShown, h2: broadside ? hShown : h2Shown, er: erShown, er2: broadside ? p.er2 : er2Shown, mask: p.mask, cpw: !broadside && p.cpw, gap: p.gap }}
+                spec={{ type, diff, coupling: broadside ? 'broadside' : 'edge', w: p.w, wTop: p.w - p.etch, t: p.t, s: p.s, h: hShown, h2: broadside ? hShown : h2Shown, er: erShown, er2: broadside ? p.er2 : er2Shown, mask: p.mask, cpw: !broadside && p.cpw, gap: p.gap, resin: resinActive && geom ? { above: raw.resinAbove, er: raw.resinDk } : undefined }}
                 unitLabel={unit}
                 toUnit={toUnit}
               />
@@ -616,6 +528,10 @@ export function Method() {
       <p>Broadside means the two traces sit on different copper layers. This model is a balanced shielded stripline: two ground planes, equal outer clearances, matching trace dimensions, mirrored etch and mirrored outer dielectric plies. The central dielectric can have a different Dk. S is the copper-to-copper vertical gap. Width solving changes both traces; spacing solving moves the upper trace and its ground plane together while preserving H and copper thickness.</p>
       <p>Offset traces, unequal copper widths or thicknesses, asymmetric dielectrics, and unshielded broadside pairs are outside this model. The fabrication corner check varies both traces together and keeps the pair balanced; it does not model registration error or imbalance between layers.</p>
       <p>Broadside tests check the odd-mode symmetry against an equivalent half-height stripline, homogeneous-dielectric scaling, the wide-trace parallel-plate limits for both modes, and mesh convergence. The coated-microstrip comparison below is a separate validation and does not establish broadside accuracy against commercial tools. See <a href="https://www.polarinstruments.com/support/cits/AP143.pdf" target="_blank" rel="noreferrer">Polar application note 143</a> for the distinction between balanced and unbalanced pairs.</p>
+      <h3>Planar resin-rich layer</h3>
+      <p>The optional internal-layer model replaces a flat band from the trace bottom to T + R above it with the entered resin-region Dk. H and H2 keep their original meanings and the planes do not move. R is measured from the trace top, so the remaining upper dielectric is H2 minus R. A zero R still fills the space beside the copper with resin. Upper plies are split at that boundary; lower plies are unchanged.</p>
+      <p>This is an explicit dielectric geometry solved by the same field solver, not an empirical impedance correction. It supports single-ended and edge-coupled internal traces, including coplanar ground. Surface microstrip and broadside pairs are outside this option. The resin Dk is a fixed user input at the frequency of interest; it is not inferred from a laminate name or resin percentage. See the <Link to="/guides/resin-rich-layer-impedance">resin-rich layer guide</Link> for assumptions and references.</p>
+      <p>Width and spacing solves preserve the band. Height sweeps and fabrication-height endpoints scale R with H2 while keeping copper thickness fixed; Dk sweeps and endpoints scale every dielectric, including the resin region. No independent resin-process tolerance is inferred. Tests check equal-material limits, thin-layer convergence and the wide-strip parallel-plate limit. The coated-microstrip comparisons below do not establish accuracy for resin-rich layers on manufactured boards.</p>
       <h3>Validation</h3>
       <p>These results were compared with a commercial 2D field solver on solder-mask coated microstrip:</p>
       <table className="tbl mb-4 font-sans text-[13px]">

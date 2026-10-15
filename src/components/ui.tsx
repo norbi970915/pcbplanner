@@ -148,6 +148,7 @@ export function LenField({
   onChange,
   units = ['mm', 'mil', 'um'],
   min = 0,
+  max,
   allowZero = false,
   hint,
   diagramKey,
@@ -158,6 +159,7 @@ export function LenField({
   onChange: (mm: number) => void;
   units?: LenUnit[];
   min?: number;
+  max?: number;
   allowZero?: boolean;
   hint?: string;
   diagramKey?: string;
@@ -179,7 +181,7 @@ export function LenField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pref]);
   const id = useId();
-  const error = numericInputIssue(text, { min, allowZero, scale: LEN_UNITS[unit].toMm, minimumLabel: plain(fromMm(min, unit), 5) + ' ' + LEN_UNITS[unit].label });
+  const error = numericInputIssue(text, { min, max, allowZero, scale: LEN_UNITS[unit].toMm, minimumLabel: plain(fromMm(min, unit), 5) + ' ' + LEN_UNITS[unit].label, maximumLabel: max === undefined ? undefined : plain(fromMm(max, unit), 5) + ' ' + LEN_UNITS[unit].label });
   const help = hint;
   return (
     <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey} uncommitted>
@@ -193,7 +195,7 @@ export function LenField({
         onChange={(e) => {
           setText(e.target.value);
           const v = parseNumericInput(e.target.value);
-          if (v !== null && !numericInputIssue(e.target.value, { min, allowZero, scale: LEN_UNITS[unit].toMm })) {
+          if (v !== null && !numericInputIssue(e.target.value, { min, max, allowZero, scale: LEN_UNITS[unit].toMm })) {
             const mm = toMm(v, unit);
             emit(mm);
             onChange(mm);

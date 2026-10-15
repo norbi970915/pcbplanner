@@ -19,6 +19,18 @@ export interface GuideDef {
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/resin-rich-layer-impedance',
+    title: 'Resin-rich Layers and PCB Impedance: What to Model',
+    seoTitle: 'Resin-rich Layers and PCB Impedance',
+    description: 'Model a resin-rich band around internal PCB traces, keep copper-to-plane distances fixed, and reproduce a differential-impedance comparison with explicit assumptions.',
+    metaDescription: 'Resin-rich layers and PCB impedance: cross-section geometry, worked calculations, model limits and the material data to ask your fabricator for.',
+    tools: ['/impedance', '/stackup', '/pcb-materials'],
+    related: ['/guides/prepreg-glass-styles', '/guides/controlled-impedance', '/guides/glass-weave-skew'],
+    date: '2026-10-15',
+    category: 'Signal Integrity & Interfaces',
+    component: lazyPage(() => import('./ResinRichLayer')),
+  },
+  {
     path: '/guides/glass-weave-skew',
     metaDescription: 'Glass weave skew: up to 16 ps/in (0.63 ps/mm) worst case, the safe pair length at 5–32 GT/s, a PCIe Gen 4 example, spread glass and routing at an angle.',
     related: ['/guides/prepreg-glass-styles', '/guides/pcie-routing-guidelines', '/guides/via-stub-back-drilling'],
@@ -69,7 +81,7 @@ export const GUIDES: GuideDef[] = [
   {
     path: '/guides/prepreg-glass-styles',
     metaDescription: 'Thickness per ply, resin content and Dk/Df of 106, 1080, 3313, 2116 and 7628 prepreg from Isola 370HR and Shengyi S1141 tables, with 50 Ω trace widths.',
-    related: ['/guides/glass-weave-skew', '/guides/choosing-a-pcb-stackup', '/guides/controlled-impedance'],
+    related: ['/guides/resin-rich-layer-impedance', '/guides/glass-weave-skew', '/guides/choosing-a-pcb-stackup', '/guides/controlled-impedance'],
     title: 'PCB Prepreg Glass Styles: 106, 1080, 2116, 3313 and 7628 Compared',
     seoTitle: 'Prepreg Glass Styles: 106, 1080, 2116, 7628',
     description: 'What prepreg glass style numbers mean, with thickness per ply, resin content and Dk/Df for 106, 1080, 3313, 2116 and 7628 from manufacturer tables, 50 Ω microstrip widths over one ply, resin fill and glass-weave skew.',
@@ -344,7 +356,7 @@ export const GUIDES: GuideDef[] = [
   {
     path: '/guides/controlled-impedance',
     metaDescription: 'What PCB trace impedance is, when it matters, how microstrip and stripline differ, and why solder mask and etching shift it by several ohms.',
-    related: ['/guides/choosing-a-pcb-stackup', '/guides/pcb-crosstalk-3w-rule', '/guides/usb3-85-or-90-ohm'],
+    related: ['/guides/resin-rich-layer-impedance', '/guides/choosing-a-pcb-stackup', '/guides/pcb-crosstalk-3w-rule', '/guides/usb3-85-or-90-ohm'],
     title: 'Controlled Impedance Explained: Microstrip, Stripline and Solder Mask',
     seoTitle: 'Controlled Impedance: Microstrip vs Stripline',
     tools: ['/impedance', '/timing', '/crosstalk', '/trace-loss', '/interface-rules'],

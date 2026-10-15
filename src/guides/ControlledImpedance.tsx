@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Cite, Guide, TryIt } from './Guide';
 
 export default function ControlledImpedance() {
@@ -17,6 +18,8 @@ export default function ControlledImpedance() {
         is, when it matters, and which details of the cross-section move it by several ohms. The numbers come from the 2D field solver in the{' '}
         <a href="/impedance">impedance calculator</a>, so you can reproduce each one.
       </p>
+
+      <p>A separate <Link to="/guides/resin-rich-layer-impedance">resin-rich layer guide</Link> explains how to model the dielectric beside an internal trace, with a reproducible comparison and fixed copper-to-plane distances.</p>
 
       <h2>What trace impedance is</h2>
       <p>

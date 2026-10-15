@@ -23,6 +23,8 @@ export default function PrepregGlassGuide() {
         fill and glass-weave skew.
       </p>
 
+      <p>For the material immediately beside an internal trace, see the <Link to="/guides/resin-rich-layer-impedance">resin-rich layer and impedance guide</Link>. Its planar model treats a local resin-rich band separately from the bulk prepreg Dk.</p>
+
       <h2>What the style number describes</h2>
       <p>
         IPC-4412C covers finished fabrics woven from E-glass yarn for printed boards, and all of them are plain weave. Its Appendix B gives a style designator for each fabric with

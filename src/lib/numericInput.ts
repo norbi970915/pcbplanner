@@ -7,7 +7,7 @@ export function parseNumericInput(text: string): number | null {
 }
 export function numericInputIssue(text: string, options: {
   min?: number; max?: number; allowZero?: boolean; allowNegative?: boolean;
-  integer?: boolean; scale?: number; minimumLabel?: string;
+  integer?: boolean; scale?: number; minimumLabel?: string; maximumLabel?: string;
 } = {}): string | undefined {
   const n = parseNumericInput(text);
   if (n === null) return text.trim() ? 'Enter a number using a decimal point, for example 0.15 or 1e-3.' : 'Enter a value to calculate.';
@@ -18,6 +18,6 @@ export function numericInputIssue(text: string, options: {
   if (!options.allowNegative && (options.allowZero ? value < min : value <= min)) {
     return 'Enter a value ' + (options.allowZero ? 'of at least ' : 'greater than ') + (options.minimumLabel ?? min) + '.';
   }
-  if (options.max !== undefined && value > options.max) return 'Enter a value no greater than ' + options.max + '.';
+  if (options.max !== undefined && value > options.max) return 'Enter a value no greater than ' + (options.maximumLabel ?? options.max) + '.';
   return undefined;
 }

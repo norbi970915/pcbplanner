@@ -70,7 +70,7 @@ export function ImpedanceSweep({ geom, acc, param, onParam, target, currentZ, un
         <div className="px-2 py-2">
           <SweepPlot xs={def.values.map(toX)} zs={zs} current={toX(def.current)} currentZ={currentZ} target={target} xLabel={`${def.label} (${xUnit})`} zName={zName} xUnit={xUnit} />
           <p className="px-1 pt-1 text-faint">
-            {def.values.length} field-solver points at {acc} accuracy, {def.kind === 'percent' ? 'every dielectric scaled together' : 'from ' + fmt(toX(def.values[0]), 3) + ' to ' + fmt(toX(def.values[def.values.length - 1]), 3) + ' ' + xUnit}. All other inputs stay as entered; the dashed line marks the current design.
+            {def.values.length} field-solver points at {acc} accuracy, {def.kind === 'percent' ? 'every dielectric scaled together' : 'from ' + fmt(toX(def.values[0]), 3) + ' to ' + fmt(toX(def.values[def.values.length - 1]), 3) + ' ' + xUnit}. {def.param === 'h' ? 'All dielectric heights, including any resin band above copper, scale together; copper thickness stays fixed.' : 'All other inputs stay as entered.'} The dashed line marks the current design.
           </p>
         </div>
       )}
