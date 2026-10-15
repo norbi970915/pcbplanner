@@ -20,7 +20,7 @@ async function load(page){
       await page.waitForFunction(({side,count})=>[...document.querySelectorAll('.properties-section')].find(s=>s.textContent.includes('Layout '+side+' layers'))?.querySelectorAll('.gerber-layer-row').length===count,{side,count:files.length});
       await section(page,side).getByRole('button',{name:'Show all'}).click();
     }
-  }else{await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===4);}
+  }else{await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===6);}
   await ready(page);
 }
 try{
@@ -61,7 +61,7 @@ try{
   await context.close();
   for(const width of [390,320]){
     const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});await context.addInitScript(consent);await context.addInitScript(()=>{Element.prototype.requestFullscreen=undefined;});
-    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===4);await ready(page);
+    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===6);await ready(page);
     await page.getByRole('button',{name:'Enter fullscreen',exact:true}).click();await page.locator('.gerber-fullscreen-workspace').waitFor();await ready(page);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     const view=await page.locator('.gerber-canvas-wrap').boundingBox(),controls=await page.getByRole('complementary',{name:'Gerber layers'}).boundingBox();assert(view.height>=100);assert(controls.y>=view.y+view.height-1);
