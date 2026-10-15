@@ -92,9 +92,9 @@ export function gerberDifference(a:Uint8ClampedArray,b:Uint8ClampedArray,showCom
   const pixels=new Uint8ClampedArray(a.length);let added=0,removed=0;
   for(let i=0;i<a.length;i+=4){const aa=a[i+3]>=128,bb=b[i+3]>=128;
     if(!aa&&!bb)continue;if(aa&&bb&&!showCommon)continue;
-    const color=aa&&bb?[125,135,145]:aa?[208,138,60]:[61,143,224];
     if(aa&&!bb)removed++;if(bb&&!aa)added++;
-    pixels[i]=color[0];pixels[i+1]=color[1];pixels[i+2]=color[2];pixels[i+3]=255;
+    // Scalar writes avoid allocating a colour array for every painted pixel.
+    pixels[i]=aa?(bb?125:208):61;pixels[i+1]=aa?(bb?135:138):143;pixels[i+2]=aa?(bb?145:60):224;pixels[i+3]=255;
   }
   return {pixels,added,removed};
 }

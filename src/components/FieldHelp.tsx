@@ -40,7 +40,7 @@ export function FieldHelp({ label, hint, descriptionId, diagramKey }: { label: R
           <Info size={14} aria-hidden="true" />
         </button>
       </Popover.Trigger>
-      <Popover.Portal>
+      <Popover.Portal container={typeof document==='undefined'?undefined:document.fullscreenElement??document.activeElement?.closest<HTMLElement>('[aria-modal="true"]')??undefined}>
         <Popover.Content className="field-help-popover" sideOffset={7} align="end" collisionPadding={12} aria-labelledby={headingId}
           onPointerEnter={cancelClose} onPointerLeave={scheduleClose}
           onKeyDownCapture={() => { interaction.current = 'keyboard'; cancelClose(); }}>
