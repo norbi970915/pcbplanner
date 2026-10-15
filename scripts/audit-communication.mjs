@@ -11,7 +11,7 @@ try{
  const open=async path=>{await page.goto(base+path);await page.getByRole('navigation',{name:'Communication interfaces',exact:true}).waitFor();};
  const output=async label=>page.evaluate(label=>[...document.querySelectorAll('.headline-result')].find(el=>el.querySelector('[data-copy-label]')?.textContent===label)?.querySelector('[data-copy-value]')?.textContent?.replace(/,/g,''),label);
  const set=async(label,value)=>{const field=page.getByRole('textbox',{name:new RegExp('^'+label)});await field.fill(String(value));await field.press('Tab');};
- await open('/spi-timing');assert.equal(await output('Setup margin'),'9');
+ await open('/spi-timing');assert.equal(await output('Setup margin'),'9');const group=page.locator('.tools-navigation .communication-nav-link');assert.equal(await group.count(),1);assert.match(await group.innerText(),/Communication interfaces/);assert.equal(await group.getAttribute('aria-current'),'page');assert.equal(await page.locator('.tools-navigation .nav-group a').filter({hasText:/^(SPI timing|CAN \/ CAN FD timing|RS-485 \/ Modbus|I²C pull-up)$/}).count(),0,'Communication tools should use the single group entry');
  await set('SCLK frequency',20);assert.equal(await output('Setup margin'),'-16');assert((await page.locator('main').innerText()).includes('no positive setup margin'));
  await page.waitForURL(/mhz=20/);const shared=page.url();await page.reload();await page.getByRole('navigation',{name:'Communication interfaces',exact:true}).waitFor();assert.equal(await output('Setup margin'),'-16');assert.equal(page.url(),shared);
  await set('SCLK frequency',10);assert.equal(await output('Setup margin'),'9');
@@ -41,7 +41,7 @@ try{
  await page.getByRole('navigation',{name:'Communication interfaces',exact:true}).getByRole('link',{name:/SPI/}).click();await page.waitForURL('**/spi-timing');
  await open('/can-bit-timing?tseg2=1');await page.getByRole('alert').waitFor();assert((await page.getByRole('alert').innerText()).includes('integer timing counts'));
  await open('/rs485-modbus?request=257');await page.getByRole('alert').waitFor();assert((await page.getByRole('alert').innerText()).includes('4 to 256'));
- assert.deepEqual(errors,[]);
+ await page.goto(base+'/tools?group=Communication%20interfaces');await page.getByRole('heading',{name:'Communication interfaces tools',exact:true}).waitFor();await page.locator('.catalog-list-item').first().waitFor();assert.equal(await page.locator('.catalog-list-item').count(),4);await page.locator('.communication-nav-link').click();await page.waitForURL('**/spi-timing');await page.getByRole('navigation',{name:'Communication interfaces',exact:true}).waitFor();assert.equal(await page.getByRole('navigation',{name:'Communication interfaces',exact:true}).getByRole('link').count(),4);assert.deepEqual(errors,[]);
  console.log('Communication calculators passed: live SPI margin and shared URL, CAN search/apply/FD/TDC, RS-485 bound and Modbus timing, four-way links beside Ethernet, invalid URL parameters, and 390/320 px layouts.');
  await context.close();
 }finally{await browser.close();}

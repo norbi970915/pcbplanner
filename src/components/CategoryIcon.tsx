@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 const symbols: Record<string, ReactNode> = {
     'Signal integrity': <path d="M2 17h5V7h6v10h6V7h3" />,
+    'Communication interfaces': <><path d="M3 8h18M3 16h18M7 4v4m10 8v4" /><circle cx="7" cy="8" r="2" /><circle cx="17" cy="16" r="2" /></>,
     RF: <path d="M2 14c3-12 5-12 8 0s5 12 8 0 3-6 4-4" />,
     Stackup: <path d="m2 8 10-5 10 5-10 5ZM2 12l10 5 10-5M2 16l10 5 10-5" />,
     Thermal: <><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0ZM12 7v11" /><circle cx="12" cy="18" r="1" /></>,

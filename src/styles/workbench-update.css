@@ -79,3 +79,5 @@
 .project-save-note { flex-basis: 100%; color: var(--muted); font-size: 11px; line-height: 1.5; }
 @media (max-width: 480px) { .project-save-bar { padding: 10px; gap: 10px; } .project-save-bar [data-slot='button'] { font-size: 12px; } }
 @media print { .project-save-bar { display: none !important; } }
+
+.communication-nav-link{font-size:11px;font-weight:600;margin:5px 0;gap:8px}.communication-nav-link>span:first-of-type{min-width:0}.communication-nav-link .group-count{flex-shrink:0}

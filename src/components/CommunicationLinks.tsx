@@ -4,7 +4,7 @@ import '../styles/communication.css';
 const buses=[{path:'/spi-timing',name:'SPI',detail:'Read-path timing'},{path:'/i2c-pullup',name:'I²C',detail:'Pull-up and capacitance'},{path:'/can-bit-timing',name:'CAN / CAN FD',detail:'Bit timing and termination'},{path:'/rs485-modbus',name:'RS-485 / Modbus',detail:'Bias and RTU timing'}];
 export function CommunicationLinks(){
   const {pathname}=useLocation();
-  return <Panel allowInvalid title="Communication interface calculators" className="mb-3"><nav className="communication-links" aria-label="Communication interfaces">{buses.map(bus=><Link to={bus.path} key={bus.path} aria-current={pathname===bus.path?'page':undefined}><strong>{bus.name}</strong><span>{bus.detail}</span></Link>)}</nav>{pathname!=='/interface-rules'&&<p className="communication-link-back"><Link to="/interface-rules">High-speed interface rules: Ethernet, USB, PCIe and more →</Link></p>}</Panel>;
+  return <Panel allowInvalid title="Communication interfaces" className="mb-3"><nav className="communication-links" aria-label="Communication interfaces">{buses.map(bus=><Link to={bus.path} key={bus.path} aria-current={pathname===bus.path?'page':undefined}><strong>{bus.name}</strong><span>{bus.detail}</span></Link>)}</nav>{pathname!=='/interface-rules'&&<p className="communication-link-back"><Link to="/interface-rules">High-speed interface rules: Ethernet, USB, PCIe and more →</Link></p>}</Panel>;
 }
 export function TimingBudget({parts,available,label,unit='ns'}:{parts:{label:string;value:number;color:string}[];available:number;label:string;unit?:string}){
   const total=parts.reduce((sum,part)=>sum+part.value,0),scale=Math.max(total,available,Number.EPSILON),remaining=Math.max(0,available-total),hasRemaining=remaining>scale*1e-12;

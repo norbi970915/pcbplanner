@@ -106,7 +106,18 @@ export function ToolsNavigation({
         )) : <p className="favorites-empty">Star a tool to pin it here.</p>}
       </section>
       <Separator className="nav-separator" />
-      {GROUPS.map((group) => (
+      {GROUPS.map((group) => group === 'Communication interfaces' ? (
+        <Link key={group}
+          className={'side-link communication-nav-link' + (TOOLS.some(tool => tool.group === group && tool.path === path) ? ' current' : '')}
+          aria-current={TOOLS.some(tool => tool.group === group && tool.path === path) ? 'page' : undefined}
+          to={TOOLS.find(tool => tool.group === group && tool.path === path)?.path ?? '/spi-timing'}
+          onClick={onNavigate}
+        >
+          <CategoryIcon group={group} color={GROUP_COLORS[group]} />
+          <span>{group}</span>
+          <span className="group-count">{TOOLS.filter(tool => tool.group === group).length}</span>
+        </Link>
+      ) : (
         <details className="nav-group" key={group} open>
           <summary>
             <CategoryIcon group={group} color={GROUP_COLORS[group]} />
