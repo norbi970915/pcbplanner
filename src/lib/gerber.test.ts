@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { strToU8, zipSync } from 'fflate';
 import { fitGerber, normaliseGerberCoordinates, gerberDifference, gerberLayerLabel, readGerberInputs, unionGerberBounds, zoomGerber, type GerberLayer } from './gerber';
 import { GERBER_EXAMPLE_A } from './gerberExample';
+import { normaliseGerberHeaders } from './gerberFormat';
 
 const signal=()=>new AbortController().signal;
 const layer=(bounds:[number,number,number,number]):GerberLayer=>({id:'a',name:'top.gtl',label:'Top copper',svg:'',bounds,visible:true,color:'#fff',warnings:[]});
@@ -72,5 +73,42 @@ describe('physical-coordinate camera and difference classification',()=>{
     const mask=new Uint8ClampedArray([255,255,255,255,0,0,0,127]);
     expect([...gerberDifference(mask,mask,false).pixels]).toEqual([0,0,0,0,0,0,0,0]);
     expect(()=>gerberDifference(mask,new Uint8ClampedArray(4),true)).toThrow('dimensions');
+  });
+});
+
+
+describe('exporter header compatibility',()=>{
+  const base=GERBER_EXAMPLE_A[0].text;
+  it('accepts legacy names, including an empty image name, without changing geometry',()=>{
+    for(const command of ['INTop Copper','IN','LNSilkscreen Bottom','IPPOS','ASAXBY','MIA0B0','OFA0.000B-0.00','SFA1.000B1.0','IR0','LMN','LR0.0','LS1.0']){
+      expect(normaliseGerberHeaders(base.replace('%MOMM*%','%MOMM*%\n%'+command+'*%')).replace(/\s/g,'')).toBe(normaliseGerberHeaders(base).replace(/\s/g,''));
+    }
+    expect(gerberLayerLabel('copper_l1.gbr','%INTop Copper*%')).toBe('Top Copper');
+    expect(gerberLayerLabel('Profile_NP.gbr','%IN*%')).toBe('Board outline');
+    expect(gerberLayerLabel('ambiguous.gbr','%INOlder name*%\n%TF.FileFunction,Copper,L2,Inr*%')).toBe('Copper / L2 / Inr');
+  });
+  it('does not erase non-default transformations or unknown commands',()=>{
+    for(const command of ['IPNEG','MIA1B0','OFA1B0','SFA2B1','IR90','LMX','LR30','LS2','XYUNKNOWN','ABD12']){
+      expect(normaliseGerberHeaders(base+'\n%'+command+'*%')).toContain('%'+command+'*%');
+    }
+  });
+  it('splits combined format/unit headers and accepts explicit G70/G71 units',()=>{
+    expect(normaliseGerberHeaders('%FSLAX25Y25*MOMM*%')).toBe('%FSLAX25Y25*%\n%MOMM*%');
+    expect(normaliseGerberHeaders(base.replace('%MOMM*%','G71*')).replace(/\s/g,'')).toBe(normaliseGerberHeaders(base).replace(/\s/g,''));
+    expect(normaliseGerberHeaders(base.replace('%MOMM*%','G70*'))).toContain('%MOIN*%');
+  });
+  it('preserves complete aperture macros and leaves Excellon headers alone',()=>{
+    const macro='%AMNAME*0 IN and IPPOS are just macro comments here*1,1,1,0,0*%';
+    expect(normaliseGerberHeaders(base+macro)).toContain(macro);
+    expect(normaliseGerberHeaders(base+'%AMXNAME*0 X comment*$1=3X2X0.5*1,1,$1,0,0*%')).toContain('%AMXNAME*0 X comment*$1=3x2x0.5*1,1,$1,0,0*%');
+    const drill='M48\nMETRIC,TZ,000.000\nT01C1.0\n%\nX010000Y010000\nM30';
+    expect(normaliseGerberHeaders(drill)).toBe(drill);
+  });
+  it('finds artwork in ZIPs with exporter-specific or missing extensions and skips manifests',async()=>{
+    const entries={'board/CU_L1.copper':strToU8(base),'board/soldermask':strToU8(base),'board/job.gbrjob':strToU8('{}'),'notes.txt':strToU8('Manufacturing instructions')};
+    const result=await readGerberInputs([new File([zipSync(entries) as Uint8Array<ArrayBuffer>],'board.zip')],signal());
+    expect(result.inputs.map(file=>file.name)).toEqual(['board/CU_L1.copper','board/soldermask']);
+    const individual=await readGerberInputs([new File([base],'top.gbr'),new File(['{}'],'gerber_job.gbrjob')],signal());
+    expect(individual.inputs).toHaveLength(1);
   });
 });

@@ -1,30 +1,34 @@
 import gerberBundle from 'gerber-to-svg/dist/gerber-to-svg.min.js?raw';
 import type gerberToSvg from 'gerber-to-svg';
+import { normaliseGerberHeaders } from './gerberFormat';
 import { normaliseGerberCoordinates, type GerberInput } from './gerber';
 
 export interface ParsedGerber { name:string; svg:string; bounds:[number,number,number,number]; warnings:string[] }
 export interface GerberWorkerResult { layers:ParsedGerber[]; errors:string[] }
 
 /** This function is serialised with the pinned browser bundle into an isolated, cancellable worker. */
-function gerberWorkerMain(normalise:typeof normaliseGerberCoordinates) {
+function gerberWorkerMain(normalise:typeof normaliseGerberCoordinates,normaliseHeaders:typeof normaliseGerberHeaders) {
   const scope=globalThis as unknown as { gerberToSvg:typeof gerberToSvg; onmessage:((e:MessageEvent<{inputs:{name:string;data:Uint8Array}[]}>)=>void)|null; postMessage:(data:unknown)=>void };
   scope.onmessage=async(event)=>{
     const layers:ParsedGerber[]=[], errors:string[]=[];let renderedBytes=0;
     for(const [index,file]of event.data.inputs.entries()){
       try{
-        const source=new TextDecoder().decode(file.data);const warnings:string[]=[];let fatalWarning='';
+        const source=normaliseHeaders(new TextDecoder().decode(file.data));const warnings:string[]=[];let fatalWarning='';
         if(!source.trim()||source.includes('\0'))throw new Error('Not a text Gerber/drill file.');
         const drill=/^(?:\s*M48|[\s\S]*?^\s*(?:METRIC|INCH)[,\s])/im.test(source);
         if(!drill&&!/%(?:FS|MO|ADD)/i.test(source))throw new Error('No Extended Gerber header found.');
         if(!drill&&!/%FS[LT]A\d*X\d\dY\d\d\*%/i.test(source))throw new Error('Explicit absolute Gerber coordinate format required (FS).');
         if(!drill&&!/%MO(?:MM|IN)\*%/i.test(source))throw new Error('Explicit Gerber units required (MOMM or MOIN).');
         if(/%(?:AB|LM|LR|LS|IPNEG|IR|OF|MI)/i.test(source))throw new Error('This file uses an unsupported image transform, aperture block or negative image. It was not rendered.');
-        if(drill&&!/[XY][+-]?\d*\.\d+/i.test(source)&&!/(?:FILE_FORMAT|FORMAT)\s*[=:]\s*\d[:.]\d/i.test(source))throw new Error('Drill coordinates need decimal points or an explicit FILE_FORMAT; no precision is guessed.');
+        const declaredFormat=source.match(/(?:FILE_FORMAT|FORMAT)\s*[=:]\s*(\d)[:.](\d)/i);
+        const nativeFormat=source.match(/^(?:METRIC|INCH)[^\r\n]*?,(0+)\.(0+)(?:,|\s|$)/im);
+        const kicadFormat=source.match(/;FORMAT=\{(\d):(\d)\//i);
+        const places: [number,number]|undefined=declaredFormat?[Number(declaredFormat[1]),Number(declaredFormat[2])]:nativeFormat?[nativeFormat[1].length,nativeFormat[2].length]:kicadFormat?[Number(kicadFormat[1]),Number(kicadFormat[2])]:undefined;
+        if(drill&&!/[XY][+-]?\d*\.\d+/i.test(source)&&!places)throw new Error('Drill coordinates need decimal points or an explicit coordinate format (FILE_FORMAT, unit-line zeros or KiCad FORMAT). No precision is guessed.');
         if(drill&&!/^(?:METRIC|INCH|M71|M72)(?:,|\s|$)/im.test(source))throw new Error('Explicit drill units required (METRIC or INCH).');
         if(!drill&&!/M0?2\s*\*/i.test(source))throw new Error('The Gerber end marker M02 is missing; export the complete layer.');
-        const format=source.match(/(?:FILE_FORMAT|FORMAT)\s*[=:]\s*(\d)[:.](\d)/i);
         await new Promise<void>((resolve,reject)=>{
-          const converter=scope.gerberToSvg(source,{filetype:drill?'drill':'gerber',...(drill&&format?{places:[Number(format[1]),Number(format[2])] as [number,number]}:{}),id:'pcbplanner_'+index},(error)=>{
+          const converter=scope.gerberToSvg(source,{filetype:drill?'drill':'gerber',...(drill&&places?{places}:{}),id:'pcbplanner_'+index},(error)=>{
             if(error){reject(error);return;}
             try{
               if(fatalWarning)throw new Error(fatalWarning);
@@ -51,7 +55,7 @@ function gerberWorkerMain(normalise:typeof normaliseGerberCoordinates) {
 
 export function parseGerberInputs(inputs:GerberInput[],signal:AbortSignal,onProgress:(done:number,total:number)=>void):Promise<GerberWorkerResult> {
   return new Promise((resolve,reject)=>{
-    const url=URL.createObjectURL(new Blob([gerberBundle,'\n;(',gerberWorkerMain.toString(),')(',normaliseGerberCoordinates.toString(),');'],{type:'text/javascript'}));
+    const url=URL.createObjectURL(new Blob([gerberBundle,'\n;(',gerberWorkerMain.toString(),')(',normaliseGerberCoordinates.toString(),',',normaliseGerberHeaders.toString(),');'],{type:'text/javascript'}));
     const worker=new Worker(url);URL.revokeObjectURL(url);
     const clean=()=>{worker.terminate();clearTimeout(timer);signal.removeEventListener('abort',abort);};
     const fail=(message:string)=>{clean();reject(new Error(message));};

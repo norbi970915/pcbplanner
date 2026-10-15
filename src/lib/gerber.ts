@@ -7,14 +7,18 @@ export interface GerberLayer {
 }
 export interface GerberInput { name: string; data: Uint8Array }
 export const GERBER_LIMITS = { fileBytes: 8 * 1024 * 1024, totalBytes: 40 * 1024 * 1024, files: 64, archiveBytes: 25 * 1024 * 1024 };
-const candidate = (name: string) => !name.split('/').some(part=>part.startsWith('.')||part==='__MACOSX') && /\.(?:gbr|ger|gerber|gtl|gbl|gts|gbs|gto|gbo|gtp|gbp|gko|gml|gm\d+|g\d+|art|pho|cmp|sol|stc|sts|plc|pls|drl|xln|ncd|txt)$/i.test(name) && !/(?:readme|license|licence)\./i.test(name);
+const candidate = (name: string) => !name.endsWith('/') && !name.split('/').some(part=>part.startsWith('.')||part==='__MACOSX') && !/\.(?:gbrjob|json|pdf|png|jpe?g|gif|webp|svg|zip|exe|dll|sch|brd|kicad_pcb|kicad_sch)$/i.test(name) && !/(?:readme|license|licence)\./i.test(name);
+// Exporters use many layer suffixes. The artwork header, rather than its extension, identifies a ZIP entry.
+const artwork = (data:Uint8Array) => /%(?:FS|MO|AD|AM)|(?:^|[\r\n])\s*(?:M48|METRIC|INCH|M71|M72)(?:[,\s]|$)/i.test(new TextDecoder().decode(data.subarray(0,65536)));
 
 /** Recognise X2 FileFunction first, then conventional filenames; labels are identification hints, not enforced layer pairing. */
 export function gerberLayerLabel(name: string, text = ''): string {
   const x2 = text.match(/%TF\.FileFunction,([^*]+)\*%/i)?.[1];
   if (x2) return x2.split(',').join(' / ');
+  const legacy=text.match(/%IN([^*%]*)\*%/)?.[1]?.trim();
+  if(legacy)return legacy;
   const file=name.split(/[\\/]/).at(-1) ?? name;
-  const rules: [RegExp,string][] = [[/\.(gtl|cmp)$/i,'Top copper'],[/\.(gbl|sol)$/i,'Bottom copper'],[/\.(gts|stc)$/i,'Top solder mask'],[/\.(gbs|sts)$/i,'Bottom solder mask'],[/\.(gto|plc)$/i,'Top silkscreen'],[/\.(gbo|pls)$/i,'Bottom silkscreen'],[/\.gtp$/i,'Top paste'],[/\.gbp$/i,'Bottom paste'],[/\.(gko|gml|gm1)$/i,'Board outline'],[/\.(drl|xln|ncd)$/i,'Drill'],[/(?:F[._-]Cu|top[._-]copper)/i,'Top copper'],[/(?:B[._-]Cu|bottom[._-]copper)/i,'Bottom copper']];
+  const rules: [RegExp,string][] = [[/\.(gtl|cmp)$/i,'Top copper'],[/\.(gbl|sol)$/i,'Bottom copper'],[/\.(gts|stc)$/i,'Top solder mask'],[/\.(gbs|sts)$/i,'Bottom solder mask'],[/\.(gto|plc)$/i,'Top silkscreen'],[/\.(gbo|pls)$/i,'Bottom silkscreen'],[/\.gtp$/i,'Top paste'],[/\.gbp$/i,'Bottom paste'],[/\.(gko|gml|gm1)$/i,'Board outline'],[/(?:profile|edge[._-]cuts|outline)/i,'Board outline'],[/\.(drl|xln|ncd)$/i,'Drill'],[/(?:F[._-]Cu|top[._-]copper)/i,'Top copper'],[/(?:B[._-]Cu|bottom[._-]copper)/i,'Bottom copper']];
   return rules.find(([re])=>re.test(file))?.[1] ?? (/\.g(\d+)$/i.test(file) ? 'Copper L'+file.match(/\.g(\d+)$/i)![1] : 'Layer');
 }
 
@@ -28,6 +32,7 @@ export async function readGerberInputs(files: File[], signal: AbortSignal): Prom
   };
   for(const file of files){
     signal.throwIfAborted();
+    if(/\.gbrjob$/i.test(file.name))continue; // A job manifest is metadata, not artwork.
     if(/\.zip$/i.test(file.name)){
       if(file.size>GERBER_LIMITS.archiveBytes) throw new Error('ZIP archives must be smaller than 25 MiB.');
       const bytes=new Uint8Array(await file.arrayBuffer());
@@ -44,7 +49,7 @@ export async function readGerberInputs(files: File[], signal: AbortSignal): Prom
         }},(error,result)=>{signal.removeEventListener('abort',abort);if(error)reject(new Error('Could not open ZIP: '+error.message));else if(rejected)reject(new Error(rejected));else resolve(result);});
         if(signal.aborted)abort();
       });
-      for(const [name,data]of Object.entries(extracted))add(name,data);
+      for(const [name,data]of Object.entries(extracted))if(artwork(data))add(name,data);
     }else{
       if(file.size>GERBER_LIMITS.fileBytes) throw new Error(file.name+': exceeds the 8 MiB layer limit.');
       add(file.name,new Uint8Array(await file.arrayBuffer()));
