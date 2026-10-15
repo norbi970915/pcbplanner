@@ -155,7 +155,7 @@ async function gotoFresh(page, route, query = '') {
 
 async function expandSections(page) {
   for (let k = 0; k < 20; k++) {
-    const b = page.locator(`${PROPS} button[aria-expanded="false"]`);
+    const b = page.locator(`${PROPS} button.properties-toggle[aria-expanded="false"]`);
     if (!(await b.count())) break;
     await b.first().click();
   }
@@ -185,6 +185,11 @@ function newValid(text) {
   if (!Number.isFinite(v) || v === 0) return '1';
   if (Number.isInteger(v) && Math.abs(v) >= 1) return String(v + 1);
   return String(Number((v * 1.25).toPrecision(4)));
+}
+// Keep generated valid edits inside the bounded CAN sample-point domain.
+function validNumericEdit(route, label, original) {
+  if (route === '/can-bit-timing' && /sample point/i.test(label)) return '80';
+  return newValid(original);
 }
 const near = (a, b, rel = 2e-4) => Math.abs(a - b) <= rel * Math.max(Math.abs(a), Math.abs(b), 1e-12);
 const FACT = { mm: 1, mil: 0.0254, um: 0.001, 'µm': 0.001, oz: 1.378 * 0.0254, in: 25.4, cm: 10 };
@@ -220,7 +225,7 @@ async function stepFields(page, route, container) {
     const base = await snapshot(page);
 
     // free text: a list field (aria-invalid present) gets another list item, plain names get a suffix
-    const nv = numeric ? newValid(orig) : validatable ? `${orig}, 1k` : `${orig} x`;
+    const nv = numeric ? validNumericEdit(route, label, orig) : validatable ? `${orig}, 1k` : `${orig} x`;
     await inp.fill(nv);
     await settle(page, route, `${tag} = ${nv}`);
     await page.waitForTimeout(300); // URL debounce
@@ -431,7 +436,7 @@ async function stepUrlState(page, route, container) {
   if (!picks.length) return;
   const typed = {};
   for (const i of picks) {
-    typed[i] = newValid(await all.nth(i).inputValue());
+    typed[i] = validNumericEdit(route, await labelOf(all.nth(i)), await all.nth(i).inputValue());
     await all.nth(i).fill(typed[i]);
     await settle(page, route, '8 url edit');
   }

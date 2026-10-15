@@ -101,6 +101,34 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./InterfaceRules')),
   },
   {
+    path: '/spi-timing',
+    title: 'SPI Timing Calculator',
+    metaDescription: 'SPI read timing from outgoing clock delay, peripheral clock-to-output, MISO return, setup and reserve. Calculate setup margin and clock ceiling.',
+    nav: 'SPI timing',
+    group: 'Signal integrity',
+    summary: 'Opposite-edge SPI read timing: clock and MISO path delay, peripheral tCO, setup margin and the timing-limited clock ceiling.',
+    component: lazyPage(() => import('./SpiTiming')),
+  },
+  {
+    path: '/can-bit-timing',
+    title: 'CAN / CAN FD Bit Timing Calculator',
+    seoTitle: 'CAN & CAN FD Bit Timing Calculator',
+    metaDescription: 'CAN bit rate, sample point, time quanta and timing search using Bosch M_CAN limits. Includes CAN FD data phase and split termination calculations.',
+    nav: 'CAN / CAN FD timing',
+    group: 'Signal integrity',
+    summary: 'CAN and CAN FD bit timing, sample point, prescaler and segment search with Bosch M_CAN limits, plus standard and split termination.',
+    component: lazyPage(() => import('./CanBitTiming')),
+  },
+  {
+    path: '/rs485-modbus',
+    title: 'RS-485 / Modbus RTU Calculator',
+    metaDescription: 'RS-485 termination, conservative fail-safe bias resistor sizing and stub length. Modbus RTU character, frame-gap and polling timing calculations.',
+    nav: 'RS-485 / Modbus',
+    group: 'Signal integrity',
+    summary: 'Two-wire RS-485 end termination, conservative external bias sizing, rise-time-based stub length and Modbus RTU frame and polling timing.',
+    component: lazyPage(() => import('./Rs485Modbus')),
+  },
+  {
     path: '/clock-jitter',
     metaDescription: 'RMS phase jitter from an oscillator phase noise curve by exact integration, the jitter-limited SNR and ENOB of an ADC, and a total-jitter budget at a BER.',
     title: 'Phase Noise to Jitter & Jitter Budget',
@@ -586,6 +614,10 @@ export const TOOLS: ToolDef[] = [
 
 /** Tools in other groups (or not obviously related) that a tool page links to under "Related tools". */
 export const RELATED: Record<string, string[]> = {
+  '/spi-timing': ['/timing', '/termination', '/logic-levels', '/interface-rules'],
+  '/can-bit-timing': ['/rs485-modbus', '/termination', '/interface-rules'],
+  '/rs485-modbus': ['/can-bit-timing', '/termination', '/logic-levels'],
+  '/i2c-pullup': ['/spi-timing', '/logic-levels'],
   '/gerber-viewer': ['/stackup', '/impedance', '/interface-rules'],
   '/vswr-calculator': ['/attenuator', '/impedance-matching', '/coax-impedance', '/s-parameter-viewer'],
   '/coax-impedance': ['/vswr-calculator', '/timing', '/skin-effect', '/impedance'],

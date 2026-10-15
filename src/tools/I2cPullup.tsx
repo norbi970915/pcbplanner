@@ -1,3 +1,4 @@
+import { CommunicationLinks } from '../components/CommunicationLinks';
 import { Link } from 'react-router-dom';
 import { SiField } from '../components/SiField';
 import { ToolPage } from '../components/ToolPage';
@@ -68,7 +69,7 @@ export default function I2cPullup() {
         </Section>
       </>}
       status={result ? `${limits.label}, Cb ${fmt(busCapPf, 4)} pF: ${si(result.min, 'Ω', 4)} to ${si(result.max, 'Ω', 4)}` : 'Check the inputs'} method={<Method />}>
-      <Notes kind="error" items={errors} />
+      <CommunicationLinks/><Notes kind="error" items={errors} />
       <Notes items={notes} />
       {capSource === 'estimate' && <CapacitanceEstimate p={p} set={set} model={traceModel} estimate={estimate} limitPf={limits.busPf} />}
       {result && actual && <div className="grid gap-3 xl:grid-cols-2">

@@ -58,6 +58,21 @@ const SECTIONS = [
       'Check the small circuits around IC pins before choosing footprints.',
     tools: [
       {
+        path: '/spi-timing',
+        name: 'SPI read-path timing',
+        detail: 'Clock and MISO round-trip delay, setup margin and clock ceiling',
+      },
+      {
+        path: '/can-bit-timing',
+        name: 'CAN / CAN FD bit timing',
+        detail: 'Sample point, time quanta, timing search and termination',
+      },
+      {
+        path: '/rs485-modbus',
+        name: 'RS-485 / Modbus RTU',
+        detail: 'External bias, bus-end termination, stub guideline and frame timing',
+      },
+      {
         path: '/i2c-pullup',
         name: 'I²C pull-up',
         detail: 'Rise time, bus capacitance and resistor range',

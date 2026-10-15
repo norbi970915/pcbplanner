@@ -1,3 +1,4 @@
+import { CommunicationLinks } from '../components/CommunicationLinks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sources } from '../components/Sources';
@@ -389,7 +390,7 @@ export default function InterfaceRules() {
       status={spec ? `${spec.name} · ${rateLabel(spec.rateGbps)} per lane · Nyquist ${freqLabel(spec.nyquistGHz)}${busy ? ' · solving…' : ''}` : 'No interface data'}
       method={<Method />}
     >
-      <Notes kind="error" items={errors} />
+      <CommunicationLinks/><Notes kind="error" items={errors} />
       {spec && (
         <>
           <Panel title={`${spec.name} on ${layerName}`}>
