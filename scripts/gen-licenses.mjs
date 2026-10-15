@@ -29,6 +29,7 @@ for (const dir of dirs) {
 if (seen.size === 0) throw new Error('gen-licenses: no production dependencies found; is node_modules installed?');
 
 const entries = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+const gerberBundleNotices = readFileSync('node_modules/gerber-to-svg/dist/gerber-to-svg.min.js.LICENSE.txt', 'utf8').trim();
 const shadcn = readFileSync('src/components/shadcn/LICENSE.md', 'utf8').trim();
 const rule = '-'.repeat(72);
 const body = [
@@ -41,6 +42,7 @@ const body = [
   'shadcn/ui components (adapted in src/components/shadcn)',
   rule,
   shadcn,
+  '', rule, 'gerber-to-svg browser bundle: embedded dependency notices', rule, gerberBundleNotices,
   ...entries.flatMap((e) => ['', rule, `${e.name} ${e.version}${e.license ? ` (${e.license})` : ''}`, rule, e.text]),
   '',
 ].join('\n');

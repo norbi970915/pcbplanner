@@ -10,6 +10,12 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   {
+    date: '2026-10-15',
+    title: 'Inspect Gerbers and compare board revisions',
+    text: 'Open one PCB layout to inspect its layers, or load revisions A and B to highlight their differences. Choose layers independently, zoom into changes and export the view. Gerber files and ZIP archives are processed on your device, with no uploads.',
+    links: [{ to: '/gerber-viewer', label: 'Open Gerber Viewer & Compare' }],
+  },
+  {
     date: '2026-10-03',
     title: 'Keep your favorite tools close',
     text: 'Star the tools you use most to pin them at the top of the sidebar. Your favorites stay saved in the same browser—even after closing and reopening the app. Available on desktop and mobile, with no account needed.',

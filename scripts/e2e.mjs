@@ -197,7 +197,8 @@ async function stepLoad(page, route) {
   await checkPage(page, route, '1 load');
   if (!NO_PROPS.has(route)) {
     const n = await page.locator(`${PROPS} input, ${PROPS} select, ${PROPS} [role=radio]`).count();
-    await check(page, n > 0, route, '1 load: properties panel has inputs', `found ${n} controls`);
+    const files = await page.locator('main input[type=file]').count();
+    await check(page, n > 0 || files > 0, route, '1 load: tool has inputs', `found ${n} property controls and ${files} file inputs`);
   }
 }
 
@@ -367,7 +368,8 @@ async function stepUnitSwitch(page, route, container) {
 
 async function clickMenu(page, menu, item) {
   await page.getByRole('button', { name: menu, exact: true }).first().click();
-  await page.getByRole('menuitem', typeof item === 'string' ? { name: item, exact: true } : { name: item }).first().click();
+  const options = typeof item === 'string' ? { name: item, exact: true } : { name: item };
+  await page.getByRole('menuitem', options).or(page.getByRole('menuitemcheckbox', options)).or(page.getByRole('menuitemradio', options)).first().click();
 }
 
 async function stepGlobalUnit(page, route, container) {
@@ -881,9 +883,9 @@ async function runIsolated(browser, route, name, fn, ms) {
 async function newCtx(browser, viewport = { width: 1600, height: 1000 }) {
   const ctx = await browser.newContext({ viewport });
   await ctx.addInitScript(() => {
-    if (!localStorage.getItem('pcbtk-settings')) localStorage.setItem('pcbtk-settings', JSON.stringify({ unit: 'mm', theme: 'dark' }));
+    if (!sessionStorage.getItem('pcbtk-settings')) sessionStorage.setItem('pcbtk-settings', JSON.stringify({ unit: 'mm', theme: 'dark' }));
     // answer the analytics banner up front: it covers the lower inputs and the status bar, and clicks behind it time out
-    if (!localStorage.getItem('pcbplanner:analytics-consent')) localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', updatedAt: '2026-01-01T00:00:00Z' }));
+    if (!localStorage.getItem('pcbplanner:analytics-consent')) localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', version: 2, updatedAt: new Date().toISOString() }));
   });
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
   return ctx;

@@ -10,6 +10,11 @@ export const SCHEMATIC_DESCRIPTION =
 
 const SECTIONS = [
   {
+    title: 'Board inspection and revision review',
+    description: 'Inspect fabrication layers or check what changed between two board exports.',
+    tools: [{ path: '/gerber-viewer', name: 'Gerber viewer & compare', detail: 'One or two layouts, independent layer selection and colour differences; files stay on your device' }],
+  },
+  {
     title: 'Power rails and loads',
     description:
       'Start with the complete supply tree, then size and check individual stages.',

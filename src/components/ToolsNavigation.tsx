@@ -56,6 +56,9 @@ export function ToolsNavigation({
         <CircuitBoard size={16} />
         Schematic design
       </Link>
+      <Link className={'side-link schematic-gerber-link' + (path === '/gerber-viewer' ? ' current' : '')} aria-current={path === '/gerber-viewer' ? 'page' : undefined} to="/gerber-viewer" onClick={onNavigate}>
+        <CategoryIcon group="Electronics" color={GROUP_COLORS.Electronics} size={14} />Gerber viewer &amp; compare
+      </Link>
       <Separator className="nav-separator" />
       {activeProject && (
         <>

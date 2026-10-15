@@ -79,3 +79,5 @@
 .project-save-note { flex-basis: 100%; color: var(--muted); font-size: 11px; line-height: 1.5; }
 @media (max-width: 480px) { .project-save-bar { padding: 10px; gap: 10px; } .project-save-bar [data-slot='button'] { font-size: 12px; } }
 @media print { .project-save-bar { display: none !important; } }
+
+.schematic-gerber-link { margin-left: 18px; font-size: 12px !important; }

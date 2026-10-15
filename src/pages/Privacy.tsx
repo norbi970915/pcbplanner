@@ -29,7 +29,7 @@ export default function Privacy() {
           <h2>In short</h2>
           <ul>
             <li>There are no accounts, forms, comments or payments. You can use every tool without giving any personal data.</li>
-            <li>Calculations run in your browser. Files you open, such as Touchstone, project and stackup files, are read locally and never uploaded.</li>
+            <li>Calculations run in your browser. Files you open, such as Gerber, ZIP, Touchstone, project and stackup files, are read locally and never uploaded.</li>
             <li>Analytics run only if you accept them, and you can withdraw that at any time under Help › Analytics preferences.</li>
             <li>No data is sold, used for advertising or used for automated decisions about you.</li>
           </ul>
@@ -70,6 +70,7 @@ export default function Privacy() {
             <li><b>Session storage</b> (cleared when the tab closes): theme and units, open tabs and panels, calculator inputs, A/B comparison baselines, search text and stackup drafts.</li>
             <li><b>Offline cache:</b> a service worker stores the site's code so the calculators keep working without a network connection.</li>
           </ul>
+          <p>Gerber layers and comparison data are kept only in the current tab's memory, including when switching tools. They are cleared on reload or with the viewer's Clear controls; file contents and filenames are not sent to analytics.</p>
           <p>You can delete all of this at any time by clearing this site's data in your browser settings.</p>
 
           <h2>Transfers outside the EU</h2>

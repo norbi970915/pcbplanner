@@ -545,6 +545,17 @@ export const TOOLS: ToolDef[] = [
     component: lazyPage(() => import('./Attenuator')),
   },
   {
+    path: '/gerber-viewer',
+    title: 'Gerber Viewer & Compare',
+    seoTitle: 'Gerber Viewer and PCB Revision Comparison',
+    metaDescription: 'View Gerber files and ZIPs locally. Compare PCB revisions with independent layer selection, colour differences, pan, zoom and PNG export. No uploads.',
+    nav: 'Gerber viewer & compare',
+    group: 'Utilities',
+    summary: 'Inspect one Gerber layout or compare two PCB revisions, choose layers independently and highlight added, removed and common geometry. Files stay on your device.',
+    component: lazyPage(() => import('./GerberViewer')),
+  },
+
+  {
     path: '/projects',
     metaDescription: 'Save the inputs of every calculator for a board under one name, reopen them later, and export or import a project file. Everything stays in your browser.',
     title: 'Projects',
@@ -575,6 +586,7 @@ export const TOOLS: ToolDef[] = [
 
 /** Tools in other groups (or not obviously related) that a tool page links to under "Related tools". */
 export const RELATED: Record<string, string[]> = {
+  '/gerber-viewer': ['/stackup', '/impedance', '/interface-rules'],
   '/vswr-calculator': ['/attenuator', '/impedance-matching', '/coax-impedance', '/s-parameter-viewer'],
   '/coax-impedance': ['/vswr-calculator', '/timing', '/skin-effect', '/impedance'],
   '/impedance-matching': ['/quarter-wave-transformer', '/vswr-calculator', '/reactance', '/s-parameter-viewer'],
