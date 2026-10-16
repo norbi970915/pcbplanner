@@ -14,6 +14,7 @@ import {
   ExternalLink,
   ChevronRight,
   FolderPlus,
+  FolderOpen,
   Compass,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/shadcn/card';
@@ -23,6 +24,7 @@ import { Badge } from '../components/shadcn/badge';
 import { NEWS } from '../data/news';
 import { useShell } from '../state/shell';
 import { CreateProjectDialog } from '../components/CreateProjectDialog';
+import { useProjects } from '../state/projectStore';
 import { GUIDES } from '../guides/registry';
 import { searchEntries, type SearchEntry } from '../lib/siteSearch';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
@@ -54,6 +56,41 @@ function Heading({
 }
 function HomeProjectStart() {
   const navigate = useNavigate();
+  const { projects, activeId } = useProjects();
+  const project = projects.find(item => item.id === activeId) ?? projects[0];
+  const recent = [...(project?.tools ?? [])]
+    .sort((a, b) => (Number.isFinite(b.updated) ? b.updated : 0) - (Number.isFinite(a.updated) ? a.updated : 0))
+    .flatMap(entry => {
+      const tool = TOOLS.find(tool => tool.path === entry.path);
+      return tool ? [{ ...entry, tool }] : [];
+    }).slice(0, 3);
+
+  if (project) return (
+    <section className="home-project-start" aria-labelledby="home-project-heading">
+      <FolderOpen className="home-project-icon" size={22} aria-hidden="true" />
+      <div className="home-project-copy">
+        <h2 id="home-project-heading">Continue your project</h2>
+        <p className="home-project-name">{project.name}</p>
+        <p>{project.tools.length
+          ? project.tools.length + ' saved ' + (project.tools.length === 1 ? 'calculation' : 'calculations')
+          : 'No calculations saved yet. Open your project to get started.'}</p>
+        {recent.length > 0 && <ul className="home-project-tools" aria-label="Recent saved calculations">
+          {recent.map(entry => <li key={entry.path}>
+            <Link to={entry.path + (entry.query ? '?' + entry.query : '')} title={'Open saved calculation: ' + entry.tool.title}>
+              <CategoryIcon group={entry.tool.group} color={GROUP_COLORS[entry.tool.group]} size={14} />
+              <span>{entry.tool.nav}</span><ArrowRight size={12} aria-hidden="true" />
+            </Link>
+          </li>)}
+        </ul>}
+        <div className="home-project-actions">
+          <Button size="sm" onClick={() => navigate('/projects')}><FolderOpen size={15} />Open project</Button>
+          <CreateProjectDialog onCreated={() => navigate('/projects')}>
+            <Button size="sm" variant="ghost"><FolderPlus size={15} />Create another</Button>
+          </CreateProjectDialog>
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <section className="home-project-start" aria-labelledby="home-project-heading">
