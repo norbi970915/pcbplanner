@@ -1,4 +1,3 @@
-import { DEFAULT_STACKUP_ID } from '../data/rigidStackupRules';
 import { CommunicationLinks } from '../components/CommunicationLinks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -23,7 +22,7 @@ import { useUrlState } from '../state/useUrlState';
 
 const DEFAULTS = {
   ifid: 'pcie-gen3',
-  stk: DEFAULT_STACKUP_ID,
+  stk: 'std-6l-16-1080-2',
   lay: '',
   region: '',
   len: 100,
@@ -393,8 +392,7 @@ export default function InterfaceRules() {
       method={<Method />}
     >
       <CommunicationLinks/><Notes kind="error" items={errors} />
-      {!construction && <Notes kind="error" items={['The selected stackup is unavailable. Choose an example or saved construction in Board. Earlier library IDs are not mapped to different geometries.']} />}
-      {construction?.origin === 'pcbplanner-example-v1' && <Notes items={['PCBPlanner planning example: thicknesses and Dk/Df are assumptions. Enter your fabricator’s construction before finalising design rules.']} />}
+      {!construction && <Notes kind="error" items={['The selected stackup is unavailable. Choose a library or saved construction in Board. Unavailable IDs are not mapped to different geometries.']} />}
       {spec && construction && (
         <>
           <Panel title={`${spec.name} on ${layerName}`}>

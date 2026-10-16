@@ -1,5 +1,5 @@
 import { lazyPage, type LazyPage } from '../lib/lazyPage';
-import { RIGID_EXAMPLE_COUNT } from '../data/rigidStackupRules';
+import { FAB_STACKUP_COUNT } from '../data/fabStackupCount';
 
 export interface ToolDef {
   path: string;
@@ -209,11 +209,11 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/stackup',
-    metaDescription: 'Original PCBPlanner stackup examples from 2 to 12 layers, plus flex and rigid-flex starters. Edit thicknesses, materials and per-layer impedance targets.',
+    metaDescription: '178 FR-4 stackups from 2 to 12 layers plus flex and rigid-flex starters. Edit materials and thicknesses and see the trace width for each impedance target.',
     title: 'Layer Stack Manager',
     nav: 'Layer stack manager',
     group: 'Stackup',
-    summary: `${RIGID_EXAMPLE_COUNT} original rigid stackup examples plus six flex and rigid-flex design starters, with linked regions, editable materials and per-layer impedance.`,
+    summary: `${FAB_STACKUP_COUNT} rigid fab stackups plus six flex and rigid-flex design starters, with linked regions, editable materials and per-layer impedance.`,
     component: lazyPage(() => import('./StackupTool')),
   },
   {

@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { PRESETS, type Stackup } from './stackups';
 import { crc32, eagleLayerNumbers, normalise, toAltium, toEagleDru, toKicad, zip } from './stackupExport';
 
-import { multiPlyStackup as four } from './__fixtures__/stackup';
+const byId = (id: string) => PRESETS.find((s) => s.id === id)!;
+const four = byId('std-4l-8-1080-2'); // two prepreg plies per outer gap
 const six = PRESETS.find((s) => s.layers.filter((l) => l.kind === 'copper').length === 6)!;
 const twelve = PRESETS.find((s) => s.layers.filter((l) => l.kind === 'copper').length === 12)!;
 
@@ -13,7 +14,7 @@ describe('normalise', () => {
     const n = normalise(four);
     expect(n.coppers).toHaveLength(4);
     expect(n.gaps).toHaveLength(3);
-    expect(n.gaps[0].plies.map((p) => p.name)).toEqual(['Prepreg A', 'Prepreg B']);
+    expect(n.gaps[0].plies.map((p) => p.name)).toEqual(['Prepreg 1080', 'Prepreg 7628']);
     expect(n.maskTop && n.maskBottom).toBeTruthy();
   });
   it('rejects stackups no tool can import', () => {
@@ -32,7 +33,7 @@ describe('KiCad', () => {
     expect(pcb.content).toContain('(31 "B.Cu" signal)');
     expect(pcb.content.match(/\(layer "dielectric \d+"/g)).toHaveLength(3);
     expect(pcb.content.match(/addsublayer/g)).toHaveLength(2);
-    expect(pcb.content).toContain('(epsilon_r 3.8)');
+    expect(pcb.content).toContain('(epsilon_r 3.91)');
   });
   it('general thickness is the sum of every item, mask included', () => {
     const sum = four.layers.reduce((a, l) => a + l.t, 0);
@@ -79,10 +80,10 @@ describe('Fusion 360 / EAGLE DRU', () => {
     expect(cu).toHaveLength(16);
     expect(iso).toHaveLength(15);
     expect(cu[0]).toBe('0.035mm');
-    expect(cu[1]).toBe('0.018mm');
-    expect(iso[0]).toBe(`${Number((0.1 + 0.2).toFixed(6))}mm`); // both plies summed
-    expect(iso[1]).toBe('0.4mm'); // core between 2 and 15
-    expect(iso[14]).toBe(`${Number((0.1 + 0.2).toFixed(6))}mm`);
+    expect(cu[1]).toBe('0.0152mm');
+    expect(iso[0]).toBe(`${Number((0.084 + 0.2104).toFixed(6))}mm`); // both plies summed
+    expect(iso[1]).toBe('0.1mm'); // core between 2 and 15
+    expect(iso[14]).toBe(`${Number((0.084 + 0.2104).toFixed(6))}mm`);
   });
   it('is plain ASCII', () => {
     expect(/^[\x20-\x7e\n]*$/.test(toEagleDru(four).content)).toBe(true);

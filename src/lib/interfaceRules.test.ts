@@ -1,4 +1,3 @@
-import { DEFAULT_STACKUP_ID } from '../data/rigidStackupRules';
 import { describe, expect, it } from 'vitest';
 import { INTERFACES, interfaceById, type InterfaceSpec } from '../data/interfaces';
 import { PRESETS, geometryForLayer } from './stackups';
@@ -87,9 +86,9 @@ describe('interface checks', () => {
   });
 });
 
-describe('a specified interface on an original planning example', () => {
+describe('a real interface on a real stackup', () => {
   it('designs an 85 Ω PCIe pair on the outer layer and prices its loss at 4 GHz', () => {
-    const stack = PRESETS.find((s) => s.id === DEFAULT_STACKUP_ID);
+    const stack = PRESETS.find((s) => s.id === 'std-6l-16-1080-2');
     expect(stack).toBeDefined();
     const sg = geometryForLayer(stack!, stack!.layers.find((l) => l.kind === 'copper')!.id);
     expect(sg?.type).toBe('microstrip');
@@ -97,7 +96,7 @@ describe('a specified interface on an original planning example', () => {
     const d = designLine({ sg: sg!, kind: 'diff', target: pcie.z.target, etch: 0.0127, rule: { mode: 'ratio', s: 0.2, ratio: 1, minS: 0.09 }, accuracy: 'fast' });
     expect(d.z).toBeCloseTo(85, 0);
     expect(d.w).toBeGreaterThan(0.1);
-    expect(d.w).toBeLessThan(0.25); // 0.100 mm plane gap in the original example
+    expect(d.w).toBeLessThan(0.17);
 
     // S1141 2116 prepreg (Df 0.017 at 5 GHz) on ED foil, at the 4 GHz Nyquist frequency
     const req = interfaceLossRequest(sg!, d.w, d.s, true, { etch: 0.0127, df: 0.017, f0Hz: 5e9, maskDf: 0.027, maskF0Hz: 1e9, rqUm: 3.2, accuracy: 'fast', fHz: 4e9 });

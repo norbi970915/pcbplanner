@@ -292,7 +292,7 @@ export default function StackupAdvisor() {
   return (
     <ToolPage
       title="Stackup Advisor"
-      description="Find rigid, flex and rigid-flex stackup regions by thickness and layer count. The rigid library uses original PCBPlanner examples with assumed materials. Add impedance requirements to solve trace widths against your design limits."
+      description="Find rigid, flex and rigid-flex stackup regions by thickness and layer count. Add optional impedance requirements to solve trace widths and rank candidates against your fabrication limits."
       onReset={reset}
       properties={properties}
       status={
@@ -425,7 +425,6 @@ export function Method() {
   return (
     <>
       <h2>How the advisor works</h2>
-      <p>The rigid library contains original PCBPlanner planning examples generated from thickness budgets, with assumed Dk/Df. They are not fabricator-approved builds. The advisor also evaluates your saved constructions and the flex/rigid-flex starters. Confirm actual materials, pressed gaps and manufacturing limits with your fabricator.</p>
       <p>Rigid-flex constructions are evaluated per region. A flex result describes the flex section, and a rigid result describes the rigid section; a passing row does not certify the complete board. Check both regions, their transition and fabrication requirements. Coverlay film and adhesive are modelled as distinct dielectric plies. Thickness includes coverlay and adhesive but excludes solder mask.</p>
       <p>
         For regular stackups, minimum trace width, minimum spacing and minimum via drill record your design requirements. The construction library has no verified manufacturing
@@ -443,7 +442,7 @@ export function Method() {
         <li>Regular stackups need no impedance requirements or reference-plane assignment. Matches are ordered by fewest layers; expand a row to inspect the construction and open it in the Layer Stack Manager to assign signal and plane roles.</li>
         <li>For controlled impedance, candidates must also provide the requested number of referenced signal layers.</li>
         <li>
-          For each remaining stackup, each signal layer is converted into its cross-section: surface microstrip with solder mask on the outer layers, stripline (with the entered prepreg
+          For each remaining stackup, each signal layer is converted into its cross-section: surface microstrip with solder mask on the outer layers, stripline (with the real prepreg
           and core εr on each side) on the inner layers.
         </li>
         <li>
@@ -451,7 +450,7 @@ export function Method() {
           narrower than the fab minimum. Identical cross-sections are solved once and shared, and the work runs on several CPU threads.
         </li>
         <li>
-          A stackup passes when every width is between the fab minimum and your routing maximum. Passing stackups are ranked by layer count (a cost proxy, not a quotation) or by the smallest width relative to
+          A stackup passes when every width is between the fab minimum and your routing maximum. Passing stackups are ranked by layer count (cost) or by the smallest width relative to
           the fab minimum (manufacturing margin).
         </li>
       </ol>

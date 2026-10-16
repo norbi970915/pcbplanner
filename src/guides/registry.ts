@@ -368,13 +368,13 @@ export const GUIDES: GuideDef[] = [
   },
   {
     path: '/guides/choosing-a-pcb-stackup',
-    metaDescription: 'Choose a PCB stackup using original thickness-budget examples: reference planes, signal-to-plane spacing, assumed materials and fabrication checks.',
+    metaDescription: 'How to choose a 4- or 6-layer PCB stackup: layer order, reference planes, and how the prepreg glass style sets 50 Ω trace widths from 0.12 mm to over 1 mm.',
     related: ['/guides/controlled-impedance', '/guides/pcie-gen3-routing', '/guides/pcb-crosstalk-3w-rule'],
-    title: 'How to Choose a PCB Stackup: Planes, Spacing and Thickness',
-    seoTitle: 'How to Choose a PCB Stackup: Layer Roles and Spacing',
+    title: 'How to Choose a PCB Stackup (and What 1080, 2116 and 7628 Mean)',
+    seoTitle: 'How to Choose a PCB Stackup (1080, 2116, 7628)',
     tools: ['/stackup-advisor', '/stackup', '/impedance', '/pcb-materials'],
     description:
-      'Choose layer roles and dielectric spacing with original thickness-budget examples, then confirm materials and production limits with your fabricator.',
+      'A practical guide to 4- and 6-layer PCB stackups: layer order, reference planes, and how the prepreg glass style under the outer layer sets your trace widths, from 0.12 mm to over 1 mm for 50 Ω.',
     date: '2026-09-22',
     category: 'PCB Layout & Safety',
     component: lazyPage(() => import('./ChoosingStackup')),

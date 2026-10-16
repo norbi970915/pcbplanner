@@ -1,4 +1,3 @@
-import { DEFAULT_STACKUP_ID } from '../data/rigidStackupRules';
 import { useState } from 'react';
 import { copperCount, shortName, type Stackup } from '../lib/stackups';
 import { constructionOf, regionStackup } from '../lib/stackupRegions';
@@ -15,7 +14,7 @@ export function stackupGroup(s: Stackup) {
 /** Stackup + signal-layer chooser with an Apply button (Properties-panel rows). */
 export function StackupPicker({ onApply, applyLabel = 'Apply' }: { onApply: (stack: Stackup, layerId: string) => void; applyLabel?: string }) {
   const stackups = useStackups();
-  const [stackId, setStackId] = useState(() => stackups.find((s) => s.id === DEFAULT_STACKUP_ID)?.id ?? stackups[0]?.id ?? '');
+  const [stackId, setStackId] = useState(() => stackups.find((s) => s.id === 'std-6l-16-1080-2')?.id ?? stackups[0]?.id ?? '');
   const stack = stackups.find((s) => s.id === stackId) ?? stackups[0];
   const [regionId, setRegionId] = useState('');
   const selectedRegion = stack?.regions?.find(r=>r.id===regionId)?.id ?? stack?.regions?.[0]?.id;

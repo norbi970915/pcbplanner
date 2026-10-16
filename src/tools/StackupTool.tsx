@@ -1,4 +1,3 @@
-import { DEFAULT_STACKUP_ID, RIGID_EXAMPLE_ASSUMPTIONS as EXAMPLE } from '../data/rigidStackupRules';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stackupGroup } from '../components/StackupPicker';
@@ -69,6 +68,31 @@ function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false
     />
   );
 }
+/** Prepreg glass styles used in the library, with the thickness and Dk range they have there. */
+const GLASS_TABLE = (() => {
+  const m = new Map<string, { style: string; tMin: number; tMax: number; dkMin: number; dkMax: number }>();
+  for (const s of PRESETS)
+    for (const l of s.layers) {
+      const g = l.kind === 'dielectric' ? /^Prepreg\s+(\d+)$/.exec(l.name)?.[1] : undefined;
+      if (!g) continue;
+      const e = m.get(g) ?? { style: g, tMin: Infinity, tMax: 0, dkMin: Infinity, dkMax: 0 };
+      e.tMin = Math.min(e.tMin, l.t);
+      e.tMax = Math.max(e.tMax, l.t);
+      e.dkMin = Math.min(e.dkMin, l.er ?? Infinity);
+      e.dkMax = Math.max(e.dkMax, l.er ?? 0);
+      m.set(g, e);
+    }
+  return [...m.values()].sort((a, b) => a.tMin - b.tMin);
+})();
+const WEAVE: Record<string, string> = {
+  '106': 'very fine, resin-rich',
+  '1080': 'fine, resin-rich',
+  '2313': 'medium',
+  '3313': 'medium',
+  '2116': 'medium-heavy',
+  '7628': 'coarse, glass-rich',
+};
+
 function download(name: string, data: string | Uint8Array, type: string) {
   const blob = new Blob([typeof data === 'string' ? data : (data as BlobPart)], { type });
   const url = URL.createObjectURL(blob);
@@ -84,7 +108,8 @@ function download(name: string, data: string | Uint8Array, type: string) {
 export default function StackupTool() {
   const stackups = useStackups();
   const [params] = useSearchParams();
-  const id = params.get('id') ?? readSession('selected') ?? DEFAULT_STACKUP_ID;
+  const selected = readSession('selected');
+  const id = params.get('id') ?? (stackups.some(s => s.id === selected) ? selected! : 'std-6l-16-1080-2');
   const current = stackups.find(s => s.id === id);
   return current ? <StackupEditor current={current} stackups={stackups} /> : <UnavailableStackup id={id} stackups={stackups} />;
 }
@@ -106,14 +131,14 @@ function UnavailableStackup({ id, stackups }: { id: string; stackups: Stackup[] 
     stackupStore.save(copy);
     open(copy.id);
   };
-  return <ToolPage title="Layer Stack Manager" description="Choose a PCBPlanner example or open your own construction." status="Stackup unavailable">
+  return <ToolPage title="Layer Stack Manager" description="Choose a library stackup or open your own construction." status="Stackup unavailable">
     <Panel title="Choose a stackup"><div className="prose-doc px-4 py-3">
-      <p role="status">The stackup <code>{id}</code> is unavailable. The earlier rigid library has been replaced with original PCBPlanner examples. An old link does not select a replacement automatically.</p>
+      <p role="status">The stackup <code>{id}</code> is unavailable. This link does not select a replacement automatically. Choose a library stackup or import its full construction.</p>
       <p>Saved custom stackups keep their geometry. If you have a PCBPlanner stackup JSON backup, import it here. A link containing only an old library ID cannot restore its layer dimensions.</p>
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="missing-stackup">Open a construction</label>
         <select id="missing-stackup" className="fld max-w-full" value="" onChange={e => open(e.target.value)}>
-          <option value="" disabled>Choose an example or saved stackup…</option>
+          <option value="" disabled>Choose a library or saved stackup…</option>
           {[...new Set(stackups.map(stackupGroup))].map(g => <optgroup key={g} label={g}>{stackups.filter(s => stackupGroup(s) === g).map(s => <option key={s.id} value={s.id}>{shortName(s)}</option>)}</optgroup>)}
         </select>
         <button className="btn" onClick={() => fileRef.current?.click()}>Import stackup JSON</button><input ref={fileRef} type="file" className="hidden" aria-label="Import stackup JSON" accept=".json,application/json" onChange={async e => {
@@ -321,8 +346,7 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
             </>
           )}
         </div>
-        {readOnly && <p className="text-faint">Library example: edits are temporary until you save a copy.</p>}
-        {draft.note && <p className="text-faint">{draft.note}</p>}
+        {readOnly && <p className="text-faint">Library stackup: edits are temporary until you save a copy. {draft.note}</p>}
       </Section>
       <Section title="Regions">
         {draft.regions?.length ? <>
@@ -364,7 +388,7 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
               </td>
             </tr>
             <tr>
-              <td className="text-muted">Nominal thickness</td>
+              <td className="text-muted">Nominal (fab)</td>
               <td className="tnum text-right">{active.nominal ? `${active.nominal} mm` : '—'}</td>
             </tr>
           </tbody>
@@ -401,7 +425,7 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
   return (
     <ToolPage
       title="Layer Stack Manager"
-      description={`${PRESETS.length} original PCBPlanner rigid stackup examples and ${FLEX_PRESETS.length} flex and rigid-flex design starters, plus your own linked constructions. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
+      description={`${PRESETS.length} rigid FR-4 stackups plus ${FLEX_PRESETS.length} flex and rigid-flex design starters, plus your own linked constructions. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
       properties={properties}
       status={`${active.name} · ${copperCount(active)} layers · ${L(board)} ${unit}${dirty ? ' · modified' : ''}`}
     >
@@ -612,19 +636,38 @@ export function Method() {
         <p>Core and adhesive use the listed 10 GHz datasheet Dk/Df. The Kapton film entry is measured at 1 kHz and is a starting estimate for higher frequencies; enter the values your fabricator specifies. Impedance uses the entered Dk; it does not automatically adjust layer-stack materials with frequency.</p>
         <ul>{FLEX_SOURCES.map(source=><li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul>
       </div></Panel>
-      <Panel title="How Our Rigid Examples Are Built">
-        <div className="prose-doc px-4 py-3">
-          <p>These are original PCBPlanner planning examples generated from a thickness budget. They are not copied fabrication builds or a list of stocked materials. Choose a starting point, save a copy, then enter your fabricator’s proposed construction.</p>
-          <p>For N copper layers and board thickness T, the dielectric budget is T − 2 × {EXAMPLE.outerCopper} − (N − 2) × {EXAMPLE.innerCopper} mm. Outer copper is assumed to be {EXAMPLE.outerCopper * 1000} µm and inner copper {EXAMPLE.innerCopper * 1000} µm. Solder mask is excluded from this board thickness.</p>
-          <ul>
-            <li><b>Single core:</b> the two-layer example puts the entire dielectric budget between its two copper layers.</li>
-            <li><b>Equal dielectric gaps:</b> each of the N − 1 gaps gets an equal share of the dielectric budget.</li>
-            <li><b>Close outer planes:</b> the two outer gaps are {EXAMPLE.closeOuterGap} mm each. The remaining budget is shared equally by the N − 3 inner gaps.</li>
-          </ul>
-          <p>Copper thicknesses and dielectric gaps mirror about the board centre. “Core” and “Prepreg” indicate an illustrative alternating build sequence; a gap can require multiple real plies. Neither label specifies a glass style, resin content, stock thickness or press cycle. Signal and plane roles are editable, and a plane reference means continuous copper in this model.</p>
-          <p>All rigid dielectrics assume Dk {EXAMPLE.dielectricDk} and Df {EXAMPLE.dielectricDf}. Each solder-mask layer assumes {EXAMPLE.maskThickness * 1000} µm, Dk {EXAMPLE.maskDk} and Df {EXAMPLE.maskDf}. These are modelling inputs, with no measured frequency or material certification. Replace them with design values for your frequency and chosen materials.</p>
-          <p>For example, the 6-layer, 1.6 mm close-outer-plane build has 0.142 mm of copper and 1.458 mm of dielectric: two 0.100 mm outer gaps and three 0.419333… mm inner gaps. The two masks add 0.040 mm to the displayed total. This arithmetic defines the example; it does not predict a finished board’s tolerance, copper balance or impedance yield.</p>
+      <Panel title="Reading the Stackup Names">
+        <div className="prose-doc px-4 pt-3">
+          <p>
+            Library stackups are named by how they are built: <b>the prepreg under the outer layers</b>, then <b>the core thickness</b>, for example “1080 prepreg · core 0.6 mm”.
+            “2×2116” means two plies of 2116; “7628+1080” means a 7628 ply plus a 1080 ply. Where two stackups would otherwise share a name, the prepreg between L3 and L4 is added.
+          </p>
+          <p>
+            The numbers identify glass-fabric styles. Pressed thickness and Dk also depend on resin content and processing; the style alone does not specify either value. The outer prepreg sets the distance from an outer trace to its reference plane and affects the width needed for a target impedance. Confirm the construction, material properties and glass-weave requirements with your fabricator.
+          </p>
         </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Glass style</th>
+              <th className="v">Ply thickness in the library</th>
+              <th className="v">Dk in the library</th>
+              <th>Weave</th>
+            </tr>
+          </thead>
+          <tbody>
+            {GLASS_TABLE.map((g) => (
+              <tr key={g.style}>
+                <td>{g.style}</td>
+                <td className="v">
+                  {g.tMin === g.tMax ? fmt(g.tMin, 3) : `${fmt(g.tMin, 3)} – ${fmt(g.tMax, 3)}`} mm
+                </td>
+                <td className="v">{g.dkMin === g.dkMax ? fmt(g.dkMin, 3) : `${fmt(g.dkMin, 3)} – ${fmt(g.dkMax, 3)}`}</td>
+                <td className="text-muted">{WEAVE[g.style] ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </Panel>
       <Panel title="Importing the Stackup">
         <div className="prose-doc px-4 py-3">

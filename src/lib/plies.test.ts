@@ -1,4 +1,3 @@
-import { multiPlyStackup } from './__fixtures__/stackup';
 import { describe, expect, it } from 'vitest';
 import { averageDk, formatPlies, parsePlies, pliesThickness, slabsAbove, slabsBelow } from './plies';
 
@@ -33,9 +32,9 @@ describe('ply lists', () => {
 describe('stacked plies match the stackup path', () => {
   it('slabs built from a ply list equal the ones the advisor solves', async () => {
     const { toSolverGeometry } = await import('./design');
-    const { geometryForLayer } = await import('./stackups');
+    const { geometryForLayer, PRESETS } = await import('./stackups');
     // a 4-layer build with two prepreg plies of different Dk under the outer layer
-    const s = multiPlyStackup;
+    const s = PRESETS.find((x) => x.id === 'std-4l-8-1080-2')!;
     const l1 = s.layers.find((l) => l.kind === 'copper')!;
     const sg = geometryForLayer(s, l1.id)!;
     expect(sg.below!.length).toBe(2);
