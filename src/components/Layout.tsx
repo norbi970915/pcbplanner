@@ -3,6 +3,7 @@ import { MobileToolNavigation } from './MobileToolNavigation';
 import { GlobalSearch } from './GlobalSearch';
 import {
   Suspense,
+  lazy,
   useCallback,
   useEffect,
   useMemo,
@@ -14,7 +15,7 @@ import { Analytics, type BeforeSendEvent } from '@vercel/analytics/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../config';
 import { currentToolUrl } from '../lib/toolUrl';
-import { Home, PanelLeft, Sun, Moon } from 'lucide-react';
+import { Compass, Home, PanelLeft, Sun, Moon } from 'lucide-react';
 import { Button } from './shadcn/button';
 import { Badge } from './shadcn/badge';
 import {
@@ -51,6 +52,7 @@ import { ShellContext, type ToolActions } from '../state/shell';
 import { projectStore, useProjects } from '../state/projectStore';
 import { GROUP_COLORS, GROUPS, TOOLS, toolByPath } from '../tools/registry';
 
+const GuidedHelp = lazy(() => import('./GuidedHelp'));
 const TABS_KEY = 'pcbtk-tabs';
 const PANELS_KEY = 'pcbtk-panels';
 
@@ -153,6 +155,8 @@ export function Layout() {
   const navigate = useNavigate();
   const [menu, setMenu] = useState<string | null>(null);
   const [mobileTools, setMobileTools] = useState(false);
+  const [guidanceOpen, setGuidanceOpen] = useState(false);
+  const openGuidance = useCallback(() => setGuidanceOpen(true), []);
   const [panels, setPanels] = useState(() =>
     readJson(PANELS_KEY, { tools: true, props: true }),
   );
@@ -327,8 +331,8 @@ export function Layout() {
   };
   const showInputs = useCallback(() => setPanels(previous => ({ ...previous, props: true })), []);
   const shell = useMemo(
-    () => ({ propsEl, statusEl, headEl, setActions, showInputs }),
-    [propsEl, statusEl, headEl, setActions, showInputs],
+    () => ({ propsEl, statusEl, headEl, setActions, showInputs, openGuidance }),
+    [propsEl, statusEl, headEl, setActions, showInputs, openGuidance],
   );
   const tabTitle = (p: string) =>
     p === '/'
@@ -353,6 +357,7 @@ export function Layout() {
 
   return (
     <ShellContext.Provider value={shell}>
+      {guidanceOpen && <Suspense fallback={null}><GuidedHelp onClose={() => setGuidanceOpen(false)} /></Suspense>}
       <div className="app-shell flex h-full flex-col">
         <a className="skip-link" href="#tool-panel">
           Skip to content
@@ -485,6 +490,8 @@ export function Layout() {
             ))}
           </Menu>
           <Menu {...menuProps('Help')}>
+            <Item onClick={run(openGuidance)}>Help me choose</Item>
+            <div className="menu-sep" />
             <Item
               onClick={run(() =>
                 document
@@ -518,6 +525,7 @@ export function Layout() {
             Guides
           </Link>
           <div className="header-spacer" />
+          <Button variant="ghost" size="sm" className="guidance-trigger" aria-label="Help me choose" title="Help me choose a tool or use the workspace" onClick={openGuidance}><Compass size={16} aria-hidden="true" /><span>Help me choose</span></Button>
           <GlobalSearch />
           <Button
             variant="ghost"

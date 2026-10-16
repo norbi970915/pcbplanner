@@ -81,3 +81,11 @@
 @media print { .project-save-bar { display: none !important; } }
 
 .communication-nav-link{font-size:11px;font-weight:600;margin:5px 0;gap:8px}.communication-nav-link>span:first-of-type{min-width:0}.communication-nav-link .group-count{flex-shrink:0}
+
+/* Optional task guidance, beside search and below the homepage search field. */
+.guidance-trigger { height: 30px; gap: 7px; color: var(--muted); font-size: 12px; }
+.home-guidance-invitation { display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; margin-top: 7px; color: var(--muted); font-size: 11px; }
+.home-guidance-invitation button { padding-inline: 5px; height: auto; min-height: 32px; font-size: 11px; }
+@media (max-width: 767px) { .guidance-trigger { width: 28px; padding: 0; } .guidance-trigger span { display: none; } }
+@media (max-width: 380px) { .menu-bar .guidance-trigger { display: none; } }
+@media print { .guidance-trigger, .home-guidance-invitation { display: none !important; } }

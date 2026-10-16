@@ -14,7 +14,8 @@ export interface Shell {
   headEl: HTMLElement | null;
   setActions: (a: ToolActions | null) => void;
   showInputs: () => void;
+  openGuidance: () => void;
 }
 
-export const ShellContext = createContext<Shell>({ propsEl: null, statusEl: null, headEl: null, setActions: () => {}, showInputs: () => {} });
+export const ShellContext = createContext<Shell>({ propsEl: null, statusEl: null, headEl: null, setActions: () => {}, showInputs: () => {}, openGuidance: () => {} });
 export const useShell = () => useContext(ShellContext);

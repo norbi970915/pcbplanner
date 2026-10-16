@@ -14,6 +14,7 @@ import {
   ExternalLink,
   ChevronRight,
   FolderPlus,
+  Compass,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/shadcn/card';
 import { Button } from '../components/shadcn/button';
@@ -76,7 +77,7 @@ export default function Home() {
     'PCB impedance, stackup and design calculators',
     'PCB design calculators: impedance field solver, stackup advisor, trace width, via, thermal, crosstalk, PDN and electronics tools. Runs in your browser.',
   );
-  const { statusEl } = useShell();
+  const { statusEl, openGuidance } = useShell();
   const [query, setQuery] = useState(() => {
     try {
       return sessionStorage.getItem(HOME_SEARCH_KEY) ?? '';
@@ -191,6 +192,7 @@ export default function Home() {
                 </Button>
               )}
             </div>
+            <div className="home-guidance-invitation"><span>Not sure where to start?</span><Button type="button" variant="link" size="sm" onClick={openGuidance}><Compass size={15} aria-hidden="true" />Help me choose<ArrowRight size={13} aria-hidden="true" /></Button></div>
           </CardContent>
           {!words.length && (
             <section className="welcome-news" aria-labelledby="home-news-heading">
