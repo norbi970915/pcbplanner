@@ -1,3 +1,4 @@
+import { DEFAULT_STACKUP_ID } from '../data/rigidStackupRules';
 import { CommunicationLinks } from '../components/CommunicationLinks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -22,7 +23,7 @@ import { useUrlState } from '../state/useUrlState';
 
 const DEFAULTS = {
   ifid: 'pcie-gen3',
-  stk: 'std-6l-16-1080-2',
+  stk: DEFAULT_STACKUP_ID,
   lay: '',
   region: '',
   len: 100,
@@ -72,7 +73,7 @@ export default function InterfaceRules() {
   const { unit } = useSettings();
   const stackups = useStackups();
   const spec = interfaceById(p.ifid) ?? INTERFACES[0];
-  const construction = stackups.find((s) => s.id === p.stk) ?? stackups[0];
+  const construction = stackups.find((s) => s.id === p.stk);
   const regionId = construction?.regions?.find(r=>r.id===p.region)?.id ?? construction?.regions?.[0]?.id;
   const stack = useMemo(()=>construction?regionStackup(construction,regionId):undefined,[construction,regionId]);
   const coppers = useMemo(() => (stack ? stack.layers.filter((l) => l.kind === 'copper') : []), [stack]);
@@ -87,8 +88,8 @@ export default function InterfaceRules() {
   const key = JSON.stringify([sg, spec?.id, p.etch, p.srule, p.k, p.sfix, p.minS, p.mat, p.foil, p.acc]);
 
   useEffect(() => {
-    if (!sg || !spec) return;
     const my = ++seq.current;
+    if (!sg || !spec) { setLine(null); setSecond(null); setBusy(false); setError(null); return; }
     setBusy(true);
     const t = setTimeout(() => {
       const diff = spec.z.kind === 'diff';
@@ -159,8 +160,8 @@ export default function InterfaceRules() {
   const scanKey = JSON.stringify([stack?.id, spec?.id, p.etch, p.srule, p.k, p.sfix, p.minS, p.mat, p.foil]);
 
   useEffect(() => {
-    if (!stack || !spec) return;
     const my = ++scanSeq.current;
+    if (!stack || !spec) { setScan(null); return; }
     setScan(null);
     const t = setTimeout(() => {
       const diff = spec.z.kind === 'diff';
@@ -295,6 +296,7 @@ export default function InterfaceRules() {
             Stackup
           </label>
           <select id="ir-stk" className="fld w-[176px]" value={construction?.id ?? ''} onChange={(e) => set({ stk: e.target.value, lay: '',region:'' })}>
+            {!construction && <option value="" disabled>Choose a stackup…</option>}
             {[...new Set(stackups.map(stackupGroup))].map((g) => (
               <optgroup key={g} label={g}>
                 {stackups
@@ -391,7 +393,9 @@ export default function InterfaceRules() {
       method={<Method />}
     >
       <CommunicationLinks/><Notes kind="error" items={errors} />
-      {spec && (
+      {!construction && <Notes kind="error" items={['The selected stackup is unavailable. Choose an example or saved construction in Board. Earlier library IDs are not mapped to different geometries.']} />}
+      {construction?.origin === 'pcbplanner-example-v1' && <Notes items={['PCBPlanner planning example: thicknesses and Dk/Df are assumptions. Enter your fabricator’s construction before finalising design rules.']} />}
+      {spec && construction && (
         <>
           <Panel title={`${spec.name} on ${layerName}`}>
             <div className="flex flex-wrap gap-6 px-3 py-2.5">

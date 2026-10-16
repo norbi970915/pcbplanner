@@ -116,48 +116,22 @@ export default function ViaStubGuide() {
         <li>TI's general layout guides set one fixed limit for every interface: keep via stubs under 15 mil, and back-drill longer ones. <Cite n={[2, 3, 4, 6]} /></li>
       </ul>
 
-      <h2>Worked example: a 1.6 mm six-layer board</h2>
-      <p>
-        The example uses the 1.6 mm six-layer “1080 prepreg · core 0.1/0.7 mm” stackup from the site's library: L1, 0.076 mm 1080 prepreg, L2, 0.10 mm core, L3, then 7628
-        prepreg, a 0.7 mm core and 7628 prepreg, then L4, 0.10 mm core, L5, 1080 prepreg and L6, 1.604 mm from copper to copper. With L2 and L5 as ground, L1, L3, L4 and L6
-        are signal layers (S-G-S-S-G-S). A pair enters at L1, for example from a BGA ball or a surface-mount connector, and leaves on L3, L4 or L6. The stub is the barrel from the
-        far side of the exit-layer copper to the outer surface of L6.
-      </p>
-      <TryIt to="/stackup?id=std-6l-16-1080-3">Open the six-layer stackup in the Stackup tool</TryIt>
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>Exit layer</th>
-            <th className="v">Via used</th>
-            <th className="v">Stub</th>
-            <th className="v">f<sub>stub</sub>, εr = 4.2</th>
-            <th className="v">f<sub>stub</sub>, εeff = 7.1</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>L3</td><td className="v">0.242 mm</td><td className="v">1.363 mm (53.6 mil)</td><td className="v">26.8 GHz</td><td className="v">20.6 GHz</td></tr>
-          <tr><td>L4</td><td className="v">1.378 mm</td><td className="v">0.227 mm (8.9 mil)</td><td className="v">161 GHz</td><td className="v">124 GHz</td></tr>
-          <tr><td>L6</td><td className="v">1.604 mm</td><td className="v">none</td><td className="v">–</td><td className="v">–</td></tr>
-        </tbody>
-      </table>
-      <p>
-        L3 is the inner layer closest to the top, so a pair from L1 to L3 leaves almost the whole barrel unused. At εr 4.2 its null at 26.8 GHz is 6.7 times the Gen3 Nyquist
-        frequency – just short of the 7 × rule, but well inside Samtec's 80 mil. At Gen4 it is only 3.4 times the Nyquist frequency, and at Gen5 the null sits below TI's 29 GHz,
-        so for Gen4 and Gen5 this transition needs back-drilling or a different layer. With εeff 7.1 the margins shrink to 5.2, 2.6 and 1.3 times.
-      </p>
-      <p>
-        L4 sits next to the far side, so its stub of 8.9 mil is already under TI's 15 mil without back-drilling, and its null stays above 7 × Nyquist even for Gen5 (10.1 times
-        at εr 4.2, 7.8 times at εeff 7.1). L6 uses the whole barrel and has no stub, but puts the pair on an outer layer. The rule is symmetrical: a pair entering from the
-        bottom and leaving on L3 has the short stub instead.
-      </p>
-      <TryIt to="/differential-via?len=0.24&stub=1.36">Load the L1 → L3 transition (1.36 mm stub, 26.9 GHz)</TryIt>
-      <TryIt to="/differential-via?len=1.38&stub=0.23">Load the L1 → L4 transition (0.23 mm stub, 159 GHz)</TryIt>
-      <TryIt to="/differential-via?stub=0">Load the L1 → L6 transition (no stub)</TryIt>
-      <p>
-        The rounded inputs give 26.9 GHz and 159 GHz in the tool. To see the pessimistic case, enter εr = 7.1; the tool then reports 20.7 GHz for the L3 stub, but it also
-        uses that εr for the via impedance, so read only the stub line from that run.
-      </p>
-      <TryIt to="/differential-via?len=0.24&stub=1.36&er=7.1">Load the L1 → L3 stub with εeff = 7.1</TryIt>
+      <h2>Worked example: our original 1.6 mm six-layer board</h2>
+      <p>The close-outer-plane PCBPlanner example assumes 35 µm outer copper, four 18 µm inner copper layers, two 0.100 mm outer dielectric gaps and three 0.419333… mm inner gaps. This adds to exactly 1.600 mm excluding mask. The default L2 reference sits above L3; the example is a planning geometry, not a fabrication build.</p>
+      <p>For a through via entering at L1 and leaving at L3, measure from the top surface of L1 through the bottom surface of L3: 0.035 + 0.100 + 0.018 + 0.419333… + 0.018 = 0.590333… mm. The unused barrel below L3 is 1.600 − 0.590333… = 1.009667… mm. This copper-face convention makes used barrel plus stub equal the full copper-to-copper thickness.</p>
+      <TryIt to="/stackup?id=pcbplanner-v1-6l-1600-close">Inspect the original six-layer geometry</TryIt>
+      <table className="tbl"><thead><tr><th>Transition</th><th className="v">Used barrel</th><th className="v">Stub</th><th className="v">f<sub>stub</sub>, εr = 4.2</th><th className="v">f<sub>stub</sub>, εeff = 7.1</th></tr></thead><tbody>
+        <tr><td>L1 → L3, through via</td><td className="v">0.590333 mm</td><td className="v">1.009667 mm</td><td className="v">36.2 GHz</td><td className="v">27.9 GHz</td></tr>
+        <tr><td>L1 → L3, back-drilled to a chosen 0.200 mm residue</td><td className="v">0.590333 mm</td><td className="v">0.200 mm</td><td className="v">182.9 GHz</td><td className="v">140.6 GHz</td></tr>
+        <tr><td>L1 → L6, through via</td><td className="v">1.600 mm</td><td className="v">none</td><td className="v">–</td><td className="v">–</td></tr>
+      </tbody></table>
+      <p>The 36.2 GHz estimate is above seven times the Gen3 Nyquist frequency (28 GHz), but below the corresponding Gen4 and Gen5 thresholds (56 and 112 GHz). The pessimistic 27.9 GHz estimate is just below even the Gen3 threshold. This illustrates why a bulk-Dk calculation is a screening estimate rather than sign-off evidence.</p>
+      <p>A chosen 0.200 mm residual stub puts both estimates above 112 GHz. That residue is an example input, not a promised back-drill capability. Agree residual length and depth tolerance with your fabricator, and simulate the complete transition. Exiting on L6 uses the full barrel and leaves no stub.</p>
+      <TryIt to="/differential-via?len=0.590333&stub=1.009667&er=4.2">Load the L1 → L3 transition (36.2 GHz stub estimate)</TryIt>
+      <TryIt to="/differential-via?len=0.590333&stub=0.2&er=4.2">Compare a chosen 0.200 mm back-drill residue</TryIt>
+      <TryIt to="/differential-via?len=1.6&stub=0&er=4.2">Load L1 → L6 with no stub</TryIt>
+      <TryIt to="/differential-via?len=0.590333&stub=1.009667&er=7.1">Check the pessimistic εeff = 7.1 case</TryIt>
+      <p>The via-stub checks use εr 4.2 and 7.1 to keep the two comparisons above consistent. They do not use the stackup example’s assumed bulk Dk 4.0. Entering 7.1 in the via calculator also changes its impedance estimate, so read only the stub result for that comparison.</p>
 
       <h2>The longest stub per interface</h2>
       <p>
@@ -219,7 +193,7 @@ export default function ViaStubGuide() {
       <ul>
         <li>
           <b>Choose the exit layer.</b> TI's example compares a 10-layer via from L3 to L10 (long stub, to be back-drilled) with one from L1 to L8 (stub of 15 mil or
-          less). <Cite n={3} /> In the six-layer example, moving the pair from L3 to L4 shortens the stub from 53.6 mil to 8.9 mil. Through vias that run from the top to the bottom
+          less). <Cite n={3} /> Choosing a different exit layer changes the unused barrel length; measure it from the actual layer positions. Through vias that run from the top to the bottom
           layer have no stub at all. <Cite n={1} />
         </li>
         <li>

@@ -1,6 +1,7 @@
 // Stackup model, presets and conversion to an impedance geometry.
 import { regionStackup } from './stackupRegions';
-import { FAB_STACKUPS, type RawStackup } from '../data/fabStackups';
+import { createRigidExamples } from './rigidStackupExamples';
+export { RIGID_ROLE_PATTERNS as ROLE_PATTERNS } from '../data/rigidStackupRules';
 
 export type LayerKind = 'mask' | 'copper' | 'dielectric' | 'coverlay' | 'adhesive';
 export type CopperRole = 'signal' | 'plane';
@@ -37,6 +38,7 @@ export interface Stackup {
   regionName?: string;
   label?: string; // short name inside its layer-count/thickness group (library stackups)
   note?: string;
+  origin?: 'pcbplanner-example-v1'; // assumptions used by the original example generator
   vendor?: string;
   nominal?: number; // nominal finished thickness, mm
 }
@@ -44,53 +46,13 @@ export interface Stackup {
 let uid = 0;
 export const newId = () => `l${Date.now().toString(36)}${(uid++).toString(36)}`;
 
-/**
- * Default signal/plane assignment per copper count. Every signal layer gets at
- * least one adjacent reference plane; inner signal layers sit between planes.
- */
-export const ROLE_PATTERNS: Record<number, string> = {
-  2: 'SP',
-  4: 'SPPS',
-  6: 'SPSPPS',
-  8: 'SPSPPSPS',
-  10: 'SPSPPSPSPS',
-  12: 'SPSPSPPSPSPS',
-};
-
-const MASK_T = 0.0305; // 1.2 mil, a common LPI mask thickness over laminate
-const MASK_ER = 3.8;
-/** Df of NP-155F (Nan Ya datasheet 0.014–0.016 at 1 GHz, middle) and a typical LPI mask (Taiyo PSR-4000 BN: 0.027 at 1 GHz). */
+/** Defaults for user-added layers and older saved constructions; presets have explicit assumptions. */
 export const FR4_DF = 0.015;
 export const MASK_DF = 0.027;
-/** Default Df for new dielectric layers (same FR-4 as the library stackups). */
+const MASK_ER = 3.8; // Preserve the fallback for saved layers without an explicit mask Dk.
 export const DEFAULT_DF = FR4_DF;
 
-function fromRaw(r: RawStackup): Stackup {
-  const pattern = ROLE_PATTERNS[r.n] ?? '';
-  let ci = 0;
-  const layers: Layer[] = [{ id: `${r.id}-mt`, kind: 'mask', name: 'Top Solder', t: MASK_T, er: MASK_ER, df: MASK_DF }];
-  r.L.forEach((l, i) => {
-    if (l[0] === 'c') {
-      const role: CopperRole = pattern[ci] === 'P' ? 'plane' : 'signal';
-      ci++;
-      layers.push({ id: `${r.id}-${i}`, kind: 'copper', name: l[1], t: l[2], role });
-    } else {
-      layers.push({ id: `${r.id}-${i}`, kind: 'dielectric', name: l[1], t: l[2], er: l[3], df: FR4_DF });
-    }
-  });
-  layers.push({ id: `${r.id}-mb`, kind: 'mask', name: 'Bottom Solder', t: MASK_T, er: MASK_ER, df: MASK_DF });
-  return {
-    id: r.id,
-    name: `${r.n}L ${r.nominal} mm · ${r.name}`,
-    label: r.name,
-    layers,
-    builtin: true,
-    nominal: r.nominal,
-    note: 'Standard FR-4 construction (NP-155F-class laminate). Default layer roles assigned; edit as needed.',
-  };
-}
-
-export const PRESETS: Stackup[] = FAB_STACKUPS.map(fromRaw);
+export const PRESETS: Stackup[] = createRigidExamples();
 
 /** Name inside a stackup dropdown group (the group already says layers and thickness). */
 export const shortName = (s: Stackup) => s.label ?? s.name;

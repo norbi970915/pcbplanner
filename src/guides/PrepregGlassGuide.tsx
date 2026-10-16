@@ -183,7 +183,7 @@ export default function PrepregGlassGuide() {
       </p>
       <p>
         The same calculation over the S1141 rows above gives 0.130 mm for 1080 (0.081 mm, Dk 3.85), 0.199 mm for 2116 (0.123 mm, Dk 4.17) and 0.329 mm for 7628 (0.199 mm, Dk 4.40),
-        with mask. The stackup guide's figures differ again because its fab stackup uses other ply thicknesses. In every case the answer depends on the thickness your fabricator
+        with mask. The stackup guide uses original planning examples with assumed materials rather than glass-style builds. In every case the answer depends on the thickness your fabricator
         actually presses, so use its stackup sheet for the final width.
       </p>
       <TryIt to="/impedance?w=0.119&h=0.076&er=3.9">Open the 1080 example (0.119 mm over 0.076 mm, Dk 3.90) in the impedance calculator</TryIt>

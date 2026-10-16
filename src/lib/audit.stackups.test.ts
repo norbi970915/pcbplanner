@@ -1,3 +1,4 @@
+import { multiPlyStackup } from './__fixtures__/stackup';
 import { describe, expect, it } from 'vitest';
 import { closedFormWidth, findWidth, spacingFor, toSolverGeometry } from './design';
 import { microstripHJ } from './closedform';
@@ -8,13 +9,13 @@ import { nominalThickness, rankAdvice } from './advisor';
 const mk = (layers: Omit<Layer, 'id'>[]): Stackup => ({ id: 's', name: 's', layers: layers.map((l, i) => ({ ...l, id: `x${i}` })) });
 
 describe('audit: geometryForLayer', () => {
-  it('4-layer 1080/7628 preset: L1 microstrip over L2 with both prepregs and the mask', () => {
-    const s = PRESETS.find((p) => p.id === 'std-4l-8-1080-2')!;
+  it('synthetic 4-layer geometry: L1 sees both dielectric plies and the mask', () => {
+    const s = multiPlyStackup;
     const g = geometryForLayer(s, s.layers.find((l) => l.name === 'L1')!.id)!;
     expect(g.type).toBe('microstrip');
-    expect(g.h).toBeCloseTo(0.084 + 0.2104, 9); // prepreg 1080 + prepreg 7628 (fabStackups.ts)
-    expect(g.mask).toEqual({ c1: 0.0305, c2: 0.01525, er: 3.8 });
-    expect(nominalThickness(s)).toBe(0.8);
+    expect(g.h).toBeCloseTo(0.1 + 0.2, 9); // both independent test plies
+    expect(g.mask).toEqual({ c1: 0.02, c2: 0.01, er: 3.5 });
+    expect(nominalThickness(s)).toBe(1.106);
   });
 
   it('stripline between two planes', () => {
@@ -50,11 +51,11 @@ describe('audit: geometryForLayer', () => {
   });
 
   it('collapsing stacked prepregs into one εr (thickness-weighted) costs < 1 % in Z', () => {
-    // Documented approximation: layered 7628 (4.4) + 1080 (3.91) under a 0.5 mm trace:
+    // Documented approximation: synthetic layers (Dk 4.2 and 3.8) under a 0.5 mm trace:
     // two-slab field solution vs single-slab arithmetic mean εr.
-    const w = 0.5, t = 0.035, h = 0.2944;
-    const two = solve({ w, t, yTrace: h, diff: false, slabs: [{ y0: 0, y1: 0.2104, er: 4.4 }, { y0: 0.2104, y1: h, er: 3.91 }] }).se!.z;
-    const one = solve({ w, t, yTrace: h, diff: false, slabs: [{ y0: 0, y1: h, er: (0.2104 * 4.4 + 0.084 * 3.91) / h }] }).se!.z;
+    const w = 0.5, t = 0.035, h = 0.3;
+    const two = solve({ w, t, yTrace: h, diff: false, slabs: [{ y0: 0, y1: 0.2, er: 4.2 }, { y0: 0.2, y1: h, er: 3.8 }] }).se!.z;
+    const one = solve({ w, t, yTrace: h, diff: false, slabs: [{ y0: 0, y1: h, er: (0.2 * 4.2 + 0.1 * 3.8) / h }] }).se!.z;
     expect(Math.abs(one / two - 1)).toBeLessThan(0.01);
   }, 60000);
 });

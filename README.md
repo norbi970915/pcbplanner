@@ -8,7 +8,7 @@ Browser-based calculators for PCB design with a compact shadcn/ui workbench: men
 |---|---|
 | Signal integrity | Impedance (2D field solver: microstrip / coated / embedded / stripline / coplanar, SE and differential (edge-coupled and balanced shielded broadside), solve W or S, laminate library), Delay & timing, Termination, Trace loss (incremental-inductance conductor loss with Hammerstad / Groiss / Huray roughness, field-energy dielectric loss, Djordjevic–Sarkar Dk/Df), Crosstalk, Differential via, Via stitching & fence spacing, Interface rules, Phase noise & jitter, S-parameter viewer |
 | RF | VSWR & return loss, Coax impedance, L-network matching, Quarter-wave & stubs |
-| Stackup | Stackup advisor, Layer stack manager (178 rigid fabricator stackups, 2–12 layers, plus flex and rigid-flex starters), Materials (datasheet Dk/Df, solder masks, copper foil roughness) |
+| Stackup | Stackup advisor, Layer stack manager (37 original rigid examples, 2–12 layers, plus flex and rigid-flex starters), Materials (datasheet Dk/Df, solder masks, copper foil roughness) |
 | Thermal | Junction temperature, Thermal vias, Copper heat spreading |
 | Power & conductors | Trace width / current (IPC-2221, IPC-2152), Via, Skin effect, Fusing current, Wire gauge / drop, Conductor spacing (IPC-2221), Creepage & clearance (IEC 60664-1) |
 | Power integrity | PDN, EMI filter |
@@ -49,7 +49,7 @@ It has been checked against:
 
 ## Stackup data
 
-- `src/data/fabStackups.ts` holds 178 standard FR-4 stackups (2–12 layers, 0.8–2.0 mm), named by their outer prepreg glass style.
+- `src/lib/rigidStackupExamples.ts` generates 37 original planning examples (2–12 copper layers) from the explicit thickness budgets in `src/data/rigidStackupRules.ts`. Equal-gap and close-outer-plane variants use assumed materials; they are not a fabricator catalogue. Geometry and assumptions are documented in the Stackup tool. Versioned IDs must not be reused for changed geometry.
 - Default layer roles (signal / plane) are assigned by layer count in `src/lib/stackups.ts` (`ROLE_PATTERNS`).
 
 The layer stack manager also includes six editable flex and rigid-flex starters in `src/data/flexStackups.ts`. Regional membership references shared layer records, so copper and dielectric edits stay linked. The advisor evaluates each physical region separately, using its own thickness, reference planes and coverlay/adhesive plies. These are uniform cross-section models with solid planes; bends, transitions and hatched planes need separate validation. Material notes distinguish per-ply Dk/Df reference frequencies and the low-frequency Kapton film estimate.
