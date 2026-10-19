@@ -1,4 +1,4 @@
-import { Calculator, BookOpen, FolderOpen, ArrowRight } from 'lucide-react';
+import { Calculator, BookOpen, Layers, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card } from '../components/shadcn/card';
 import { useDocumentMeta } from '../components/ToolPage';
@@ -6,7 +6,7 @@ import { APP_NAME } from '../config';
 import { GROUP_COLORS } from '../tools/registry';
 
 export const ABOUT_DESCRIPTION =
-  'About PCB Planner: free PCB design calculators, a 2D field solver, stackup tools and practical guides. Compare designs and save your work without an account.';
+  'About PCB Planner: free PCB design calculators, a 2D field solver, stackup tools and practical guides. Compare design alternatives and share calculations without an account.';
 
 export default function About() {
   useDocumentMeta(`About ${APP_NAME}`, ABOUT_DESCRIPTION);
@@ -37,11 +37,11 @@ export default function About() {
               <span>Worked examples, explanations and links to the sources.</span>
               <span className="about-feature-link">Read the guides <ArrowRight size={13} aria-hidden="true" /></span>
             </Link>
-            <Link to="/projects" className="about-feature">
-              <FolderOpen size={21} color={GROUP_COLORS.Stackup} aria-hidden="true" />
-              <strong>Keep your work</strong>
-              <span>Save calculation inputs and export projects with custom stackups.</span>
-              <span className="about-feature-link">Open projects <ArrowRight size={13} aria-hidden="true" /></span>
+            <Link to="/stackup" className="about-feature">
+              <Layers size={21} color={GROUP_COLORS.Stackup} aria-hidden="true" />
+              <strong>Plan your stackup</strong>
+              <span>Explore rigid, flex and rigid-flex constructions and their impedance.</span>
+              <span className="about-feature-link">Open stackup manager <ArrowRight size={13} aria-hidden="true" /></span>
             </Link>
           </nav>
 
@@ -87,9 +87,9 @@ export default function About() {
             <h2 id="about-data">Your work stays in your browser</h2>
             <p>
               Calculations run locally, without an account or a server-side calculation service.
-              Favorites, saved projects and custom stackups use browser storage. They remain after
+              Favorites and custom stackups use browser storage. They remain after
               closing and reopening the browser while its site data is kept, and do not automatically
-              sync to another device. Export projects and stackups to keep a backup or move them elsewhere.
+              sync to another device. Export custom stackups to keep a backup or move them elsewhere.
             </p>
             <p>
               Calculator links carry the input settings for that calculation. They do not attach

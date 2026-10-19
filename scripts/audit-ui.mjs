@@ -224,13 +224,6 @@ try {
   );
   assert.equal(await fields.first().inputValue(), '12');
   checks.push('Calculator input, result updates and reset');
-  await visit('/projects');
-  await page.getByLabel('New project', { exact: true }).fill('UI audit board');
-  await page.getByRole('button', { name: 'Create', exact: true }).click();
-  assert.ok(
-    (await page.locator('main').innerText()).includes('UI audit board'),
-  );
-  checks.push('Project creation');
   await page.setViewportSize({ width: 390, height: 900 });
   await visit('/');
   await page

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { FeaturedTools } from '../components/FeaturedTools';
 import { useDocumentMeta } from '../lib/useDocumentMeta';
@@ -13,8 +13,6 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
-  FolderPlus,
-  FolderOpen,
   Compass,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/shadcn/card';
@@ -23,8 +21,6 @@ import { Input } from '../components/shadcn/input';
 import { Badge } from '../components/shadcn/badge';
 import { NEWS } from '../data/news';
 import { useShell } from '../state/shell';
-import { CreateProjectDialog } from '../components/CreateProjectDialog';
-import { useProjects } from '../state/projectStore';
 import { GUIDES } from '../guides/registry';
 import { searchEntries, type SearchEntry } from '../lib/siteSearch';
 import { GROUP_COLORS, GROUPS, TOOLS } from './registry';
@@ -54,61 +50,6 @@ function Heading({
     </CardHeader>
   );
 }
-function HomeProjectStart() {
-  const navigate = useNavigate();
-  const { projects, activeId } = useProjects();
-  const project = projects.find(item => item.id === activeId) ?? projects[0];
-  const recent = [...(project?.tools ?? [])]
-    .sort((a, b) => (Number.isFinite(b.updated) ? b.updated : 0) - (Number.isFinite(a.updated) ? a.updated : 0))
-    .flatMap(entry => {
-      const tool = TOOLS.find(tool => tool.path === entry.path);
-      return tool ? [{ ...entry, tool }] : [];
-    }).slice(0, 3);
-
-  if (project) return (
-    <section className="home-project-start" aria-labelledby="home-project-heading">
-      <FolderOpen className="home-project-icon" size={22} aria-hidden="true" />
-      <div className="home-project-copy">
-        <h2 id="home-project-heading">Continue your project</h2>
-        <p className="home-project-name">{project.name}</p>
-        <p>{project.tools.length
-          ? project.tools.length + ' saved ' + (project.tools.length === 1 ? 'calculation' : 'calculations')
-          : 'No calculations saved yet. Open your project to get started.'}</p>
-        {recent.length > 0 && <ul className="home-project-tools" aria-label="Recent saved calculations">
-          {recent.map(entry => <li key={entry.path}>
-            <Link to={entry.path + (entry.query ? '?' + entry.query : '')} title={'Open saved calculation: ' + entry.tool.title}>
-              <CategoryIcon group={entry.tool.group} color={GROUP_COLORS[entry.tool.group]} size={14} />
-              <span>{entry.tool.nav}</span><ArrowRight size={12} aria-hidden="true" />
-            </Link>
-          </li>)}
-        </ul>}
-        <div className="home-project-actions">
-          <Button size="sm" onClick={() => navigate('/projects')}><FolderOpen size={15} />Open project</Button>
-          <CreateProjectDialog onCreated={() => navigate('/projects')}>
-            <Button size="sm" variant="ghost"><FolderPlus size={15} />Create another</Button>
-          </CreateProjectDialog>
-        </div>
-      </div>
-    </section>
-  );
-
-  return (
-    <section className="home-project-start" aria-labelledby="home-project-heading">
-      <FolderPlus className="home-project-icon" size={22} aria-hidden="true" />
-      <div className="home-project-copy">
-        <h2 id="home-project-heading">Keep your board calculations together</h2>
-        <p>Save calculator inputs in a project and reopen them in this browser, even after closing it. No account needed.</p>
-        <div className="home-project-actions">
-          <CreateProjectDialog onCreated={() => navigate('/projects')}>
-            <Button size="sm"><FolderPlus size={15} />Create a project</Button>
-          </CreateProjectDialog>
-          <Link to="/projects">Your projects<ArrowRight size={13} /></Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export default function Home() {
   useDocumentMeta(
     'PCB impedance, stackup and design calculators',
@@ -183,13 +124,11 @@ export default function Home() {
             </div>
             <p className="intro">
               PCB design calculators for stackups, signals, power and
-              components. Share a calculation by link, or save your setups
-              together in a project.{' '}
+              components. Share a calculation by link.{' '}
               <Link to="/about">
                 About PCB Planner <ExternalLink size={11} />
               </Link>
             </p>
-            <HomeProjectStart />
             <div className="search-label">
               <label htmlFor="home-search">Find a tool or guide</label>
               <span>

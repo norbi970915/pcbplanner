@@ -49,7 +49,6 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { CategoryIcon } from './CategoryIcon';
 import { useSettings } from '../state/settings';
 import { ShellContext, type ToolActions } from '../state/shell';
-import { projectStore, useProjects } from '../state/projectStore';
 import { GROUP_COLORS, GROUPS, TOOLS, toolByPath } from '../tools/registry';
 
 const GuidedHelp = lazy(() => import('./GuidedHelp'));
@@ -161,14 +160,11 @@ export function Layout() {
     readJson(PANELS_KEY, { tools: true, props: true }),
   );
   const [tabs, setTabs] = useState<string[]>(() =>
-    readJson(TABS_KEY, ['/', '/impedance']),
+    readJson<string[]>(TABS_KEY, ['/', '/impedance']).filter(path => path === '/' || path === '/tools' || path === '/schematic' || !!toolByPath(path)),
   );
   const [propsEl, setPropsEl] = useState<HTMLElement | null>(null);
   const [statusEl, setStatusEl] = useState<HTMLElement | null>(null);
   const [headEl, setHeadEl] = useState<HTMLElement | null>(null);
-  const { projects, activeId } = useProjects();
-  const activeProject = projects.find((p) => p.id === activeId);
-  const [canSaveTool, setCanSaveTool] = useState(false);
   const [analyticsChoice, setAnalyticsChoice] =
     useState<AnalyticsChoice | null>(readAnalyticsChoice);
   const [consentOpen, setConsentOpen] = useState(
@@ -181,7 +177,6 @@ export function Layout() {
   const actions = useRef<ToolActions | null>(null);
   const setActions = useCallback((a: ToolActions | null) => {
     actions.current = a;
-    setCanSaveTool(!!a?.canSave);
   }, []);
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -288,16 +283,6 @@ export function Layout() {
       window.removeEventListener('keydown', onKey);
     };
   }, [isTool]);
-  const saveTool = () => {
-    setMenu(null);
-    // The stackup manager keeps its own draft/save controls; preserve saving its selected stackup link.
-    if (path === '/stackup') {
-      const id = activeId ?? projectStore.create('My board').id;
-      projectStore.saveTool(id, path, new URL(currentToolUrl()).search.slice(1));
-      return;
-    }
-    actions.current?.save?.();
-  };
   const run = (fn: () => void) => () => {
     setMenu(null);
     fn();
@@ -405,11 +390,6 @@ export function Layout() {
             <Item onClick={run(() => actions.current?.reset?.())}>
               Reset Inputs
             </Item>
-            <div className="menu-sep" />
-            <Item onClick={saveTool} disabled={!canSaveTool && path !== '/stackup'}>
-              Save Tool to Project
-            </Item>
-            <Item onClick={run(() => navigate('/projects'))}>Projects…</Item>
             <div className="menu-sep" />
             {!!toolByPath(path) && <Item onClick={openReport}>Calculation report...</Item>}
             <Item onClick={isTool ? openReport : run(() => window.print())} hint="Ctrl+P">
@@ -680,15 +660,6 @@ export function Layout() {
             <span title="No network connection: the calculators keep working from the saved copy">
               Offline
             </span>
-          )}
-          {activeProject && (
-            <Link
-              to="/projects"
-              className="hidden truncate text-muted no-underline hover:text-ink sm:inline"
-              title="Projects"
-            >
-              {`Project: ${activeProject.name}`}
-            </Link>
           )}
           <button
             type="button"

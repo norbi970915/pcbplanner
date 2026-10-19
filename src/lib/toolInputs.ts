@@ -18,22 +18,16 @@ export function parseToolQuery<T extends ToolDefaults>(search: string, defaults:
   return out as T;
 }
 
-/** Compact URLs for sharing; full snapshots keep defaults explicit when reopening a saved tool. */
-export function encodeToolQuery<T extends ToolDefaults>(state: T, defaults: T, includeDefaults = false): string {
+/** Compact calculator input URLs for sharing. */
+export function encodeToolQuery<T extends ToolDefaults>(state: T, defaults: T): string {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(state)) {
     const def = defaults[k];
-    if (!includeDefaults) {
-      if (v === def) continue;
-      if (typeof v === 'number' && typeof def === 'number' && Number(v.toPrecision(7)) === Number(def.toPrecision(7))) continue;
-    }
+    if (v === def) continue;
+    if (typeof v === 'number' && typeof def === 'number' && Number(v.toPrecision(7)) === Number(def.toPrecision(7))) continue;
     if (typeof v === 'number') q.set(k, String(Number(v.toPrecision(7))));
     else if (typeof v === 'boolean') q.set(k, v ? '1' : '0');
     else q.set(k, v);
   }
   return q.toString();
-}
-
-export function normaliseToolQuery(search: string, defaults: ToolDefaults): string {
-  return encodeToolQuery(parseToolQuery(search, defaults), defaults);
 }

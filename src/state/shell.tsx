@@ -3,8 +3,6 @@ import { createContext, useContext } from 'react';
 export interface ToolActions {
   reset?: () => void;
   report?: () => void;
-  save?: () => void;
-  canSave?: boolean;
 }
 
 export interface Shell {

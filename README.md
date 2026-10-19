@@ -15,7 +15,7 @@ Browser-based calculators for PCB design with a compact shadcn/ui workbench: men
 | Power supply | Power tree, Buck converter (TI SLVA477B), Boost converter (TI SLVA372D), LDO dissipation, Feedback divider |
 | Components | Spiral inductor, Padstack, SMD land pattern, BGA land, Resistor color code, SMD resistor code, Capacitor code |
 | Electronics | Ohm's law, Reactance & resonance, RC filters, Active filters, Op-amp gain, Crystal & ppm, 555 timer, I²C pull-up, Logic levels, Comparator hysteresis, ADC input, NTC thermistor, Current-sense shunt, Resistor tools, Attenuator pads |
-| Utilities | Projects, Unit converter, Reference charts |
+| Utilities | Unit converter, Reference charts |
 
 The site also has 34 guides (`src/guides/`), a page per laminate datasheet (`src/data/materialPages.ts`) and a layout-guideline page per interface (`src/data/interfacePages.ts`).
 
@@ -23,11 +23,11 @@ Every tool keeps its inputs in the URL, so any result can be shared as a link.
 
 ## Interface
 
-Shared components live in src/components/shadcn/. Workbench layout and page styles are in src/styles/workbench.css; dark/light theme and material colors are in src/index.css. The desktop app keeps docked tools and properties, and phones have an accessible tools drawer. The existing calculator, URL state, projects and offline behavior are retained.
+Shared components live in src/components/shadcn/. Workbench layout and page styles are in src/styles/workbench.css; dark/light theme and material colors are in src/index.css. The desktop app keeps docked tools and properties, and phones have an accessible tools drawer. The existing calculator, URL state and offline behavior are retained.
 
 Favorite tools with the star in the sidebar or calculator heading. Favorites appear at the top of the tools panel, persist in localStorage on the same browser/device, and update across open tabs.
 
-Run node scripts/audit-ui.mjs after starting the production preview to check all routes at desktop and phone sizes, theme switching, search, calculator reset, projects and mobile navigation. Screenshots and the report are saved under dist-check/redesign/.
+Run node scripts/audit-ui.mjs after starting the production preview to check all routes at desktop and phone sizes, theme switching, search, calculator reset and mobile navigation. Screenshots and the report are saved under dist-check/redesign/.
 
 Run node scripts/audit-featured-carousel.mjs for the featured-tools carousel: all ten illustrations, three visible cards, arrows that move one tool at a time, free dragging and touch swiping with momentum, position indicator, keyboard navigation and dark/light mobile layouts. Its screenshots and report are saved under dist-check/carousel/.
 

@@ -4,7 +4,6 @@ import { useTrackedState } from './useTrackedState';
 import { REFRESH_INPUTS_EVENT } from './designHistoryStore';
 import { FLUSH_TOOL_URL_EVENT } from '../lib/toolUrl';
 import { encodeToolQuery as encode, parseToolQuery as parse } from '../lib/toolInputs';
-import { toolInputsStore } from './toolInputsStore';
 
 type Primitive = string | number | boolean;
 const SESSION_PREFIX = 'pcbplanner:tool:';
@@ -72,7 +71,6 @@ export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
   }, [location.key, location.search, path, replaceState]);
 
   useEffect(() => {
-    toolInputsStore.publish(path, state, defaultsRef.current);
     saveSession(path, state, defaultsRef.current);
     const writeUrl = () => {
       const q = encode(state, defaultsRef.current);

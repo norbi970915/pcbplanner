@@ -6,12 +6,10 @@ import {
   ChevronRight,
   BookOpen,
   Star,
-  FolderOpen,
 } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 import { FavoriteButton } from './FavoriteButton';
 import { useFavorites } from '../state/favoritesStore';
-import { useProjects } from '../state/projectStore';
 import { Separator } from './shadcn/separator';
 import { GROUP_COLORS, GROUPS, TOOLS } from '../tools/registry';
 export function ToolsNavigation({
@@ -22,8 +20,6 @@ export function ToolsNavigation({
   onNavigate?: () => void;
 }) {
   const favorites = useFavorites();
-  const { projects, activeId } = useProjects();
-  const activeProject = projects.find((project) => project.id === activeId);
   const pinned = favorites.flatMap((path) => {
     const tool = TOOLS.find((item) => item.path === path);
     return tool ? [tool] : [];
@@ -60,30 +56,6 @@ export function ToolsNavigation({
         <CategoryIcon group="Electronics" color="var(--muted)" size={16} />Gerber viewer &amp; compare
       </Link>
       <Separator className="nav-separator" />
-      {activeProject && (
-        <>
-          <section className="active-project-navigation" aria-label="Active project">
-            <h2 className="active-project-heading">
-              <FolderOpen size={14} aria-hidden="true" />
-              Active project
-            </h2>
-            <Link
-              className={'side-link active-project-link' + (path === '/projects' ? ' current' : '')}
-              aria-current={path === '/projects' ? 'page' : undefined}
-              title={'Open project: ' + activeProject.name}
-              to="/projects"
-              onClick={onNavigate}
-            >
-              <span className="active-project-details">
-                <strong>{activeProject.name}</strong>
-                <span>{activeProject.tools.length} saved {activeProject.tools.length === 1 ? 'tool' : 'tools'}</span>
-              </span>
-              <ChevronRight size={12} aria-hidden="true" />
-            </Link>
-          </section>
-          <Separator className="nav-separator" />
-        </>
-      )}
       <section className="favorites-navigation" aria-label="Favorite tools">
         <div className="favorites-heading">
           <Star size={14} aria-hidden="true" />

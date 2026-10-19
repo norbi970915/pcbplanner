@@ -38,7 +38,7 @@ export default function ResinRichLayer() {
     <TryIt to={example + '&resin=0&resinDk=0&resinAbove=0'}>Open the composite baseline</TryIt>
     <TryIt to={example + '&resin=1&resinDk=3.2&resinAbove=0'}>Model resin beside the copper, with R = 0</TryIt>
     <TryIt to={example + '&resin=1&resinDk=3.2&resinAbove=0.02'}>Add the 0.020 mm band above the copper</TryIt>
-    <p>To compare a different design, save the composite case as A using the comparison control, enable the layer and enter its properties, then compare the changed inputs and results. Save to a project if you want to reopen the setup later.</p>
+    <p>To compare a different design, save the composite case as A using the comparison control, enable the layer and enter its properties, then compare the changed inputs and results. Copy the calculator link if you want to reopen the setup later.</p>
 
     <h2>Why the impedance changes</h2>
     <p>The solver assigns the entered permittivity to each dielectric region and calculates capacitance from the electrostatic field. It repeats the calculation with the dielectric replaced by air. For a single line, or for each differential mode, the quasi-static relationship is <Cite n={4} />:</p>

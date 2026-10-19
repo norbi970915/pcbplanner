@@ -44,7 +44,7 @@ try {
   await page.goto(base + '/');
   await page.locator('.home-guidance-invitation').waitFor();
   assert.equal(await panel.count(), 0, 'Guidance must not open automatically');
-  assert(await page.getByRole('button', { name: 'Create a project', exact: true }).isVisible());
+  assert.equal(await page.getByRole('button', { name: 'Create a project', exact: true }).count(), 0);
   const homeTrigger = page.locator('.home-guidance-invitation button');
   await homeTrigger.click(); await panel.waitFor();
   await noOverflow();
@@ -70,7 +70,6 @@ try {
     assert.equal(await panel.locator('.guidance-steps li').count(), item.steps.length);
     assert.equal(await panel.locator('.guidance-workspace-note').innerText(), item.note);
     if (item.action) assert.equal(await panel.getByRole('link', { name: item.action.label, exact: true }).getAttribute('href'), item.action.to);
-    if (item.id === 'save') await page.screenshot({ path: 'dist-check/guidance/projects-desktop.png' });
     await panel.getByRole('button', { name: 'Workspace topics', exact: true }).click();
   }
   await page.keyboard.press('Escape'); await panel.waitFor({ state: 'detached' });
@@ -107,8 +106,8 @@ try {
     await category('communication'); await task('communication', 'highspeed'); await noOverflow();
     await page.screenshot({ path: 'dist-check/guidance/result-' + width + '.png' });
     await panel.getByRole('tab', { name: 'Use the workspace', exact: true }).click();
-    await panel.locator('.guidance-choice').filter({ hasText: 'Save calculations in a project' }).click(); await noOverflow();
-    await page.screenshot({ path: 'dist-check/guidance/projects-' + width + '.png' });
+    await panel.locator('.guidance-choice').filter({ hasText: 'Share a calculation' }).click(); await noOverflow();
+    await page.screenshot({ path: 'dist-check/guidance/sharing-' + width + '.png' });
     await panel.getByRole('button', { name: 'Close guidance', exact: true }).click();
   }
   await page.setViewportSize({ width: 1500, height: 1050 });

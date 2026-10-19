@@ -102,7 +102,7 @@ html, body { overscroll-behavior-x: none; }
   html, body, #root, .app-shell { height: auto !important; overflow: visible !important; background: #fff !important; }
   .workspace, .overflow-x-auto { overflow: visible !important; height: auto !important; max-height: none !important; }
   .skip-link, .menu-bar, .document-bar, .tools-panel, .status-bar, .mobile-workbench-bar,
-  .tool-page > .tool-heading:not(.mobile-tool-heading), .tool-actions, .properties-resizer, .properties-heading, .project-save-bar, .global-search-trigger,
+  .tool-page > .tool-heading:not(.mobile-tool-heading), .tool-actions, .properties-resizer, .properties-heading, .global-search-trigger,
   aside[aria-labelledby='analytics-consent-title'], .content-footer { display: none !important; }
   .workspace, .properties-panel, main { display: block !important; width: auto !important; max-width: none !important; border: 0 !important; }
   /* the narrow-screen heading sits above the inputs, so the printout reads title, inputs, results */

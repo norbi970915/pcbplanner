@@ -585,15 +585,6 @@ export const TOOLS: ToolDef[] = [
   },
 
   {
-    path: '/projects',
-    metaDescription: 'Save the inputs of every calculator for a board under one name, reopen them later, and export or import a project file. Everything stays in your browser.',
-    title: 'Projects',
-    nav: 'Projects',
-    group: 'Utilities',
-    summary: 'Save the inputs of every calculator for a board under one name, reopen them later, and export or import them as a project file.',
-    component: lazyPage(() => import('./Projects')),
-  },
-  {
     path: '/units',
     title: 'Unit Converter',
     nav: 'Unit converter',

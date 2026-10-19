@@ -56,7 +56,7 @@ try {
   await page.evaluate(theme=>sessionStorage.setItem('pcbtk-settings',JSON.stringify({theme,unit:'mm'})),theme);
   for(const width of [1600,1024,390,320]){
    await page.setViewportSize({width,height:1050});
-   for(const route of ['/','/buck-converter','/boost-converter','/crosstalk','/rc-filter','/stackup','/adc-input','/projects']){
+   for(const route of ['/','/buck-converter','/boost-converter','/crosstalk','/rc-filter','/stackup','/adc-input']){
     await visit(route);await layout(theme+' '+width+' '+route);
     if(width<1024&&route!=='/')assert.ok(await page.locator('.mobile-workbench-bar').isVisible());
     if(route==='/'||width>=1024)assert.ok(await page.locator('.mobile-workbench-bar').count()===0||!await page.locator('.mobile-workbench-bar').isVisible());

@@ -4,11 +4,14 @@ import './index.css'
 import App from './App.tsx'
 import { guideByPath } from './guides/registry'
 import { registerServiceWorker } from './lib/pwa'
+import { clearRetiredBrowserData } from './lib/retiredBrowserData'
 import { toolByPath } from './tools/registry'
 import { materialPageByPath } from './data/materialPages'
 import { MaterialPageRoute } from './pages/materialRoute'
 import { interfacePageByPath } from './data/interfacePages'
 import { InterfacePageRoute } from './pages/interfaceRoute'
+
+try { clearRetiredBrowserData(window.localStorage, window.sessionStorage) } catch { /* Browser storage may be unavailable. */ }
 
 registerServiceWorker()
 
