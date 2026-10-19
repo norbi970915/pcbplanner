@@ -58,7 +58,11 @@ const PANELS_KEY = 'pcbtk-panels';
 function beforeVercelSend(event: BeforeSendEvent): BeforeSendEvent | null {
   try {
     const url = new URL(event.url, window.location.origin);
-    return { ...event, url: url.origin + url.pathname };
+    // calculator inputs live in the query string and are never sent; campaign tags (utm_*) are kept so link sources can be measured
+    const keep = new URLSearchParams();
+    for (const [k, v] of url.searchParams) if (/^utm_(source|medium|campaign|content|term)$/.test(k)) keep.set(k, v.slice(0, 100));
+    const qs = keep.toString();
+    return { ...event, url: url.origin + url.pathname + (qs ? `?${qs}` : '') };
   } catch {
     return null;
   }
@@ -685,7 +689,8 @@ export function Layout() {
             Panels
           </button>
         </div>
-        {analyticsChoice === 'accepted' && isAnalyticsHost() && (
+        {/* Vercel Web Analytics sets no cookies and stores nothing on the device, so it counts every visit; only Google Analytics waits for consent */}
+        {isAnalyticsHost() && (
           <Analytics
             mode="production"
             route={path}
@@ -708,10 +713,10 @@ export function Layout() {
                   Site analytics
                 </h2>
                 <p className="mt-1 text-muted">
-                  May we use Google Analytics and Vercel Web Analytics to
-                  measure visits and pages viewed? Google Analytics uses
-                  cookies; Vercel Web Analytics does not. You can change your
-                  choice under Help &gt; Analytics preferences.{' '}
+                  May we use Google Analytics to measure visits and pages
+                  viewed? It uses cookies. Page views are also counted without
+                  cookies by Vercel Web Analytics. You can change your choice
+                  under Help &gt; Analytics preferences.{' '}
                   <Link to="/privacy">Privacy policy</Link>.
                 </p>
                 {analyticsChoice && (

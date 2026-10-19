@@ -5,7 +5,7 @@ import { APP_NAME, LEGAL_UPDATED, OPERATOR } from '../config';
 import { ANALYTICS_ID } from '../lib/analytics';
 import ContactEmail from '../components/ContactEmail';
 
-export const PRIVACY_DESCRIPTION = 'How PCB Planner handles data: no account, calculations in your browser, optional analytics only with your consent, and your rights under the GDPR.';
+export const PRIVACY_DESCRIPTION = 'How PCB Planner handles data: no account, calculations in your browser, cookie-free page counts, and Google Analytics only with your consent.';
 
 const date = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -41,8 +41,16 @@ export default function Privacy() {
             server logs are kept by Vercel for a limited period under its own retention rules and are not used to identify you.
           </p>
 
-          <h2>Analytics, only with your consent</h2>
-          <p>When you first visit, a banner asks whether we may measure visits. Nothing is measured and no analytics cookie is set unless you accept.</p>
+          <h2>Analytics</h2>
+          <p>
+            <b>Cookie-free page counts.</b> Vercel Web Analytics (Vercel Inc., USA) counts page views without cookies and without storing or reading anything on
+            your device, recording the page, the referring website, the country, browser and device type. It is used to see which pages are read. The legal basis
+            is our legitimate interest in running and improving the site (Art. 6(1)(f) GDPR); you can object at any time by writing to the address below.
+          </p>
+          <p>
+            <b>Google Analytics, only with your consent.</b> When you first visit, a banner asks whether we may also use Google Analytics. It is not loaded and
+            sets no cookie unless you accept.
+          </p>
           <ul>
             <li>
               <b>Google Analytics 4</b> (Google Ireland Limited; Google LLC, USA) counts page views and records the page, the referring website (its domain only),
@@ -50,14 +58,11 @@ export default function Privacy() {
               store a random identifier for up to two years (browsers may shorten this). Advertising features, Google Signals and ad personalisation are switched off.
               Event data is kept for two months.
             </li>
-            <li>
-              <b>Vercel Web Analytics</b> (Vercel Inc., USA) counts page views without cookies, recording the page, referrer, country, browser and device type.
-            </li>
           </ul>
           <p>
-            Calculator inputs are not sent: page views contain the page path only. The legal basis is your consent (Art. 6(1)(a) GDPR and the rules on device storage
-            in the ePrivacy Directive). Withdrawing consent stops further measurement and deletes the Google Analytics cookies; it does not affect measurement
-            made before. Your choice is stored in your browser and asked again after twelve months.
+            Calculator inputs are not sent by either service: page views contain the page path only. The legal basis for Google Analytics is your consent (Art. 6(1)(a)
+            GDPR and the rules on device storage in the ePrivacy Directive). Withdrawing consent stops further Google Analytics measurement and deletes its cookies; it
+            does not affect measurement made before. Your choice is stored in your browser and asked again after twelve months.
           </p>
 
           <h2>Storage in your browser</h2>
