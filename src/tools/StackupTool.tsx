@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stackupGroup } from '../components/StackupPicker';
+import { LAYER_COLOR } from '../components/layerColors';
+import { StackPreview } from '../components/StackPreview';
 import { ToolPage } from '../components/ToolPage';
 import { Check, Notes, NumField, Panel, Section, Segmented } from '../components/ui';
 import type { DesignResult } from '../lib/design';
@@ -9,6 +11,8 @@ import { toAltium, toEagleDru, toKicad, zip } from '../lib/stackupExport';
 import { FLEX_MATERIALS, FLEX_PRESETS, FLEX_SOURCES } from '../data/flexStackups';
 import { addRegion, constructionOf, impedanceQuery, insertRegionLayer, layerRegionNames, regionStackup, removeRegionLayer, setRegionLayer, stackupIssues, stackupRegions, updateStackupLayer } from '../lib/stackupRegions';
 import { isStackup, parseStackupFile, serialiseStackup } from '../lib/stackupFile';
+import { kicadStackup } from '../lib/kicadImport';
+import { readKicadFile, saveImportedStackup } from '../lib/kicadImportClient';
 import { boardThickness, copperCount, DEFAULT_DF, shortName, geometryForLayer, MASK_DF, newId, PRESETS, totalThickness, type Layer, type LayerKind, type Stackup } from '../lib/stackups';
 import { fmt, fromMm, MM_PER_OZ, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
@@ -17,9 +21,7 @@ import { useSyncedText } from '../state/useNumericText';
 import { stackupStore, useStackups } from '../state/stackupStore';
 
 const TYPE_LABEL: Record<LayerKind, string> = { mask: 'Solder Mask', copper: 'Signal', dielectric: 'Dielectric', coverlay: 'Coverlay film', adhesive: 'Adhesive' };
-const COLOR: Record<LayerKind, string> = { mask: 'var(--mask)', copper: 'var(--copper)', dielectric: 'var(--laminate)', coverlay: '#c9a227', adhesive: '#886d39' };
-// label colour on each layer bar, at 4.5:1 or more against COLOR in both themes
-const LAYER_INK: Record<LayerKind, string> = { mask: '#fff', copper: '#1a1206', dielectric: 'var(--laminate-ink)', coverlay: '#1a1206', adhesive: '#fff' };
+const COLOR = LAYER_COLOR;
 const SESSION = 'pcbplanner:stackup-manager:';
 const readSession = (key: string) => {
   try { return sessionStorage.getItem(SESSION + key); } catch { return null; }
@@ -291,6 +293,20 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
       setExportMsg({text:'Imported the complete construction and its linked regions as a new stackup.'});
     } catch(error) {setExportMsg({text:error instanceof Error?error.message:'Could not import this stackup.',error:true});}
   };
+  const kicadRef = useRef<HTMLInputElement>(null);
+  const [kicadBusy, setKicadBusy] = useState(false);
+  const importKicad = async (file: File) => {
+    setKicadBusy(true);
+    try {
+      const board = await readKicadFile(file);
+      const r = kicadStackup(board, { name: file.name.replace(/\.kicad_pcb$/i, '') + ' (KiCad)' });
+      if (!r) throw new Error(`${file.name} has no physical stackup (KiCad ${board.kicad} file). Open it in KiCad 6 or later, check Board Setup → Physical Stackup and save, or enter the layers here by hand.`);
+      setId(saveImportedStackup(r.stackup));
+      const planes = r.stackup.layers.filter(l => l.kind === 'copper' && l.role === 'plane').map(l => l.name);
+      setExportMsg({ text: `Imported ${copperCount(r.stackup)} copper layers from ${file.name} as a new stackup. ${planes.length ? `Planes found from the zones: ${planes.join(', ')}.` : 'No plane layers were found: set the copper roles.'} Check the roles and materials.${r.notes.length ? ' ' + r.notes.map(n => n.text).join(' ') : ''}` });
+    } catch (error) { setExportMsg({ text: error instanceof Error ? error.message : 'Could not read this KiCad board.', error: true }); }
+    finally { setKicadBusy(false); }
+  };
   const cadUnsupported = active.layers.some(l=>l.kind==='coverlay'||l.kind==='adhesive');
   const L = (mm: number) => fmt(fromMm(mm, unit), 4);
   const total = totalThickness(active);
@@ -406,8 +422,9 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
             Fusion 360 / EAGLE
           </button>
         </div>
-        <div className="flex flex-wrap gap-1 pt-2"><button className="btn btn-primary" disabled={issues.length>0} onClick={()=>runExport('json')}>PCBPlanner JSON</button><button className="btn" onClick={()=>fileRef.current?.click()}>Import JSON</button></div>
+        <div className="flex flex-wrap gap-1 pt-2"><button className="btn btn-primary" disabled={issues.length>0} onClick={()=>runExport('json')}>PCBPlanner JSON</button><button className="btn" onClick={()=>fileRef.current?.click()}>Import JSON</button><button className="btn" disabled={kicadBusy} onClick={()=>kicadRef.current?.click()} title="Read the physical stackup of a KiCad 6 to 10 board file as a new stackup">{kicadBusy?'Reading…':'Import from KiCad'}</button></div>
         <input ref={fileRef} type="file" accept=".json,application/json" aria-label="Import stackup file" className="hidden" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void importFile(file);}} />
+        <input ref={kicadRef} type="file" accept=".kicad_pcb" aria-label="Import a KiCad board file" className="hidden" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void importKicad(file);}} />
         <p className="text-faint">JSON preserves the complete construction and all region links. CAD templates export only the active region and do not create board regions or bends. {cadUnsupported?'Coverlay/adhesive CAD export is unavailable; use JSON.':''}</p>
         {exportMsg && <p className={exportMsg.error ? 'text-[var(--err-line)]' : 'text-faint'}>{exportMsg.text}</p>}
         {!exportMsg && <p className="text-faint">Downloads the stackup shown, including unsaved edits. See “Importing the stackup” below the stack preview.</p>}
@@ -591,34 +608,7 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
       </Panel>
 
       <Panel title="Stack Preview">
-        <div className="p-2.5">
-          {active.layers.map((l, i) => {
-            const n = active.layers.slice(0, i + 1).filter((x) => x.kind === 'copper').length;
-            return (
-              <div
-                key={l.id}
-                className="flex items-center justify-between px-2 text-[11px]"
-                style={{
-                  background: l.kind === 'copper' ? 'var(--copper)' : COLOR[l.kind],
-                  minHeight: Math.max(7, Math.min(30, (l.t / Math.max(total, 1e-6)) * 420)),
-                  color: LAYER_INK[l.kind],
-                  outline: sel === l.id ? '2px solid var(--accent)' : undefined,
-                  opacity: l.kind === 'copper' && l.role === 'plane' ? 0.8 : 1,
-                }}
-                onClick={() => setSel(l.id)}
-              >
-                <span className="truncate">
-                  {l.kind === 'copper' && l.name !== `L${n}` ? `L${n} ` : ''}
-                  {l.name}
-                  {l.kind === 'copper' ? ` (${l.role === 'plane' ? 'plane' : 'signal'})` : ''}
-                </span>
-                <span className="tnum">
-                  {L(l.t)} {unit}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <StackPreview layers={active.layers} length={(mm) => `${L(mm)} ${unit}`} selected={sel} onSelect={setSel} />
       </Panel>
       <Notes items={active.layers.some((l) => l.kind === 'copper' && l.role === 'plane') ? [] : ['Mark at least one copper layer as a plane so signal layers have a reference.']} />
       <Method />

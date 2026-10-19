@@ -1,4 +1,4 @@
-// "What's new" on the home page. Newest first; the home page shows the first three.
+// "What's new" on the home page. Newest first; the home page shows the latest two (the owner's choice).
 // Only announcements the site owner chooses go here, not every new tool or guide.
 
 export interface NewsItem {
@@ -9,6 +9,12 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  {
+    date: '2026-10-18',
+    title: 'Trace widths straight from your KiCad board',
+    text: 'Drop a .kicad_pcb file and get the trace width for 50 Ω single-ended and 90 Ω and 100 Ω differential pairs on every layer of your real stackup, with the loss per inch. The planes are found from your zones, and the file is read in your browser, never uploaded.',
+    links: [{ to: '/kicad-impedance', label: 'Open the KiCad impedance calculator' }],
+  },
   {
     date: '2026-10-15',
     title: 'Inspect Gerbers and compare board revisions',

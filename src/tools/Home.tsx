@@ -176,7 +176,7 @@ export default function Home() {
                 <h2 id="home-news-heading">What's new</h2>
                 <span className="section-meta">Latest update</span>
               </div>
-              {NEWS.slice(0, 3).map((item) => (
+              {NEWS.slice(0, 2).map((item) => (
                 <div className="news-item" key={item.title}>
                   <div className="news-icon">
                     <Check size={17} />
