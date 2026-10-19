@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useState } from 'react';
-import { NumField, Panel, Section, SelectField } from '../components/ui';
-import { INTERFACES } from '../data/interfaces';
-import { toCsv, toText } from '../lib/kicadImpedance';
-import { COUPLING, PLAIN_TARGETS, targetById, type Fmt, type ItemResult, type KicadProject, type RouteGroup, type RoutingSummary } from '../lib/kicadRouting';
-import { routingRows, statusLabel, type CheckedItem } from '../lib/kicadRoutingSolve';
+import { NumField, Panel, Section, SelectField } from '../ui';
+import { INTERFACES } from '../../data/interfaces';
+import { toCsv, toText } from '../../lib/kicadImpedance';
+import { COUPLING, PLAIN_TARGETS, targetById, type Fmt, type ItemResult, type KicadProject, type RouteGroup, type RoutingSummary } from '../../lib/kicadRouting';
+import { routingRows, statusLabel, type CheckedItem } from '../../lib/kicadRoutingSolve';
 
 type St = ItemResult['overall'];
 const tone = (s: St) => (s === 'ok' ? 'text-ok' : s === 'fail' ? 'text-[var(--err-line)]' : s === 'warn' ? 'text-[var(--accent-ink)]' : 'text-muted');

@@ -34,7 +34,8 @@ try {
  const noProjects=async()=>{
   assert.equal(await page.locator('a[href="/projects"]').count(),0);
   assert.equal(await page.locator('.home-project-start,.project-save-bar,.active-project-navigation').count(),0);
-  assert(!/\bprojects?\b/i.test(await page.locator('body').innerText()));
+  // the KiCad project (one loaded board, /kicad-project) is a different feature and may be named
+  assert(!/\bprojects?\b/i.test((await page.locator('body').innerText()).replace(/KiCad projects?|projects? (folder|files?)/gi,'')));
  };
  for(const path of ['/','/tools','/about','/privacy','/active-filter','/impedance','/s-parameter-viewer']) {await go(path);await noProjects();}
  await go('/active-filter');

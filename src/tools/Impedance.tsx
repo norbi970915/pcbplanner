@@ -11,6 +11,8 @@ import { useDesignComparison } from '../state/useDesignComparison';
 import { comparisonRow as row } from '../lib/designComparison';
 import { Big, Check, LenField, Notes, NumField, Panel, Result, Section, Segmented, SelectField } from '../components/ui';
 import { StackupPicker } from '../components/StackupPicker';
+import { KicadProjectSource, type KicadPickValues } from '../components/KicadProjectSource';
+import { impedancePatch } from '../lib/kicadProjectQueries';
 import { microstripHJ, striplineAsym, striplineWheeler } from '../lib/closedform';
 import type { Accuracy } from '../lib/fieldsolver';
 import { delayPsPerMm, lineLC, nextCoefficient } from '../lib/signal';
@@ -37,6 +39,7 @@ export default function Impedance() {
     [...(parsePlies(raw.dl) ?? []), ...(raw.coupling === 'broadside' && raw.mode === 'diff' ? [] : parsePlies(raw.dl2) ?? [])].some((x) => x.mat);
   const { unit } = useSettings();
   const [stackNote, setStackNote] = useState<string | null>(null);
+  const [kicadNote, setKicadNote] = useState<string | null>(null);
   const [solving, setSolving] = useState<null | 'w' | 's'>(null);
   const [solveErr, setSolveErr] = useState<string | null>(null);
   const [view, setView] = useState<'section' | 'field'>('section');
@@ -137,6 +140,17 @@ export default function Impedance() {
       ...(g.type === 'microstrip' ? { mask: !!g.mask, ...(g.mask ? { c1: g.mask.c1, c2: g.mask.c2, erm: g.mask.er } : {}) } : {}),
     });
     setStackNote(g.note);
+  };
+
+  // From KiCad project: the layer's cross-section, and W (and S) from the routed pair or net, or the net class
+  const applyKicad = (v: KicadPickValues) => {
+    const r = impedancePatch(v, raw);
+    if (!r) {
+      setKicadNote('That layer has no reference plane in the KiCad project.');
+      return;
+    }
+    set(r.patch);
+    setKicadNote(r.note);
   };
 
   const solveFor = async (param: 'w' | 's') => {
@@ -346,6 +360,7 @@ export default function Impedance() {
           <NumField label="Mask εr" value={p.erm} onChange={(v) => set({ erm: v })} min={1} allowZero />
         </Section>
       )}
+      <KicadProjectSource pick={['layer', 'netclass', 'pair']} onApply={applyKicad} note={kicadNote} />
       <Section title="From Stackup">
         <StackupPicker onApply={applyLayer} />
         {broadside && <p className="text-faint">Applying a single stackup layer switches back to edge coupling. Broadside uses two signal layers; enter their balanced cross-section here.</p>}

@@ -5,11 +5,13 @@ import {
   CircuitBoard,
   ChevronRight,
   BookOpen,
+  FolderOpen,
   Star,
 } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 import { FavoriteButton } from './FavoriteButton';
 import { useFavorites } from '../state/favoritesStore';
+import { useKicadProject } from '../state/kicadProjectStore';
 import { Separator } from './shadcn/separator';
 import { GROUP_COLORS, GROUPS, TOOLS } from '../tools/registry';
 export function ToolsNavigation({
@@ -20,6 +22,8 @@ export function ToolsNavigation({
   onNavigate?: () => void;
 }) {
   const favorites = useFavorites();
+  const kicad = useKicadProject();
+  const kicadName = kicad.data?.boardName ?? (kicad.status === 'loading' ? kicad.boardName : undefined);
   const pinned = favorites.flatMap((path) => {
     const tool = TOOLS.find((item) => item.path === path);
     return tool ? [tool] : [];
@@ -55,6 +59,22 @@ export function ToolsNavigation({
       <Link className={'side-link schematic-gerber-link' + (path === '/gerber-viewer' ? ' current' : '')} aria-current={path === '/gerber-viewer' ? 'page' : undefined} to="/gerber-viewer" onClick={onNavigate}>
         <CategoryIcon group="Electronics" color="var(--muted)" size={16} />Gerber viewer &amp; compare
       </Link>
+      <Link className={'side-link' + (path === '/kicad-project' ? ' current' : '')} aria-current={path === '/kicad-project' ? 'page' : undefined} to="/kicad-project" onClick={onNavigate}>
+        <FolderOpen size={16} />
+        KiCad project
+      </Link>
+      {kicadName && (
+        <Link
+          className="kicad-project-badge ml-[33px] mr-2 -mt-1 mb-1 flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] text-faint no-underline hover:bg-[var(--hover)] hover:text-ink"
+          to="/kicad-project"
+          onClick={onNavigate}
+          aria-label={`Active KiCad project: ${kicadName}${kicad.status === 'loading' ? ' (reading)' : ''}`}
+          title={`Active KiCad project: ${kicadName}`}
+        >
+          <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${kicad.status === 'loading' ? 'bg-[var(--faint)]' : 'bg-[var(--accent)]'}`} />
+          <span className="truncate">{kicadName.replace(/\.kicad_pcb$/i, '')}</span>
+        </Link>
+      )}
       <Separator className="nav-separator" />
       <section className="favorites-navigation" aria-label="Favorite tools">
         <div className="favorites-heading">
