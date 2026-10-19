@@ -4,8 +4,7 @@ import { useKicadProject } from '../../state/kicadProjectStore';
 
 /**
  * Loading a KiCad board or project into the shared project store: the drop zone (files, folder,
- * example), the hidden file inputs and drag and drop anywhere on the page. Used by /kicad-project
- * and /kicad-impedance, so both load the same way and into the same project.
+ * example), the hidden file inputs and drag and drop anywhere on the page (/kicad-project).
  */
 export function useKicadFileLoader() {
   const kp = useKicadProject();

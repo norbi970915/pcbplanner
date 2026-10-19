@@ -1,7 +1,7 @@
 // What "From KiCad Project → Apply" sets in the Trace Loss calculator (/trace-loss) and in the delay
 // and timing tool (/timing), built from the values the picker resolved (kicadProjectQueries.ts).
 //
-// Both mappings follow the routing check of /kicad-impedance so the numbers agree (tested in
+// Both mappings follow the routing check of /kicad-project so the numbers agree (tested in
 // kicadLossTiming.test.ts):
 //   trace loss  the cross-section and each ply's Dk, Df and reference frequency are taken from the
 //               routing check's own loss request (kicadImpedance.lossRequest), the width (and gap)
@@ -23,10 +23,10 @@ import type { TraceLossInputs } from './traceLossRequest';
 const r6 = (v: number) => Number(v.toFixed(6));
 type Fmt = (mm: number) => string;
 
-/** Copper model of the routing check with the /kicad-impedance defaults (ED foil, Hammerstad, 20 °C; KICAD_ANALYSIS_DEFAULTS). */
+/** Copper model of the routing check with the /kicad-project defaults (ED foil, Hammerstad, 20 °C; KICAD_ANALYSIS_DEFAULTS). */
 export const ROUTING_CHECK_FOIL = 'ed';
 export const ROUTING_CHECK_RQ = FOILS.find((f) => f.id === ROUTING_CHECK_FOIL)?.rq ?? 3.2;
-/** Loss frequency of /kicad-impedance when the target names no interface (its default). */
+/** Loss frequency of /kicad-project when the target names no interface (its default). */
 export const ROUTING_CHECK_FGHZ = 4;
 
 const specOf = (t: TargetRef | null | undefined) => (t ? (targetById(t.id)?.spec ?? INTERFACES.find((s) => s.id === t.id)) : undefined);
@@ -142,7 +142,7 @@ export function traceLossPatch(
     Object.assign(patch, { dl2: plies(above, as), h2: r6(sg.h2 ?? above.reduce((a, x) => a + x.t, 0)), mat2: 'custom', er2: r6(as[0].dk), df2: r6(as[0].df), f02: r6(as[0].f0 / 1e9) });
   }
 
-  const fText = spec ? `Loss at ${f} GHz, the Nyquist frequency of ${spec.name}` : `Frequency kept at ${f} GHz${item ? ` (${item.name} has no interface target; the routing check uses the loss frequency of /kicad-impedance)` : ''}`;
+  const fText = spec ? `Loss at ${f} GHz, the Nyquist frequency of ${spec.name}` : `Frequency kept at ${f} GHz${item ? ` (${item.name} has no interface target; the routing check uses the loss frequency of /kicad-project)` : ''}`;
   const model =
     cur.rough !== 'hammerstad' || cur.rq !== ROUTING_CHECK_RQ || cur.temp !== 20
       ? ` Your copper settings differ from the routing check's default (Hammerstad, Rq ${ROUTING_CHECK_RQ} µm, 20 °C), so the loss will too.`

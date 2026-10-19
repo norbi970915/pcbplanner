@@ -26,7 +26,7 @@ const project = parseKicadProject(exampleProject(), EXAMPLE_PROJECT_FILE);
 const data: KicadProjectData = { boardName: EXAMPLE_FILE, board, project, projectName: EXAMPLE_PROJECT_FILE, otherBoards: [], roleOverrides: {} };
 const L = (mm: number) => mm.toFixed(4);
 
-/** What /kicad-impedance builds before it solves: detected roles, kicadStackup, calcStackup with the mask switch, planLayers. */
+/** What /kicad-project builds before it solves: detected roles, kicadStackup, calcStackup with the mask switch, planLayers. */
 function pagePlans(mask: boolean, roles?: Record<string, 'plane' | 'signal'>) {
   const r = roles ?? Object.fromEntries(Object.entries(guessRoles(board)).map(([k, g]) => [k, g.role]));
   const st = kicadStackup(board, { name: 'pcbplanner-example-6layer (KiCad)', roles: r })!.stackup;
@@ -41,7 +41,7 @@ describe('layers and cross-sections of the example project', () => {
       ['B.Cu', 'coated microstrip', 'In4.Cu', true],
     ]);
   });
-  it('layerGeometry of F.Cu and In2.Cu is the cross-section /kicad-impedance solves, with and without mask', () => {
+  it('layerGeometry of F.Cu and In2.Cu is the cross-section /kicad-project solves, with and without mask', () => {
     for (const mask of [true, false])
       for (const name of ['F.Cu', 'In2.Cu']) {
         const g = layerGeometry(data, name, { mask })!;

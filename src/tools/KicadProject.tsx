@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom';
 import { StackPreview } from '../components/StackPreview';
 import { ToolPage } from '../components/ToolPage';
 import { Notes, Panel, Section } from '../components/ui';
+import { AnalysisMethod } from '../components/kicad/AnalysisMethod';
 import { AnalysisProperties, BoardSummary, ImpedanceByLayerPanel, NoStackupNote, RoutingPanel } from '../components/kicad/KicadAnalysis';
-import { analysisQuery, analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
+import { analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
 import { useKicadFileLoader } from '../components/kicad/KicadFileLoader';
 import { stackupItemThickness, versionDate } from '../lib/kicadImport';
 import { netClasses, pairSummary, pairs, type KicadProjectData } from '../lib/kicadProjectQueries';
@@ -28,7 +29,7 @@ const KICAD_PROJECT_TOOLS: { path: string; label: string; takes: string; ready: 
 
 const mm = (v: number | undefined, L: (x: number) => string) => (v === undefined ? '—' : L(v));
 
-function ProjectHeader({ data, persisted, storageNote, onClose, query }: { data: KicadProjectData; persisted: boolean; storageNote?: string; onClose: () => void; query: string }) {
+function ProjectHeader({ data, persisted, storageNote, onClose }: { data: KicadProjectData; persisted: boolean; storageNote?: string; onClose: () => void }) {
   const b = data.board;
   const thick = b.thickness ?? stackupItemThickness(b);
   const rows: [string, string][] = [
@@ -56,9 +57,6 @@ function ProjectHeader({ data, persisted, storageNote, onClose, query }: { data:
         <button type="button" className="btn" onClick={onClose}>
           Close project
         </button>
-        <Link className="btn" to={`/kicad-impedance${query}`}>
-          Open in KiCad impedance
-        </Link>
       </div>
     </>
   );
@@ -96,7 +94,7 @@ function NetClassesPanel({ data, L, unit }: { data: KicadProjectData; L: (mm: nu
       </table>
       <p className="px-2.5 py-2 text-faint">
         {data.project
-          ? `From ${data.project.name}, resolved as KiCad ${data.project.kicad} does (see the KiCad impedance method). Routed nets: nets with tracks whose deciding class this is.`
+          ? `From ${data.project.name}, resolved as KiCad ${data.project.kicad} does (see the method section). Routed nets: nets with tracks whose deciding class this is.`
           : 'No .kicad_pro was loaded, so every net is in Default. Load the project folder, or the .kicad_pcb and .kicad_pro together, to use the net classes.'}
       </p>
     </Panel>
@@ -201,7 +199,7 @@ export default function KicadProject() {
   return (
     <ToolPage
       title="KiCad Project"
-      description="The active KiCad project of this browser. Load a .kicad_pcb file or the whole project folder once to see its stackup, layer roles, net classes, differential pairs, impedance by layer and routing check, and to use its layers, net classes and pairs in the other calculators. The files stay in your browser and are not uploaded."
+      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}
       onReset={reset}
@@ -222,7 +220,7 @@ export default function KicadProject() {
       {data && (
         <>
           <Panel title="Project" allowInvalid>
-            <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} query={analysisQuery(p)} />
+            <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
             <div className="hidden px-3 pb-3 lg:block">{dropZone(true)}</div>
           </Panel>
           <NoStackupNote data={data} />
@@ -252,9 +250,8 @@ export function Method() {
     <>
       <h2>What the project page is</h2>
       <p>
-        The board you load here, or on the <Link to="/kicad-impedance">KiCad impedance</Link> page, becomes the active KiCad project of this browser. Both pages show the same project, and the calculators
-        that read it offer a <b>From KiCad Project</b> section in their Properties panel: choose a signal layer, a net class, a net or a differential pair and press Apply, and the tool takes the layer’s
-        cross-section, the class widths or the routed width, gap and length from the project. A tool never changes your inputs until you press Apply. Loading another board replaces the project; when a
+        The board you load here becomes the active KiCad project of this browser. The calculators that read it offer a <b>From KiCad Project</b> section in their Properties panel: choose a signal
+        layer, a net class, a net or a differential pair and press Apply, and the tool takes the layer’s cross-section, the class widths or the routed width, gap and length from the project. A tool never changes your inputs until you press Apply. Loading another board replaces the project; when a
         different board is loaded, you are asked first.
       </p>
       <h2>What is stored, and where</h2>
@@ -273,19 +270,19 @@ export function Method() {
         Press <b>Close project</b> on this page: both stored files and the layer roles are deleted at once, in every open tab of the site. Clearing the site data of pcbplanner.com in your browser settings
         removes it as well. The files on your computer are never changed.
       </p>
-      <h2>What is shown</h2>
+      <h2>Net classes and pairs</h2>
       <p>
-        The stackup, the plane detection and layer roles, the impedance by layer and the routing check are the ones of the <Link to="/kicad-impedance">KiCad impedance</Link> page and are explained in its
-        method section: how the file is read, how plane layers are inferred from the zones, how widths and losses are solved, and how net classes, differential pairs, widths, gaps, lengths and skew are
-        measured. The net class table lists the classes of the project file with their track width and differential-pair width and gap, and the number of routed nets (nets with tracks) and pairs for which
+        The net class table lists the classes of the project file with their track width and differential-pair width and gap, and the number of routed nets (nets with tracks) and pairs for which
         each class decides. Without a project file every net is in Default.
       </p>
-      <h2>Limits</h2>
-      <ul>
-        <li>One project at a time. Loading a board replaces the one that was loaded.</li>
-        <li>The inputs of this page (targets, pair gap, loss frequency, routing targets) are kept in its address, like any calculator; the layer roles are kept with the project.</li>
-        <li>Custom DRC rules (the .kicad_dru file), footprints and pads are not read.</li>
-      </ul>
+      <AnalysisMethod
+        limits={
+          <>
+            <li>One project at a time. Loading a board replaces the one that was loaded.</li>
+            <li>The inputs of this page (targets, pair gap, loss frequency, routing targets) are kept in its address, like any calculator; the layer roles are kept with the project.</li>
+          </>
+        }
+      />
     </>
   );
 }

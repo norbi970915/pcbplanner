@@ -26,7 +26,7 @@ describe('Crosstalk Calculator cross-section', () => {
     expect([sl.slabs, sl.topPlane, sl.mask]).toEqual([[{ y0: 0, y1: 0.1, er: 4.1 }, { y0: 0.1, y1: 0.1 + 0.035 + 0.2, er: 4.2 }], 0.1 + 0.035 + 0.2, undefined]);
   });
 
-  it('the fields taken from a KiCad layer rebuild the geometry /kicad-impedance solves, on every signal layer and with or without mask', () => {
+  it('the fields taken from a KiCad layer rebuild the geometry /kicad-project solves, on every signal layer and with or without mask', () => {
     for (const mask of [true, false])
       for (const name of ['F.Cu', 'In2.Cu', 'B.Cu']) {
         const g = layerGeometry(data, name, { mask })!;

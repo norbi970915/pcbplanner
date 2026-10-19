@@ -1,4 +1,4 @@
-// The analysis of the active KiCad project that /kicad-impedance and /kicad-project both show: the
+// The analysis of the active KiCad project that /kicad-project shows: the
 // impedance width table of every signal layer, the routing check, the layer roles and the inputs
 // they share (targets, pair gap, loss frequency, foil, solder mask, routing targets). Each page keeps
 // its own inputs in its address (the same parameter names, so a link can carry them across); the

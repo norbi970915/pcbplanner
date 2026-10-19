@@ -1,5 +1,5 @@
 // The Crosstalk Calculator's inputs from a KiCad project: a signal layer's cross-section (the one
-// /kicad-impedance solves, as kicadProjectQueries.ts layerGeometry gives it) and a measured parallel run
+// /kicad-project solves, as kicadProjectQueries.ts layerGeometry gives it) and a measured parallel run
 // of two nets on that layer (kicadParallel.ts). Rise time and swing are not in a board file and stay
 // as the user set them.
 import type { CrosstalkInputs } from './crosstalk';

@@ -13,7 +13,7 @@
  *   onApply      (values: KicadPickValues) => void, called on Apply. The values (see
  *                src/lib/kicadProjectQueries.ts) carry only what was picked and resolved:
  *                  layer       LayerGeometry: line kind, reference planes, the StackupGeometry `sg` that
- *                              /kicad-impedance solves, and `impedance` (the Impedance Calculator's
+ *                              /kicad-project solves, and `impedance` (the Impedance Calculator's
  *                              fields: type, h, er, h2, er2, dl, dl2, t, mask, c1, c2, erm, etch, acc)
  *                  copperT     copper thickness of the layer, mm
  *                  netClass    NetClassSummary: trackWidth, dpWidth, dpGap (mm), nets, pairs

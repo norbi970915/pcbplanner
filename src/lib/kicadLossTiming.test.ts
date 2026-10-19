@@ -1,6 +1,6 @@
 /// <reference types="node" />
 // The Trace Loss and timing mappings of "From KiCad Project" on the example project, checked against
-// the routing check of /kicad-impedance (kicadRoutingSolve.useRoutingCheck → checkItem).
+// the routing check of /kicad-project (kicadRoutingSolve.useRoutingCheck → checkItem).
 import { describe, expect, it } from 'vitest';
 import { KICAD_ANALYSIS_DEFAULTS } from '../components/kicad/useKicadAnalysis';
 import { FOILS } from '../data/laminates';

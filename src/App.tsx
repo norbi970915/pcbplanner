@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { GUIDES } from './guides/registry';
 import { SettingsProvider } from './state/settings';
@@ -18,6 +18,12 @@ const Terms = lazy(() => import('./pages/Terms'));
 const Schematic = lazy(() => import('./pages/Schematic'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+/** An address that moved: the new path with the same query and hash (Vercel also redirects it permanently). */
+function Moved({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={to + search + hash} replace />;
+}
+
 export default function App() {
   return (
     <SettingsProvider>
@@ -28,6 +34,7 @@ export default function App() {
             {TOOLS.map((t) => (
               <Route key={t.path} path={t.path} element={<t.component />} />
             ))}
+            <Route path="/kicad-impedance" element={<Moved to="/kicad-project" />} />
             <Route path="/tools" element={<ToolsIndex />} />
             <Route path="/schematic" element={<Schematic />} />
             <Route path="/guides" element={<GuidesIndex />} />

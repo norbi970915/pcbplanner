@@ -3,7 +3,7 @@
 // measured width, gap, length and skew of a net or pair. Plain data in, plain data out (tested in
 // kicadProjectQueries.test.ts).
 //
-// Nothing is measured or modelled again here: the layer cross-section is the one /kicad-impedance
+// Nothing is measured or modelled again here: the layer cross-section is the one /kicad-project
 // solves (kicadStackup → calcStackup → planLayers, the Layer Stack Manager's geometry), and net and
 // pair figures come from the routing summary the import worker built (kicadRouting.ts), read the way
 // the routing check reads them (itemLayers, solveWidth, pairCoupled, buildGroups).
@@ -92,7 +92,7 @@ function calcEntry(d: KicadProjectData) {
 /** The stackup the solves use: with solder mask (default) or without. */
 export const projectCalc = (d: KicadProjectData, mask = true): Stackup | null => (mask ? calcEntry(d).on : calcEntry(d).off);
 
-/** Every signal layer's plan (cross-section, line type, reference planes), as /kicad-impedance builds it. */
+/** Every signal layer's plan (cross-section, line type, reference planes), as /kicad-project builds it. */
 export function projectPlans(d: KicadProjectData, mask = true): LayerPlan[] {
   const e = calcEntry(d);
   const calc = mask ? e.on : e.off;
@@ -152,7 +152,7 @@ export interface ImpedanceFields {
   c1?: number;
   c2?: number;
   erm?: number;
-  etch: number; // the 0.5 mil trapezoid of the Layer Stack Manager and /kicad-impedance
+  etch: number; // the 0.5 mil trapezoid of the Layer Stack Manager and /kicad-project
   acc: Accuracy;
 }
 
@@ -161,7 +161,7 @@ export interface LayerGeometry {
   kind: LineKind;
   refs: string[];
   mask: boolean; // the stackup was taken with solder mask
-  /** The cross-section /kicad-impedance and the Layer Stack Manager solve on this layer. */
+  /** The cross-section /kicad-project and the Layer Stack Manager solve on this layer. */
   sg: StackupGeometry;
   etch: number;
   accuracy: Accuracy;
@@ -192,9 +192,9 @@ export function impedanceFields(g: StackupGeometry): ImpedanceFields {
 }
 
 /**
- * Cross-section of a signal layer, exactly as /kicad-impedance solves it, or null when the layer is
+ * Cross-section of a signal layer, exactly as /kicad-project solves it, or null when the layer is
  * not a signal layer with a reference plane. `mask` (default true) takes the outer layers as
- * solder-mask coated microstrip, as the Solder Mask switch of /kicad-impedance does.
+ * solder-mask coated microstrip, as the Solder Mask switch of /kicad-project does.
  */
 export function layerGeometry(d: KicadProjectData, layer: string, opts: { mask?: boolean } = {}): LayerGeometry | null {
   const mask = opts.mask ?? true;

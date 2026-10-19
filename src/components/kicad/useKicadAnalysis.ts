@@ -1,4 +1,4 @@
-// State of the KiCad analysis shown by /kicad-impedance and /kicad-project (see KicadAnalysis.tsx):
+// State of the KiCad analysis shown by /kicad-project (see KicadAnalysis.tsx):
 // its inputs, the width solves of every signal layer and the routing check, on the solver worker pool.
 import { useEffect, useMemo, useState } from 'react';
 import { FOILS } from '../../data/laminates';

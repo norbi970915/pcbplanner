@@ -1,90 +1,21 @@
+// How the KiCad project page reads the board and project files, detects plane layers, solves widths and
+// losses and runs the routing check: the analysis part of its method section.
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { StackPreview } from '../components/StackPreview';
-import { ToolPage } from '../components/ToolPage';
-import { Notes, Panel, Section } from '../components/ui';
-import { AnalysisProperties, BoardSummary, ImpedanceByLayerPanel, NoStackupNote, RoutingPanel } from '../components/kicad/KicadAnalysis';
-import { analysisQuery, analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
-import { useKicadFileLoader } from '../components/kicad/KicadFileLoader';
-import { PLANE_RULE } from '../lib/kicadImport';
-import { COUPLING } from '../lib/kicadRouting';
-import { useUrlState } from '../state/useUrlState';
+import { PLANE_RULE } from '../../lib/kicadImport';
+import { COUPLING, VOID } from '../../lib/kicadRouting';
 
-export default function KicadImpedance() {
-  const [p, set, reset] = useUrlState(KICAD_ANALYSIS_DEFAULTS);
-  const { kp, dropZone, inputs, busy, errors: loadErrors } = useKicadFileLoader();
-  const data = kp.data;
-  const a = useKicadAnalysis(data, p, set);
-  const board = data?.board ?? null;
-  const { calc, unit, L } = a;
-
-  const properties = (
-    <>
-      <div className="lg:hidden">
-        <Section title="Board File">{dropZone(true)}</Section>
-      </div>
-      <AnalysisProperties a={a} p={p} set={set} />
-    </>
-  );
-
-  return (
-    <ToolPage
-      title="KiCad Stackup Impedance Calculator"
-      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup and get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver. The routing check then measures the width, gap, length and skew of every differential pair as routed and checks its impedance on each layer against the interface it carries. The files are read in your browser and not uploaded."
-      properties={properties}
-      status={analysisStatus(a, busy, kp.boardName)}
-      onReset={reset}
-      method={<Method />}
-    >
-      {inputs}
-      <Panel title="KiCad Board File" allowInvalid className={board ? '' : 'hidden lg:flex'}>
-        <div className="p-3">
-          <div className="hidden lg:block">{dropZone(!!board)}</div>
-          {data && (
-            <div className="lg:mt-2">
-              <BoardSummary data={data} />
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Link className="btn" to={`/kicad-project${analysisQuery(p)}`}>
-                  Open in KiCad Project
-                </Link>
-                <span className="text-faint">
-                  {kp.persisted ? 'Kept in this browser as the active KiCad project; the tools can read it from there.' : (kp.storageNote ?? 'The active KiCad project for this visit.')}
-                </span>
-              </p>
-            </div>
-          )}
-        </div>
-      </Panel>
-      <Notes kind="error" items={[...loadErrors, ...a.errors]} />
-      {data && <NoStackupNote data={data} />}
-      {calc && (
-        <>
-          <Panel title="Stackup">
-            <StackPreview layers={calc.layers} length={(mm) => `${L(mm)} ${unit}`} />
-          </Panel>
-          <ImpedanceByLayerPanel a={a} p={p} />
-          <RoutingPanel a={a} />
-          <Notes items={a.notes} />
-        </>
-      )}
-      {!calc && board && <Notes items={a.notes} />}
-    </ToolPage>
-  );
-}
-
-export function Method() {
+/** `limits`: further list items for the Limits section. */
+export function AnalysisMethod({ limits }: { limits?: ReactNode }) {
   return (
     <>
       <h2>What is read from the file</h2>
       <p>
         A <code>.kicad_pcb</code> file is a text file of nested lists (s-expressions). The page reads it in your browser, in a background worker, and looks only at the top-level items it needs: the file
-        version, <code>(general (thickness …))</code>, the <code>(layers …)</code> list, the <code>(stackup …)</code> section inside <code>(setup …)</code>, the Edge.Cuts outline graphics, the header and outline
-        of every <code>(zone …)</code>, every track segment and arc (start, mid and end point, width, layer, net) and every via (position, layers, net). Footprints, fill polygons and everything else are skipped,
-        so a board of tens of megabytes is read in well under a second. Nets are named by their <code>(net N "name")</code> declarations in KiCad 6 to 9 and by <code>(net "name")</code> on each item from KiCad
+        version, <code>(general (thickness …))</code>, the <code>(layers …)</code> list, the <code>(stackup …)</code> section inside <code>(setup …)</code>, the Edge.Cuts outline graphics, the header, outline
+        and fill polygons of every <code>(zone …)</code>, every track segment and arc (start, mid and end point, width, layer, net) and every via (position, layers, net). Footprints and everything else are
+        skipped, so a board of tens of megabytes is read in about a second. Nets are named by their <code>(net N "name")</code> declarations in KiCad 6 to 9 and by <code>(net "name")</code> on each item from KiCad
         10. From a <code>.kicad_pro</code> file, dropped with the board or found in the project folder, only the net classes are read; everything else in the folder is ignored.
-      </p>
-      <p>
-        The board you load becomes the active KiCad project of this browser, shared with the <Link to="/kicad-project">KiCad project</Link> page and the calculators that read it, and it stays loaded
-        after a reload. Its files are kept only in this browser, until you close the project on that page; its method section says what is stored and how to remove it.
       </p>
       <p>
         Each stackup item is <code>(layer "name" (type "…") …)</code> with <code>(thickness mm [locked])</code>, <code>(material "…")</code>, <code>(epsilon_r …)</code> and <code>(loss_tangent …)</code>; a
@@ -94,8 +25,9 @@ export function Method() {
       </p>
       <h2>Plane layers</h2>
       <p>
-        KiCad does not mark which copper layers are planes, so they are inferred. For each copper layer, the zone outlines are clipped to the board's bounding box and their area is added up per net. The board
-        area is the largest closed Edge.Cuts outline (or its bounding box). A layer is taken as a plane when
+        KiCad does not mark which copper layers are planes, so they are inferred. For each copper layer and net, the area of the net's zones is measured: each zone is its outline less its cut-outs (KiCad
+        saves the cut-outs as further polygons after the outline), zones of the same net that overlap count once, and only the part inside the board outline counts (its bounding box when Edge.Cuts has no
+        closed shape). The board area is the largest closed Edge.Cuts outline (or its bounding box). A layer is taken as a plane when
       </p>
       <ul>
         <li>it is declared a <i>power</i> layer in Board Setup → Board Editor Layers, or</li>
@@ -107,7 +39,7 @@ export function Method() {
       </ul>
       <p>
         A ground pour on a busy signal layer therefore stays a signal layer. Each layer's detected role and the reason are shown under Layer roles in the Properties panel, where you can change it. Zone outlines
-        are used, not the filled copper, so antipads and clearances do not reduce the coverage.
+        are used, not the filled copper, so antipads and clearances do not reduce the coverage; the fills are used for the reference-plane check below.
       </p>
       <h2>Impedance and loss</h2>
       <p>
@@ -156,16 +88,27 @@ export function Method() {
         from the same loss model as the width table and the Interface Rules page.
       </p>
       <p>
+        <b>Gaps in the reference plane.</b> KiCad saves the copper of every filled zone in the board file: the zone less its cut-outs, the clearances to other nets, the antipads and the removed islands. Those fills
+        are rasterised on a {VOID.res * 1000} µm grid (coarser on a very large board) and every track is sampled along its length against the fills of the other copper layers. A stretch of a trace with no copper under
+        it on one of its reference planes is a gap; stretches are joined across the corners of the trace. A stretch that reaches a pad or a via (a free end of the net's routing on that layer) is left out,
+        because the antipad of the via and any voiding under a connector pad are there by design. What remains is a trace crossing a split, a slot cut by a track routed on the plane layer, a row of merged
+        antipads or a keepout. A gap of {VOID.warn} mm or more makes the layer a warning, with the total length, the longest gap and where it is in the board's coordinates. The fills are read as they were
+        saved, so refill the zones (B in the PCB editor) before saving the board; layers without fills are not checked.
+      </p>
+      <p>
         <b>Targets and results.</b> Each net class, split by the interface its names suggest, is matched to a target: an interface from the <Link to="/interface-rules">Interface Rules</Link> data, or a plain
         impedance. The suggestion comes from the class and net names (USB, HDMI, PCIe, SATA, MDI/ETH, MIPI/CSI/DSI, …); an impedance written in the class name, such as <code>85Ohm_PCIE</code>, is the designer's
         target: the interface is suggested when that impedance lies inside its range and within 10 % of its nominal impedance, otherwise the class's impedance is suggested as a plain target. Change any of them under Routing targets; the choice is kept in the page address. An interface target uses its impedance range from the
         specification or vendor guide; a plain or custom target allows ±10 %. Skew is checked against the interface's intra-pair limit (a time limit through the layer delay), length against its maximum length and
-        loss against its loss budget (over 80 % of the budget is a warning), where the data has them. ✓ passes, ⚠ needs a look (no reference plane, long uncoupled sections, a tight loss budget), ✗ fails. When
+        loss against its loss budget (over 80 % of the budget is a warning), where the data has them. Where the skew limit is a vendor's layout guideline rather than the specification's (HDMI, USB, 1000BASE-T,
+        SGMII), a pair over it is a warning, and a fail only beyond the skew the specification itself allows. ✓ passes, ⚠ needs a look (no reference plane, a gap in it, long uncoupled sections, a tight loss
+        budget, skew over a guideline), ✗ fails. When
         the impedance of one net differs by more than 10 % between layers, or one layer passes and another fails, the layer change is flagged: a width that is right on an outer layer is often wrong on an inner
         one.
       </p>
       <h2>Limits</h2>
       <ul>
+        {limits}
         <li>
           The routing check measures tracks, not pads: the length inside pads, via barrels and package lengths are not counted, and a track ending on a pad is not joined to the next one. Coplanar ground beside a
           pair and the copper of other nets near it do not enter the impedance.
@@ -176,7 +119,9 @@ export function Method() {
           Layer Stack Manager.
         </li>
         <li>Solder mask is taken as a uniform coating over the outer layers with the thickness in the file over the laminate and half of it over the trace. Switch it off for mask-free areas.</li>
-        <li>Coplanar ground beside the trace, plane cut-outs and the copper roughness of each layer are not read from the file.</li>
+        <li>
+          Coplanar ground beside the trace and the copper roughness of each layer are not read from the file. A gap in a reference plane is reported, but the impedance is solved over a solid plane.
+        </li>
         <li>KiCad's default stackup values are a placeholder; get the pressed thicknesses and laminate Dk/Df from your fabricator.</li>
       </ul>
       <h2>Sources</h2>
