@@ -162,7 +162,8 @@ describe('Delay and timing from the KiCad project', () => {
   it('the allowed skew is the interface’s intra-pair limit in ps on that layer', () => {
     const { patch, eeff, note } = applied({ layer: 'F.Cu', pair: '/HDMI_D0' });
     expect(patch.skew! / delayPsPerMm(eeff)).toBeCloseTo(5 * 0.0254, 4);
-    expect(note).toContain('intra-pair limit of HDMI 2.0');
+    expect(note).toContain('intra-pair layout guideline of HDMI 2.0');
+    expect(note).toContain('The specification itself allows 25 ps');
   });
 
   it('a net alone fills the first length with its single-ended εeff; a pair and a net compare the pair with the net', () => {

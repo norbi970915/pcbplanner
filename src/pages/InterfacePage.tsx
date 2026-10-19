@@ -30,7 +30,12 @@ const ROWS: { label: (s: InterfaceSpec[]) => string; value: (s: InterfaceSpec) =
     value: (s) => `${s.z.target} Ω ${s.z.kind === 'diff' ? 'differential' : 'single-ended'}${s.z.min !== undefined && s.z.max !== undefined ? ` (${s.z.min}–${s.z.max} Ω)` : ''}`,
   },
   { label: () => 'Second impedance', value: (s) => (s.z2 ? `${s.z2.label}` : undefined) },
-  { label: (ss) => ss.find((s) => s.skewLabels?.intra)?.skewLabels?.intra ?? 'Intra-pair skew', value: (s) => skew(s.intraPairPs, s.intraPairMm) || undefined },
+  { label: (ss) => ss.find((s) => s.skewLabels?.intra)?.skewLabels?.intra ?? 'Intra-pair skew', value: (s) => {
+      const v = skew(s.intraPairPs, s.intraPairMm);
+      if (!v || !(s.intraPairGuideline || s.intraPairBudgetPs !== undefined)) return v || undefined;
+      return `${v}, layout guideline${s.intraPairBudgetPs !== undefined ? `; the specification allows ${s.intraPairBudgetPs} ps` : ''}`;
+    },
+  },
   { label: (ss) => ss.find((s) => s.skewLabels?.lane)?.skewLabels?.lane ?? 'Lane-to-lane skew', value: (s) => skew(s.laneSkewPs, s.laneSkewMm) || undefined },
   { label: () => 'Board loss budget', value: (s) => (s.lossBudgetDb !== undefined ? `${s.lossBudgetDb} dB at ${s.nyquistGHz} GHz` : undefined) },
   { label: () => 'Laminate the lengths assume', value: (s) => (s.maxLossPerInGHz !== undefined ? `≤ ${s.maxLossPerInGHz} dB per inch per GHz` : undefined) },

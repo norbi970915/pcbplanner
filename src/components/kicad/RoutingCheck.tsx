@@ -322,7 +322,8 @@ export function RoutingCheckPanel({
       </div>
       <p className="px-2.5 pb-2 text-faint">
         Width and gap are the length-weighted values on each layer; sections more than {COUPLING.gapFactor} × the dominant gap apart count as uncoupled. Skew is the difference of the routed lengths, without
-        via barrels and package lengths. Loss at the interface's Nyquist frequency.
+        via barrels and package lengths. Where the skew limit is a vendor layout guideline rather than the specification's, a pair over it is a warning, and a fail only beyond the
+        specification's own budget. Loss at the interface's Nyquist frequency.
       </p>
     </Panel>
   );

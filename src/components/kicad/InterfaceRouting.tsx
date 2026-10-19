@@ -161,7 +161,13 @@ export function YourRoutingPanel({
               </td>
               <td className="v">
                 {res.skew.limitMm !== undefined ? `≤ ${L(res.skew.limitMm)}` : skewSpec ? `≤ ${skewSpec}` : 'no limit'}
-                {skewSpec && res.skew.limitMm !== undefined && <div className="text-faint">{skewSpec}</div>}
+                {skewSpec && res.skew.limitMm !== undefined && (
+                  <div className="text-faint">
+                    {skewSpec}
+                    {spec.intraPairGuideline || spec.intraPairBudgetPs !== undefined ? ' guideline' : ''}
+                  </div>
+                )}
+                {spec.intraPairBudgetPs !== undefined && <div className="text-faint">spec ≤ {spec.intraPairBudgetPs} ps</div>}
               </td>
             </tr>
           )}

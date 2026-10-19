@@ -969,7 +969,13 @@ export function checkItem(item: RouteItem, target: Target | null, solves: Record
     const psText = ps !== undefined ? ` (${ps.toFixed(ps < 10 ? 1 : 0)} ps)` : '';
     if (limitMm !== undefined) {
       const lim = spec?.intraPairMm !== undefined ? `${L(limitMm)} ${unit}` : `${spec!.intraPairPs} ps = ${L(limitMm)} ${unit} on ${main!.layer}`;
-      res.skew = { mm, ps, limitMm, status: mm <= limitMm ? 'ok' : 'fail', reason: `skew ${L(Math.round(mm * 1000) / 1000)} ${unit}${psText}, limit ${lim}` };
+      const budget = spec!.intraPairBudgetPs;
+      // a vendor guideline is tighter than the specification: over it is a warning, a fail only beyond the specification's own budget
+      if (spec!.intraPairGuideline || budget !== undefined) {
+        const status: Status = mm <= limitMm ? 'ok' : budget !== undefined && ps !== undefined && ps > budget ? 'fail' : 'warn';
+        const specText = budget !== undefined ? `${spec!.name} allows ${budget} ps` : `${spec!.name} sets no board limit`;
+        res.skew = { mm, ps, limitMm, status, reason: `skew ${L(Math.round(mm * 1000) / 1000)} ${unit}${psText}, layout guideline ${lim}; ${specText}` };
+      } else res.skew = { mm, ps, limitMm, status: mm <= limitMm ? 'ok' : 'fail', reason: `skew ${L(Math.round(mm * 1000) / 1000)} ${unit}${psText}, limit ${lim}` };
     } else if (spec?.intraPairPs !== undefined)
       res.skew = { mm, ps, status: layers.some((l) => l.status === 'pending') ? 'pending' : 'warn', reason: `skew ${L(Math.round(mm * 1000) / 1000)} ${unit}; the ${spec.intraPairPs} ps limit needs the delay of a layer with a reference plane` };
     else res.skew = { mm, ps, status: 'info', reason: `skew ${L(Math.round(mm * 1000) / 1000)} ${unit}${psText}${target ? ', no skew limit for this target' : ''}` };

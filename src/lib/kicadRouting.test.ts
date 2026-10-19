@@ -388,10 +388,21 @@ describe('checks against interfaces.ts limits', () => {
     expect(checkItem(pairItem([{ layer: 'F.Cu', w: 0.1, gap: 0.15, len: 30 }]), targetById('d100'), { 'F.Cu': { z: 111, eeff: 3 } }, L).overall).toBe('fail');
   });
   it('intra-pair skew: a length limit as it is, a ps limit through the layer delay', () => {
+    const pcie = INTERFACES.find((s) => s.id === 'pcie-gen3')!;
+    const specFail = checkItem(pairItem([{ layer: 'F.Cu', w: 0.09, gap: 0.15, len: 43.7 }], 44.08), targetById('pcie-gen3'), { 'F.Cu': { z: 85, eeff: 3.3 } }, L);
+    expect(specFail.skew).toMatchObject({ status: 'fail', limitMm: pcie.intraPairMm });
     const hdmi = targetById('hdmi-20');
     const spec = INTERFACES.find((s) => s.id === 'hdmi-20')!;
     const long = checkItem(pairItem([{ layer: 'F.Cu', w: 0.09, gap: 0.15, len: 43.7 }], 44.08), hdmi, { 'F.Cu': { z: 100, eeff: 3.3 } }, L);
-    expect(long.skew).toMatchObject({ status: 'fail', limitMm: spec.intraPairMm });
+    // HDMI's 5 mil is TI's layout guideline: over it is a warning while the 25 ps of the specification holds
+    expect(long.skew).toMatchObject({ status: 'warn', limitMm: spec.intraPairMm });
+    expect(long.skew!.reason).toContain('layout guideline 0.127 mm; HDMI 2.0 (TMDS, 6 Gb/s) allows 25 ps');
+    const far = checkItem(pairItem([{ layer: 'F.Cu', w: 0.09, gap: 0.15, len: 40 }], 45), hdmi, { 'F.Cu': { z: 100, eeff: 3.3 } }, L);
+    expect(far.skew!.ps).toBeGreaterThan(25);
+    expect(far.skew!.status).toBe('fail');
+    const usb = checkItem(pairItem([{ layer: 'F.Cu', w: 0.14, gap: 0.15, len: 40 }], 50), targetById('usb2-hs'), { 'F.Cu': { z: 90, eeff: 3.3 } }, L);
+    expect(usb.skew).toMatchObject({ status: 'warn' });
+    expect(usb.skew!.reason).toMatch(/sets no board limit/);
     expect(long.skew!.mm).toBeCloseTo(0.38, 9);
     expect(long.skew!.ps).toBeCloseTo(0.38 * ((Math.sqrt(3.3) * 1e9) / 299792458), 6);
     const dp = INTERFACES.find((s) => s.id === 'dp-hbr2')!;
@@ -479,12 +490,12 @@ describe('example project: the routing check finds what it was built to show', (
     expect(r.skew!.mm).toBeLessThan(0.01);
     expect(r.notes[0]).toMatch(/Impedance changes with the layer/);
   });
-  it('HDMI: impedance right, 0.38 mm skew from the arc bend fails', () => {
+  it('HDMI: impedance right, 0.38 mm skew from the arc bend is over the 5 mil guideline', () => {
     const r = result('p:HDMI|hdmi');
     expect(r.layers[0].status).toBe('ok');
     expect(r.skew!.mm).toBeCloseTo(0.24 * (Math.PI / 2), 3);
-    expect(r.skew!.status).toBe('fail');
-    expect(r.overall).toBe('fail');
+    expect(r.skew!.status).toBe('warn');
+    expect(r.overall).toBe('warn');
   });
   it('PCIe and the 50 Ω clock pass', () => {
     expect(result('p:PCIe|pcie').overall).toBe('ok');

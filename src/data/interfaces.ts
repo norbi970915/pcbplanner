@@ -35,6 +35,11 @@ export interface InterfaceSpec {
   z2?: { kind: 'diff' | 'se'; target: number; label: string };
   intraPairPs?: number;
   intraPairMm?: number;
+  /** The intra-pair limit above is a vendor layout guideline, not a limit of the specification:
+   *  a pair over it is a warning, and a fail only beyond intraPairBudgetPs. */
+  intraPairGuideline?: boolean;
+  /** Intra-pair skew the specification itself allows, ps, where the routing limit above is a tighter guideline. */
+  intraPairBudgetPs?: number;
   laneSkewPs?: number;
   laneSkewMm?: number;
   /** Names for the two skew limits where “intra-pair” and “lane-to-lane” do not fit. */
@@ -273,6 +278,7 @@ export const INTERFACES: InterfaceSpec[] = [
     z: { kind: 'diff', target: 100, min: 90, max: 110 },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairMm: 20 * MIL,
+    intraPairGuideline: true,
     maxLenMm: 2 * IN,
     skewLabels: { intra: 'Pair length matching (P vs N)' },
     rules: [
@@ -385,6 +391,7 @@ export const INTERFACES: InterfaceSpec[] = [
     encoding: '8b/10b, 1.25 GBd (1 Gb/s payload)',
     z: { kind: 'diff', target: 100, min: 80, max: 120, note: 'The receiver must present 80–120 Ω differential; boards are routed to 100 Ω.' },
     intraPairPs: 5,
+    intraPairGuideline: true,
     maxLenMm: 7500 * MIL,
     rules: [
       { key: 'other', label: 'Signalling', req: '1.25 GBd, 8b/10b coded, so the clock content sits at 625 MHz. Differential output 150–400 mV.', normative: true, src: 0 },
@@ -425,6 +432,7 @@ export const INTERFACES: InterfaceSpec[] = [
     z: { kind: 'diff', target: 90, min: 76.5, max: 103.5 },
     z2: { kind: 'se', target: 45, label: '45 Ω from each line to ground' },
     intraPairMm: 50 * MIL,
+    intraPairGuideline: true,
     maxLenMm: 4 * IN,
     rules: [
       { key: 'z', label: 'Impedance', req: 'The line between the receptacle and the series resistors must be 90 Ω ±15 % differential; each line is 45 Ω to ground.', normative: true, src: 0 },
@@ -469,6 +477,7 @@ export const INTERFACES: InterfaceSpec[] = [
     encoding: '8b/10b, with mandatory spread-spectrum clocking (30–33 kHz, 0 to −5000 ppm)',
     z: { kind: 'diff', target: 90, min: 81, max: 99, note: 'Vendors route SuperSpeed to 90 Ω ±10 %; TI allows ±15 %.' },
     intraPairMm: 5 * MIL,
+    intraPairGuideline: true,
     lossBudgetDb: 8.5,
     lossNote: 'The USB 3.2 specification gives an informative budget of 8.5 dB for the host or device and 23 dB for the whole channel, and advises designing about 3 dB better than that.',
     maxLenMm: 9 * IN,
@@ -531,6 +540,7 @@ export const INTERFACES: InterfaceSpec[] = [
     encoding: '128b/132b, with mandatory spread-spectrum clocking',
     z: { kind: 'diff', target: 90, min: 81, max: 99 },
     intraPairMm: 5 * MIL,
+    intraPairGuideline: true,
     lossBudgetDb: 8.5,
     lossNote: 'Same informative budget as Gen 1 (8.5 dB for the host or device, 23 dB end to end), but now measured at 5 GHz, where the board loses roughly 1.4 times as much per inch.',
     maxLenMm: 9 * IN,
@@ -582,6 +592,8 @@ export const INTERFACES: InterfaceSpec[] = [
     z: { kind: 'diff', target: 100, min: 85, max: 115, note: '100 Ω ±15 % differential; TI allows 75–110 Ω between a GPU and a redriver on a source board.' },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairMm: 5 * MIL,
+    intraPairGuideline: true,
+    intraPairBudgetPs: 44,
     laneSkewMm: 1 * IN,
     maxLossPerInGHz: 0.17,
     skewLabels: { intra: 'Intra-pair skew (source board)', lane: 'Channel-to-channel skew (source board)' },
@@ -639,6 +651,8 @@ export const INTERFACES: InterfaceSpec[] = [
     z: { kind: 'diff', target: 100, min: 85, max: 115 },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairMm: 5 * MIL,
+    intraPairGuideline: true,
+    intraPairBudgetPs: 25,
     laneSkewMm: 1 * IN,
     maxLossPerInGHz: 0.17,
     skewLabels: { intra: 'Intra-pair skew (source board)', lane: 'Channel-to-channel skew (source board)' },

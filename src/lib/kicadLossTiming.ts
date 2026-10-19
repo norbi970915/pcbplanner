@@ -206,7 +206,9 @@ export function timingPatch(v: KicadPickValues, src: TimingSource, eeff: number,
       parts.push(`Allowed skew: the ${spec.intraPairPs} ps intra-pair limit of ${spec.name}`);
     } else if (spec?.intraPairMm !== undefined) {
       patch.skew = Number((spec.intraPairMm * pm).toFixed(4));
-      parts.push(`Allowed skew: the ${L(spec.intraPairMm)} intra-pair limit of ${spec.name}, ${patch.skew} ps on ${src.layer}`);
+      const guideline = spec.intraPairGuideline || spec.intraPairBudgetPs !== undefined;
+      parts.push(`Allowed skew: the ${L(spec.intraPairMm)} intra-pair ${guideline ? 'layout guideline' : 'limit'} of ${spec.name}, ${patch.skew} ps on ${src.layer}`);
+      if (spec.intraPairBudgetPs !== undefined) parts.push(`The specification itself allows ${spec.intraPairBudgetPs} ps`);
     }
     if (v.pair.mainLayer && v.pair.mainLayer !== src.layer) parts.push(`The routing check takes the delay of ${v.pair.mainLayer}, where most of the pair runs`);
   } else if (v.net) {
