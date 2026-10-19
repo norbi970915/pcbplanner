@@ -56,6 +56,8 @@ const TABS_KEY = 'pcbtk-tabs';
 const PANELS_KEY = 'pcbtk-panels';
 
 function beforeVercelSend(event: BeforeSendEvent): BeforeSendEvent | null {
+  // automated browsers (the site's own end-to-end tests, crawlers driving a browser) are not visitors
+  if (typeof navigator !== 'undefined' && navigator.webdriver) return null;
   try {
     const url = new URL(event.url, window.location.origin);
     // calculator inputs live in the query string and are never sent; campaign tags (utm_*) are kept so link sources can be measured
