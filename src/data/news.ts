@@ -11,9 +11,9 @@ export interface NewsItem {
 export const NEWS: NewsItem[] = [
   {
     date: '2026-10-18',
-    title: 'Trace widths straight from your KiCad board',
-    text: 'Drop a .kicad_pcb file and get the trace width for 50 Ω single-ended and 90 Ω and 100 Ω differential pairs on every layer of your real stackup, with the loss per inch. The planes are found from your zones, and the file is read in your browser, never uploaded.',
-    links: [{ to: '/kicad-impedance', label: 'Open the KiCad impedance calculator' }],
+    title: 'Load your KiCad project and check its routing',
+    text: 'Drop your KiCad project folder once to see its stackup, net classes and differential pairs, the trace widths for 50, 90 and 100 Ω on every layer, and a routing check of each pair’s impedance, skew, length and loss. Impedance, Interface rules, Trace loss, Delay & timing, Crosstalk and PDN can then import values from the project. The files stay in your browser.',
+    links: [{ to: '/kicad-project', label: 'Open KiCad project' }],
   },
   {
     date: '2026-10-15',
