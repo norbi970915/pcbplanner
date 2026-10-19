@@ -30,6 +30,52 @@ export async function readKicadFile(file: Blob): Promise<KicadBoard> {
   }
 }
 
+/** A file of a dropped or picked KiCad project, with its path inside the folder. */
+export interface ProjectFile {
+  file: File;
+  name: string;
+  path: string;
+  size: number;
+}
+
+const asProjectFile = (file: File, path?: string): ProjectFile => ({ file, name: file.name, path: path || file.webkitRelativePath || file.name, size: file.size });
+
+/** Files from a file input (several files, or a folder picked with webkitdirectory). */
+export const inputFiles = (list: FileList | null): ProjectFile[] => Array.from(list ?? []).map((f) => asProjectFile(f));
+
+// folders that never hold the board: version control, backups, libraries of 3D models
+const SKIP_DIR = /^(\.|node_modules$|.*-backups$|.*\.3dshapes$|.*\.pretty$)/i;
+const MAX_ENTRIES = 20000;
+
+/**
+ * Files of a drop, with folders walked (a whole KiCad project folder). Call it from the drop handler
+ * itself: the browser only hands out the entries during the event.
+ */
+export function droppedFiles(dt: DataTransfer): Promise<ProjectFile[]> {
+  const entries = Array.from(dt.items ?? [])
+    .filter((i) => i.kind === 'file')
+    .map((i) => (typeof i.webkitGetAsEntry === 'function' ? i.webkitGetAsEntry() : null));
+  if (!entries.length || entries.some((e) => !e)) return Promise.resolve(inputFiles(dt.files));
+  const out: ProjectFile[] = [];
+  let seen = 0;
+  const walk = async (e: FileSystemEntry, depth: number): Promise<void> => {
+    if (++seen > MAX_ENTRIES) return;
+    if (e.isFile) {
+      if (!/\.kicad_(pcb|pro)$/i.test(e.name)) return;
+      const file = await new Promise<File>((res, rej) => (e as FileSystemFileEntry).file(res, rej));
+      out.push(asProjectFile(file, e.fullPath.replace(/^\//, '')));
+    } else if (e.isDirectory && depth < 6 && !(depth > 0 && SKIP_DIR.test(e.name))) {
+      const reader = (e as FileSystemDirectoryEntry).createReader();
+      for (;;) {
+        const batch = await new Promise<FileSystemEntry[]>((res, rej) => reader.readEntries(res, rej));
+        if (!batch.length) break;
+        for (const c of batch) await walk(c, depth + 1);
+      }
+    }
+  };
+  return Promise.all(entries.map((e) => walk(e as FileSystemEntry, 0))).then(() => out);
+}
+
 /**
  * Save an imported stackup to “My stackups” and return its id. The same import is saved once; when a
  * stackup with that id was edited since, the import is saved beside it under a new id.

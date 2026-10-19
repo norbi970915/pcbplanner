@@ -6,23 +6,30 @@ import { Check, LenField, Notes, NumField, Panel, Row, Section, Segmented, Selec
 import { FOILS } from '../data/laminates';
 import type { DesignResult } from '../lib/design';
 import { boardNotes, guessRoles, kicadStackup, PLANE_RULE, stackupItemThickness, versionDate, type KicadBoard } from '../lib/kicadImport';
-import { readKicadFile, saveImportedStackup } from '../lib/kicadImportClient';
+import { droppedFiles, inputFiles, readKicadFile, saveImportedStackup, type ProjectFile } from '../lib/kicadImportClient';
 import { calcStackup, designRequest, impedanceLink, lossRequest, planLayers, TARGETS, toCsv, toText, type ImpedanceSettings, type LayerPlan, type Target } from '../lib/kicadImpedance';
-import { runPooled } from '../lib/solverClient';
-import type { SolverResponse } from '../lib/solver.worker';
+import { COUPLING, decodeTargets, encodeTargets, parseKicadProject, pickProjectFiles, type KicadProject } from '../lib/kicadRouting';
+import { cachedSolve, useRoutingCheck, type SolveReq } from '../lib/kicadRoutingSolve';
 import type { CopperRole } from '../lib/stackups';
 import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { useTrackedState } from '../state/useTrackedState';
 import { useUrlState } from '../state/useUrlState';
+import { RoutingCheckPanel, RoutingTargets } from './KicadRoutingCheck';
 
-const DEFAULTS = { t50: true, t90: true, t100: true, t85: false, grule: 'fixed', gap: 0.127, f: 4, mask: true, foil: 'ed' };
+const DEFAULTS = { t50: true, t90: true, t100: true, t85: false, grule: 'fixed', gap: 0.127, f: 4, mask: true, foil: 'ed', rt: '' };
 const EXAMPLE_URL = '/examples/pcbplanner-example-6layer.kicad_pcb';
+const EXAMPLE_PRO_URL = '/examples/pcbplanner-example-6layer.kicad_pro';
 const STORE_KEY = 'pcbplanner:kicad-impedance:board';
 
 interface Loaded {
   name: string;
   board: KicadBoard;
+  /** Net classes from the .kicad_pro loaded with the board (never the file itself). */
+  project?: KicadProject | null;
+  projectError?: string;
+  /** Other .kicad_pcb files found in a dropped folder. */
+  otherBoards?: string[];
 }
 
 /** The extracted board summary (not the file) is kept for this tab, so returning to the page keeps the result. */
@@ -43,19 +50,7 @@ function writeStored(v: Loaded | null) {
   }
 }
 
-// solved lines and losses, shared across files and settings for this visit
-type Req = Parameters<typeof runPooled>[0];
-const cache = new Map<string, Promise<SolverResponse>>();
-function cachedSolve(req: Req): Promise<SolverResponse> {
-  const key = JSON.stringify(req);
-  let p = cache.get(key);
-  if (!p) {
-    if (cache.size > 4000) cache.clear();
-    p = runPooled(req);
-    cache.set(key, p);
-  }
-  return p;
-}
+type Req = SolveReq;
 
 interface Cell {
   d?: DesignResult;
@@ -86,17 +81,39 @@ export default function KicadImpedance() {
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
   const readSeq = useRef(0);
 
-  const open = async (file: Blob, name: string) => {
+  /** Open a board, or a whole project: the .kicad_pcb and, when there is one, its .kicad_pro. */
+  const open = async (files: ProjectFile[]) => {
     const id = ++readSeq.current;
     setError(null);
     setBusy(true);
     try {
-      if (!/\.kicad_pcb$/i.test(name)) throw new Error(`${name} is not a .kicad_pcb file. Choose the board file of a KiCad project (KiCad 6 to 10).`);
-      const board = await readKicadFile(file);
+      const pick = pickProjectFiles(files);
+      if (!pick.board) {
+        const one = files.length === 1 ? files[0].name : null;
+        throw new Error(
+          one
+            ? `${one} is not a .kicad_pcb file. Choose the board file of a KiCad project (KiCad 6 to 10), or the whole project folder.`
+            : `No .kicad_pcb file among the ${files.length} files. Choose the board file of a KiCad project (KiCad 6 to 10), or the whole project folder.`,
+        );
+      }
+      const [board, project] = await Promise.all([
+        readKicadFile(pick.board.file),
+        pick.project
+          ? pick.project.file.text().then(
+              (t) => ({ project: parseKicadProject(t, pick.project!.name) }),
+              () => ({ error: `${pick.project!.name} could not be read.` }),
+            )
+          : Promise.resolve(null),
+      ]);
       if (id !== readSeq.current) return;
-      const next = { name, board };
+      let proj: KicadProject | null = null;
+      let projectError: string | undefined;
+      if (project && 'project' in project) proj = project.project;
+      else if (project) projectError = project.error;
+      const next: Loaded = { name: pick.board.name, board, project: proj, projectError, otherBoards: pick.otherBoards };
       replaceLoaded(next);
       replaceOverrides({});
       writeStored(next);
@@ -113,9 +130,15 @@ export default function KicadImpedance() {
   const tryExample = async () => {
     setBusy(true);
     try {
-      const r = await fetch(EXAMPLE_URL);
+      const [r, rp] = await Promise.all([fetch(EXAMPLE_URL), fetch(EXAMPLE_PRO_URL)]);
       if (!r.ok) throw new Error(`The example could not be loaded (HTTP ${r.status}).`);
-      await openRef.current(await r.blob(), 'pcbplanner-example-6layer.kicad_pcb');
+      const named = (b: Blob, name: string): ProjectFile => {
+        const file = new File([b], name);
+        return { file, name, path: name, size: file.size };
+      };
+      const files = [named(await r.blob(), 'pcbplanner-example-6layer.kicad_pcb')];
+      if (rp.ok) files.push(named(await rp.blob(), 'pcbplanner-example-6layer.kicad_pro'));
+      await openRef.current(files);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
@@ -146,8 +169,12 @@ export default function KicadImpedance() {
       e.preventDefault();
       depth = 0;
       setDragging(false);
-      const file = e.dataTransfer?.files?.[0];
-      if (file) void openRef.current(file, file.name);
+      if (!e.dataTransfer) return;
+      // the entries are only available during the event: start walking the folder now
+      void droppedFiles(e.dataTransfer).then(
+        (files) => (files.length ? openRef.current(files) : setError('The drop held no .kicad_pcb file. Drop the board file of a KiCad project, or the whole project folder.')),
+        () => setError('The dropped folder could not be read in this browser. Choose the files instead.'),
+      );
     };
     document.addEventListener('dragenter', enter);
     document.addEventListener('dragover', over);
@@ -227,6 +254,17 @@ export default function KicadImpedance() {
   }, [solveKey]);
 
   const L = (mm: number) => fmt(fromMm(mm, unit), 4);
+
+  // ---- routing check: measured pairs and nets against their targets ----
+  const Lr = useMemo(() => (mm: number) => fmt(fromMm(mm, unit), 4), [unit]);
+  const targetOverrides = useMemo(() => decodeTargets(p.rt), [p.rt]);
+  const routingCheck = useRoutingCheck({ routing: board?.routing, project: loaded?.project ?? null, calc, plans, settings, overrides: targetOverrides, L: Lr, unit, enabled: !!calc && inputsOk });
+  const setTarget = (key: string, id: string | undefined) => {
+    const next = { ...targetOverrides };
+    if (id === undefined) delete next[key];
+    else next[key] = id;
+    set({ rt: encodeTargets(next) });
+  };
   const solving = progress.done < progress.total;
   const seTarget = targets.find((t) => t.kind === 'se');
   const diffTarget = targets.find((t) => t.id === 'd100') ?? targets.find((t) => t.kind === 'diff');
@@ -318,17 +356,24 @@ export default function KicadImpedance() {
   // the drop zone: in the document on wide screens; on phones, where the inputs come first, at the top of the inputs
   const dropZone = (compact: boolean) => (
     <div className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line px-4 text-center ${compact ? 'py-4' : 'py-10'}`}>
-      <p className="text-[15px] font-semibold">Drop your .kicad_pcb file here</p>
+      <p className="text-[15px] font-semibold">Drop your .kicad_pcb file or the whole KiCad project folder</p>
       <div className="flex flex-wrap justify-center gap-2">
-        <button type="button" className="btn btn-primary" onClick={() => fileInput.current?.click()} disabled={busy}>
-          Choose file
+        <button type="button" className="btn btn-primary" onClick={() => fileInput.current?.click()} disabled={busy} title="One .kicad_pcb, or the .kicad_pcb and .kicad_pro together">
+          Choose files
+        </button>
+        <button type="button" className="btn" onClick={() => folderInput.current?.click()} disabled={busy}>
+          Choose folder
         </button>
         <button type="button" className="btn" onClick={() => void tryExample()} disabled={busy}>
           Try an example
         </button>
       </div>
-      <p className="text-muted">The file stays in your browser — nothing is uploaded.</p>
-      <p className="text-faint">{busy ? 'Reading the board…' : 'KiCad 6 to 10 board files. Only the stackup, layers, outline, zones and track lengths are read.'}</p>
+      <p className="text-muted">The files stay in your browser — nothing is uploaded.</p>
+      <p className="text-faint">
+        {busy
+          ? 'Reading the board…'
+          : 'KiCad 6 to 10. From the .kicad_pcb: stackup, layers, outline, zones, tracks and vias; from the .kicad_pro (optional): the net classes. Other files are ignored.'}
+      </p>
     </div>
   );
   const properties = (
@@ -403,16 +448,22 @@ export default function KicadImpedance() {
           )}
         </Section>
       )}
+      {board?.routing && <RoutingTargets groups={routingCheck.groups} overrides={targetOverrides} onChange={setTarget} project={loaded?.project ?? null} projectError={loaded?.projectError} />}
     </>
   );
 
-  const status = board ? `${loaded!.name} · ${coppers.length} copper layers${progress.total ? ` · ${solving ? `solving ${Math.floor(progress.done / 2)} of ${progress.total / 2}` : `${progress.total / 2} lines solved`}` : ''}` : busy ? 'Reading the board…' : 'No board loaded';
+  const rp = routingCheck.progress;
+  const status = board
+    ? `${loaded!.name} · ${coppers.length} copper layers${progress.total ? ` · ${solving ? `solving ${Math.floor(progress.done / 2)} of ${progress.total / 2}` : `${progress.total / 2} lines solved`}` : ''}${rp.total ? ` · routing check ${rp.done < rp.total ? `${rp.done} of ${rp.total}` : 'done'}` : ''}`
+    : busy
+      ? 'Reading the board…'
+      : 'No board loaded';
   const thick = board ? (board.thickness ?? stackupItemThickness(board)) : 0;
 
   return (
     <ToolPage
       title="KiCad Stackup Impedance Calculator"
-      description="Drop a KiCad .kicad_pcb file to read its physical stackup and get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver. The file is read in your browser and not uploaded."
+      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup and get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver. The routing check then measures the width, gap, length and skew of every differential pair as routed and checks its impedance on each layer against the interface it carries. The files are read in your browser and not uploaded."
       properties={properties}
       status={status}
       onReset={onReset}
@@ -420,19 +471,34 @@ export default function KicadImpedance() {
     >
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-2 border-dashed border-[var(--accent)]" style={{ background: 'color-mix(in srgb, var(--doc) 80%, transparent)' }}>
-          <span className="border border-line bg-sheet px-3 py-2 font-semibold">Drop the .kicad_pcb file to read its stackup</span>
+          <span className="border border-line bg-sheet px-3 py-2 font-semibold">Drop the .kicad_pcb file or the project folder</span>
         </div>
       )}
       <input
         ref={fileInput}
         type="file"
-        accept=".kicad_pcb"
+        accept=".kicad_pcb,.kicad_pro"
+        multiple
         className="sr-only"
         tabIndex={-1}
-        aria-label="Choose a KiCad board file"
+        aria-label="Choose a KiCad board file, or the board and project files"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void open(file, file.name);
+          const files = inputFiles(e.target.files);
+          if (files.length) void open(files);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={folderInput}
+        type="file"
+        // a folder pick: React passes the attribute through as it is
+        {...{ webkitdirectory: '', directory: '' }}
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Choose a KiCad project folder"
+        onChange={(e) => {
+          const files = inputFiles(e.target.files);
+          if (files.length) void open(files);
           e.target.value = '';
         }}
       />
@@ -443,7 +509,15 @@ export default function KicadImpedance() {
             <p className="break-words lg:mt-2" role="status">
               <b>{loaded!.name}</b> · {coppers.length} copper layers · board {fmt(thick, 4)} mm · KiCad {board.kicad} file (format {versionDate(board.version)})
               {board.copperFinish ? ` · ${board.copperFinish}` : ''}
+              {board.routing ? ` · ${board.routing.tracks + board.routing.arcs} tracks, ${board.routing.vias} vias, ${board.routing.pairs.length} differential ${board.routing.pairs.length === 1 ? 'pair' : 'pairs'}` : ''}
+              {loaded!.project ? ` · net classes from ${loaded!.project.name}` : ''}
               <span className="text-faint"> · read in {fmt(Math.max(board.stats.ms, 1), 2)} ms</span>
+            </p>
+          )}
+          {board && !!loaded!.otherBoards?.length && (
+            <p className="text-faint">
+              The folder holds more boards; {loaded!.name} was read{loaded!.project ? ' (it has a project file of the same name)' : ''}. Not read: {loaded!.otherBoards.slice(0, 5).join(', ')}
+              {loaded!.otherBoards.length > 5 ? ` and ${loaded!.otherBoards.length - 5} more` : ''}.
             </p>
           )}
         </div>
@@ -546,6 +620,19 @@ export default function KicadImpedance() {
             </div>
             <p className="px-2.5 pb-2 text-faint">{settingsLine} Widths from the 2D field solver at normal accuracy, as in the Layer Stack Manager.</p>
           </Panel>
+          {inputsOk && (
+            <RoutingCheckPanel
+              checked={routingCheck.checked}
+              progress={routingCheck.progress}
+              routing={board?.routing}
+              hasProject={!!loaded?.project}
+              L={Lr}
+              unit={unit}
+              boardName={loaded?.name ?? ''}
+              baseName={baseName}
+              download={download}
+            />
+          )}
           <Notes items={notes} />
         </>
       )}
@@ -561,8 +648,9 @@ export function Method() {
       <p>
         A <code>.kicad_pcb</code> file is a text file of nested lists (s-expressions). The page reads it in your browser, in a background worker, and looks only at the top-level items it needs: the file
         version, <code>(general (thickness …))</code>, the <code>(layers …)</code> list, the <code>(stackup …)</code> section inside <code>(setup …)</code>, the Edge.Cuts outline graphics, the header and outline
-        of every <code>(zone …)</code> and the start and end points of every track segment and arc. Footprints, fill polygons and everything else are skipped, so a board of tens of megabytes is read in well under a
-        second.
+        of every <code>(zone …)</code>, every track segment and arc (start, mid and end point, width, layer, net) and every via (position, layers, net). Footprints, fill polygons and everything else are skipped,
+        so a board of tens of megabytes is read in well under a second. Nets are named by their <code>(net N "name")</code> declarations in KiCad 6 to 9 and by <code>(net "name")</code> on each item from KiCad
+        10. From a <code>.kicad_pro</code> file, dropped with the board or found in the project folder, only the net classes are read; everything else in the folder is ignored.
       </p>
       <p>
         Each stackup item is <code>(layer "name" (type "…") …)</code> with <code>(thickness mm [locked])</code>, <code>(material "…")</code>, <code>(epsilon_r …)</code> and <code>(loss_tangent …)</code>; a
@@ -600,9 +688,55 @@ export function Method() {
         file's values as given at 1 GHz (KiCad's default specification frequency) unless the file states another frequency. For a differential pair the loss is that of the odd mode, which is the differential
         insertion loss per inch.
       </p>
+      <h2>Routing check</h2>
+      <p>
+        <b>Net classes.</b> They are read from <code>net_settings</code> in the <code>.kicad_pro</code> file and resolved as the KiCad version that wrote the file does (the schema version is in{' '}
+        <code>net_settings.meta.version</code>). KiCad 6 lists the member nets of each class by name. KiCad 7 and 8 use an explicit <code>netclass_assignments</code> entry, else the first matching{' '}
+        <code>netclass_patterns</code> entry, else Default. KiCad 9 and 10 apply every assigned and every matching class; the one with the lowest priority number decides and missing values come from the next. A
+        pattern matches when it matches the whole net name either as a regular expression or as a wildcard (<code>*</code> any run, <code>?</code> one character), case-sensitive, as KiCad's net-class matcher
+        does; vector buses such as <code>D[0..7]</code> are expanded. Without a project file every net is in Default.
+      </p>
+      <p>
+        <b>Differential pairs.</b> KiCad's own rule: reading the net name backwards, digits and underscores are skipped and the next character must be <code>+</code> or <code>P</code> (positive) or{' '}
+        <code>-</code> or <code>N</code> (negative); the partner has that character swapped. So <code>USB_D+</code>/<code>USB_D-</code>, <code>PCIE_TX0_P</code>/<code>PCIE_TX0_N</code> and{' '}
+        <code>LVDS_P1</code>/<code>LVDS_N1</code> are pairs; lower-case <code>p</code>/<code>n</code> are not.
+      </p>
+      <p>
+        <b>Width and gap.</b> On each layer the width is the length-weighted most common track width of each net, with the range when it varies. Arcs count with their true length. For the gap, every piece of one
+        trace is compared with the pieces of the other trace on the same layer that run within {COUPLING.parallelDeg}° of parallel; a uniform grid of the pieces keeps this fast on large boards. Where the two
+        overlap when projected onto each other (as in KiCad's diff-pair DRC), the centre distance is taken at the middle of the overlap and the gap is that distance less half of each width; where several
+        pieces overlap, the nearest counts. Arcs are cut into chords of at most {COUPLING.arcStepDeg}°. The gap reported is the length-weighted most common gap (in 1 µm steps). A section whose gap is more than{' '}
+        {COUPLING.gapFactor} × that gap (and more than {COUPLING.gapSlack * 1000} µm above it), or that has no parallel partner at all, such as the breakout to pads and vias, is uncoupled: it is left out of the gap
+        and shown as the difference between coupled and total length. The coupled length is the mean of what is measured along each of the two traces.
+      </p>
+      <p>
+        <b>Impedance.</b> The measured width and gap of each layer are analysed with the same 2D field solver, cross-section, 0.5 mil etch and accuracy as the width table above, so a width designed for a target
+        and then analysed gives the target back. A pair whose two traces differ in width is solved with their mean. A layer is checked when it has at least {COUPLING.minCoupled} mm of coupled length; shorter sections are breakout near pads and vias (and electrically short) and are listed, not checked. A layer with
+        less than {COUPLING.apartCoupled} mm coupled over more than {COUPLING.apartLen} mm of routing is a warning: the two traces run apart there. The solves run on the solver worker pool and are cached
+        by layer, width and gap.
+      </p>
+      <p>
+        <b>Length, skew and loss.</b> The length of a net is the sum of its segments and arcs on all layers; the via count is the number of vias on the net. Intra-pair skew is the difference of the two routed
+        lengths; via barrels, pad-to-die (package) lengths and any length-tuning settings in KiCad are not included. It is turned into picoseconds with the delay of the layer that carries the pair (from the
+        solver's effective permittivity of the odd mode). Loss is each layer's routed length times its loss per inch at the interface's Nyquist frequency (the page's loss frequency for a plain impedance target),
+        from the same loss model as the width table and the Interface Rules page.
+      </p>
+      <p>
+        <b>Targets and results.</b> Each net class, split by the interface its names suggest, is matched to a target: an interface from the <Link to="/interface-rules">Interface Rules</Link> data, or a plain
+        impedance. The suggestion comes from the class and net names (USB, HDMI, PCIe, SATA, MDI/ETH, MIPI/CSI/DSI, …); an impedance written in the class name, such as <code>85Ohm_PCIE</code>, is the designer's
+        target: the interface is suggested when that impedance lies inside its range and within 10 % of its nominal impedance, otherwise the class's impedance is suggested as a plain target. Change any of them under Routing targets; the choice is kept in the page address. An interface target uses its impedance range from the
+        specification or vendor guide; a plain or custom target allows ±10 %. Skew is checked against the interface's intra-pair limit (a time limit through the layer delay), length against its maximum length and
+        loss against its loss budget (over 80 % of the budget is a warning), where the data has them. ✓ passes, ⚠ needs a look (no reference plane, long uncoupled sections, a tight loss budget), ✗ fails. When
+        the impedance of one net differs by more than 10 % between layers, or one layer passes and another fails, the layer change is flagged: a width that is right on an outer layer is often wrong on an inner
+        one.
+      </p>
       <h2>Limits</h2>
       <ul>
-        <li>Net classes and the track widths used on the board are not checked yet; the table gives what each layer needs.</li>
+        <li>
+          The routing check measures tracks, not pads: the length inside pads, via barrels and package lengths are not counted, and a track ending on a pad is not joined to the next one. Coplanar ground beside a
+          pair and the copper of other nets near it do not enter the impedance.
+        </li>
+        <li>Custom DRC rules (the .kicad_dru file) are not read. Bus groups such as <code>{'{A B}'}</code> in net-class patterns are not expanded.</li>
         <li>
           KiCad 5 and older files have no stackup section (only a board thickness), so no impedance can be given. Open them in KiCad 6 or later, check the physical stackup and save, or enter the layers in the
           Layer Stack Manager.
@@ -636,6 +770,30 @@ export function Method() {
             KiCad developer documentation, board file format
           </a>
           .
+        </li>
+        <li>
+          <a href="https://gitlab.com/kicad/code/kicad/-/blob/master/common/project/net_settings.cpp" target="_blank" rel="noopener noreferrer">
+            KiCad source, net_settings.cpp
+          </a>
+          : NET_SETTINGS, the net classes in the project file, their schema migrations (version 2 in KiCad 6, 3 in KiCad 7 and 8, 4 in KiCad 9, 5 in KiCad 10) and GetEffectiveNetClass.
+        </li>
+        <li>
+          <a href="https://gitlab.com/kicad/code/kicad/-/blob/master/common/eda_pattern_match.cpp" target="_blank" rel="noopener noreferrer">
+            KiCad source, eda_pattern_match.cpp
+          </a>
+          : EDA_COMBINED_MATCHER for net-class patterns (anchored regular expression or anchored wildcard).
+        </li>
+        <li>
+          <a href="https://gitlab.com/kicad/code/kicad/-/blob/master/pcbnew/board.cpp" target="_blank" rel="noopener noreferrer">
+            KiCad source, board.cpp
+          </a>
+          : BOARD::MatchDpSuffix, the differential-pair naming rule.
+        </li>
+        <li>
+          <a href="https://gitlab.com/kicad/code/kicad/-/blob/master/pcbnew/drc/drc_test_provider_diff_pair_coupling.cpp" target="_blank" rel="noopener noreferrer">
+            KiCad source, drc_test_provider_diff_pair_coupling.cpp
+          </a>
+          : how KiCad's DRC finds the coupled sections of a pair (parallel projection of segment pairs).
         </li>
       </ol>
     </>

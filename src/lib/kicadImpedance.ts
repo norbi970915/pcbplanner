@@ -3,7 +3,7 @@
 // solver pool) and the loss request built from the stackup's own Dk/Df per ply.
 import { toSolverGeometry, type DesignRequest, type SpacingRule } from './design';
 import { djordjevicSarkar, type DielectricSpec } from './dielectric';
-import type { Accuracy } from './fieldsolver';
+import type { Accuracy, Geometry, SolveOptions } from './fieldsolver';
 import type { LossRequest } from './solver.worker';
 import { impedanceQuery } from './stackupRegions';
 import { DEFAULT_DF, MASK_DF, geometryForLayer, type Layer, type Ply, type Stackup, type StackupGeometry } from './stackups';
@@ -85,6 +85,16 @@ export function spacingRule(o: ImpedanceSettings): SpacingRule {
 export function designRequest(sg: StackupGeometry, t: Target, o: ImpedanceSettings): DesignRequest {
   const base = { sg, etch: ETCH, accuracy: ACCURACY };
   return t.kind === 'se' ? { ...base, kind: 'se', target: t.z } : { ...base, kind: 'diff', target: t.z, rule: spacingRule(o) };
+}
+
+/**
+ * Field-solver run that analyses a measured line (the opposite of a design request): the same
+ * cross-section, etch and accuracy as designLine uses for each width it tries, so a width designed for
+ * a target and then analysed gives the target back. A pair is solved when `sp` is given.
+ */
+export function analyseRequest(sg: StackupGeometry, w: number, sp?: number): { type: 'solve'; geom: Geometry; opts: SolveOptions } {
+  const diff = sp !== undefined;
+  return { type: 'solve', geom: toSolverGeometry(sg, w, diff, sp, ETCH), opts: { accuracy: ACCURACY, even: false } };
 }
 
 /** Loss tangent and Dk/Df reference frequency of each ply; an intermediate copper layer takes the run's average Df. */

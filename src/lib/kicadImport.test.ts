@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from '
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { designLine } from './design';
-import { EXAMPLE_FILE, EXAMPLE_PRESET_ID, exampleBoard } from './kicadExample';
+import { EXAMPLE_FILE, EXAMPLE_PRESET_ID, EXAMPLE_PROJECT_FILE, exampleBoard, exampleProject } from './kicadExample';
 import { boardNotes, clipToBox, guessRoles, kicadStackup, parseKicadBoard, parseSexpr, readStackup, type SNode } from './kicadImport';
 import { calcStackup, designRequest, impedanceLink, lossRequest, planLayers, TARGETS, toCsv, toText, type ImpedanceSettings } from './kicadImpedance';
 import { toKicad } from './stackupExport';
@@ -242,9 +242,14 @@ describe('large files', () => {
 describe('example board and impedance plan', () => {
   const text = exampleBoard();
   const path = join('public', 'examples', EXAMPLE_FILE);
-  it.runIf(!!process.env.WRITE_KICAD_EXAMPLE)('write the example board', () => writeFileSync(path, text));
-  it('public/examples holds the generated example board', () => {
+  const proPath = join('public', 'examples', EXAMPLE_PROJECT_FILE);
+  it.runIf(!!process.env.WRITE_KICAD_EXAMPLE)('write the example board and project', () => {
+    writeFileSync(path, text);
+    writeFileSync(proPath, exampleProject());
+  });
+  it('public/examples holds the generated example board and project', () => {
     expect(readFileSync(path, 'utf8')).toBe(text);
+    expect(readFileSync(proPath, 'utf8')).toBe(exampleProject());
   });
   const b = parseKicadBoard(text);
   const r = kicadStackup(b, { name: 'example' })!;

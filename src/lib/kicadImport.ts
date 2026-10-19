@@ -10,7 +10,9 @@
 //
 // A board file can be tens of MB. Only the top-level items that matter are looked at: one pass of a
 // balanced-parenthesis scanner finds them, and only (general), (layers), (setup), Edge.Cuts graphics
-// and the header and outline of each zone are parsed into small trees. Tracks are read with a regex.
+// and the header and outline of each zone are parsed into small trees. Tracks and vias are read with
+// regexes; their geometry goes to the routing check (kicadRouting.ts).
+import { analyseRouting, trackLength, type RawTrack, type RawVia, type RoutingSummary } from './kicadRouting';
 import { MASK_DF, type CopperRole, type Layer, type Stackup } from './stackups';
 
 /* ------------------------------------------------------------------ s-expressions */
@@ -165,6 +167,8 @@ export interface KicadBoard {
   stackup: KicadStackupItem[] | null;
   board: { area: number; bbox: [number, number, number, number] | null; source: 'outline' | 'bbox' | 'zones' | 'none' };
   stats: { bytes: number; zones: number; tracks: number; ms: number };
+  /** Nets, widths, lengths and differential-pair coupling (absent in summaries stored by older versions of the page). */
+  routing?: RoutingSummary;
 }
 
 /** KiCad's defaults for a new dielectric and solder mask (BOARD_STACKUP_ITEM constructor, stackup_predefined_prms.h). */
@@ -365,18 +369,41 @@ const RE_MID = /\(mid\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)/;
 const RE_END = /\(end\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)/;
 const RE_LAYER = /\(layer\s+"?([^"\s)]+)"?/;
 
-/** Length and layer of a top-level (segment …) or (arc …). */
-function readTrack(text: string, start: number, end: number, arc: boolean): { layer: string; len: number } | null {
+const RE_LAYERS = /\(layers\s+([^)]*)\)/;
+const RE_WIDTH = /\(width\s+([\d.eE+-]+)\s*\)/;
+const RE_AT = /\(at\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)/;
+// (net 5) in KiCad 6 to 9, (net "name") from KiCad 10 (format 20251028: net codes are no longer written)
+const RE_NET = /\(net\s+(?:(\d+)|"((?:[^"\\]|\\.)*)"|([^\s()"]+))\s*\)/;
+const RE_NETDECL = /^\(net\s+(\d+)\s+(?:"((?:[^"\\]|\\.)*)"|([^\s()"]+))/;
+
+const unescape = (s: string) => s.replace(/\\(.)/g, (_, c: string) => (c === 'n' ? '\n' : c === 'r' ? '\r' : c === 't' ? '\t' : c));
+/** Net of an item: '#<code>' for a net code (resolved after the scan), else the name. */
+const netKey = (m: RegExpExecArray | null) => (!m ? '' : m[1] !== undefined ? `#${m[1]}` : m[2] !== undefined ? unescape(m[2]) : (m[3] ?? ''));
+const layerList = (s: string | undefined) => (s ? [...s.matchAll(/"((?:[^"\\]|\\.)*)"|([^\s"]+)/g)].map((m) => (m[1] !== undefined ? unescape(m[1]) : m[2])) : []);
+
+/** Geometry, width, layer and net of a top-level (segment …) or (arc …). */
+function readTrack(text: string, start: number, end: number, arc: boolean): RawTrack | null {
   const s = text.slice(start, end);
   const a = RE_START.exec(s);
   const b = RE_END.exec(s);
   const l = RE_LAYER.exec(s);
-  if (!a || !b || !l) return null;
-  const p = [Number(a[1]), Number(a[2])];
-  const q = [Number(b[1]), Number(b[2])];
+  const layer = l ? l[1] : layerList(RE_LAYERS.exec(s)?.[1]).find(isCopperName);
+  if (!a || !b || !layer) return null;
+  const t: RawTrack = { net: netKey(RE_NET.exec(s)), layer, w: Number(RE_WIDTH.exec(s)?.[1] ?? 0), x1: Number(a[1]), y1: Number(a[2]), x2: Number(b[1]), y2: Number(b[2]) };
   const m = arc ? RE_MID.exec(s) : null;
-  const len = m ? Math.hypot(Number(m[1]) - p[0], Number(m[2]) - p[1]) + Math.hypot(q[0] - Number(m[1]), q[1] - Number(m[2])) : Math.hypot(q[0] - p[0], q[1] - p[1]);
-  return Number.isFinite(len) ? { layer: l[1], len } : null;
+  if (m) {
+    t.mx = Number(m[1]);
+    t.my = Number(m[2]);
+  }
+  return Number.isFinite(t.x1 + t.y1 + t.x2 + t.y2 + (t.mx ?? 0) + (t.my ?? 0)) && Number.isFinite(t.w) ? t : null;
+}
+
+/** Position, layers and net of a top-level (via …). */
+function readVia(text: string, start: number, end: number): RawVia | null {
+  const s = text.slice(start, end);
+  const at = RE_AT.exec(s);
+  if (!at) return null;
+  return { net: netKey(RE_NET.exec(s)), x: Number(at[1]), y: Number(at[2]), layers: layerList(RE_LAYERS.exec(s)?.[1]) };
 }
 
 /** Stackup items from the (stackup …) list of (setup …). */
@@ -455,6 +482,9 @@ export function parseKicadBoard(text: string): KicadBoard {
   const zones: RawZone[] = [];
   const routed = new Map<string, number>();
   let tracks = 0;
+  const rawTracks: RawTrack[] = [];
+  const rawVias: RawVia[] = [];
+  const netNames = new Map<string, string>();
 
   scanTopLevel(text, rootStart, (name, start, end) => {
     switch (name) {
@@ -499,8 +529,19 @@ export function parseKicadBoard(text: string): KicadBoard {
         const r = readTrack(text, start, end, name === 'arc');
         if (r) {
           tracks++;
-          routed.set(r.layer, (routed.get(r.layer) ?? 0) + r.len);
+          rawTracks.push(r);
+          routed.set(r.layer, (routed.get(r.layer) ?? 0) + trackLength(r));
         }
+        break;
+      }
+      case 'via': {
+        const v = readVia(text, start, end);
+        if (v) rawVias.push(v);
+        break;
+      }
+      case 'net': {
+        const m = RE_NETDECL.exec(text.slice(start, Math.min(end, start + 2000)));
+        if (m) netNames.set(`#${m[1]}`, m[2] !== undefined ? unescape(m[2]) : (m[3] ?? ''));
         break;
       }
     }
@@ -558,6 +599,22 @@ export function parseKicadBoard(text: string): KicadBoard {
     c.zoneArea = board.area > 0 ? Math.min(top, board.area) : top;
   }
 
+  // routing: net codes to names, KiCad 5 user layer names to canonical names, copper layers only
+  const netOf = (k: string) => (k.startsWith('#') ? (netNames.get(k) ?? '') : k);
+  const cuTracks: RawTrack[] = [];
+  for (const t of rawTracks) {
+    const layer = alias.get(t.layer) ?? t.layer;
+    if (!isCopperName(layer)) continue;
+    t.layer = layer;
+    t.net = netOf(t.net);
+    cuTracks.push(t);
+  }
+  for (const v of rawVias) {
+    v.net = netOf(v.net);
+    v.layers = v.layers.map((l) => alias.get(l) ?? l);
+  }
+  const routing = analyseRouting(cuTracks, rawVias, [...netNames.values()].filter(Boolean));
+
   const st = stackupNode ? readStackup(stackupNode) : null;
   const ms = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
   return {
@@ -571,6 +628,7 @@ export function parseKicadBoard(text: string): KicadBoard {
     stackup: st && st.items.length ? st.items : null,
     board,
     stats: { bytes: text.length, zones: zones.length, tracks, ms },
+    routing,
   };
 }
 

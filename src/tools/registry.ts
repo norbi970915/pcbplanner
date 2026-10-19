@@ -218,12 +218,12 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/kicad-impedance',
-    metaDescription: 'Read the stackup of a KiCad .kicad_pcb file and get 50 Ω single-ended and 90/100 Ω differential trace widths and loss for every layer, in your browser.',
+    metaDescription: 'Read the stackup of a KiCad board or project folder, get 50/90/100 Ω trace widths per layer, and check the impedance, skew and loss of routed pairs.',
     title: 'KiCad Stackup Impedance Calculator',
     seoTitle: 'KiCad Stackup Impedance Calculator',
     nav: 'KiCad impedance',
     group: 'Stackup',
-    summary: 'Reads the stackup of a .kicad_pcb file in the browser, finds the planes from the zones and gives 50 Ω and 90/100 Ω differential widths and loss per layer.',
+    summary: 'Reads the stackup of a .kicad_pcb file or project folder in the browser, gives 50 Ω and 90/100 Ω differential widths and loss per layer, and checks the impedance, skew and loss of every routed pair.',
     component: lazyPage(() => import('./KicadImpedance')),
   },
   {
