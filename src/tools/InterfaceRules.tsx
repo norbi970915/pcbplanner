@@ -1,6 +1,9 @@
 import { CommunicationLinks } from '../components/CommunicationLinks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { KicadProjectSource, type KicadPickValues } from '../components/KicadProjectSource';
+import { YourRoutingPanel, type Designed } from '../components/kicad/InterfaceRouting';
+import { useInterfacePairCheck } from '../components/kicad/useInterfacePairCheck';
 import { Sources } from '../components/Sources';
 import { stackupGroup } from '../components/StackupPicker';
 import { ToolPage } from '../components/ToolPage';
@@ -9,6 +12,8 @@ import { INTERFACES, interfaceById } from '../data/interfaces';
 import { INTERFACE_PAGES, interfacePagePath } from '../data/interfacePages';
 import { FOILS, LAMINATES, laminateById, maskById } from '../data/laminates';
 import type { Accuracy } from '../lib/fieldsolver';
+import { saveImportedStackup } from '../lib/kicadImportClient';
+import { interfaceRulesPatch, isProjectStackup } from '../lib/kicadInterfaceRules';
 import { evaluateInterface, freqLabel, interfaceLossRequest, rateLabel, type CheckRow, type LineMetrics } from '../lib/interfaceRules';
 import type { LossRequest } from '../lib/solver.worker';
 import { runPooled, runSolver } from '../lib/solverClient';
@@ -17,6 +22,7 @@ import { geometryForLayer, type Layer, type StackupGeometry } from '../lib/stack
 import { formatPlies } from '../lib/plies';
 import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
+import { useKicadProject } from '../state/kicadProjectStore';
 import { useStackups } from '../state/stackupStore';
 import { useUrlState } from '../state/useUrlState';
 
@@ -36,6 +42,8 @@ const DEFAULTS = {
   mat: 's1141-2116',
   foil: 'ed',
   acc: 'normal',
+  kpair: '', // pair of the KiCad project compared under Your routing (base name)
+  kmask: true, // with solder mask on the outer layers, as picked
 };
 
 type P = typeof DEFAULTS;
@@ -78,6 +86,16 @@ export default function InterfaceRules() {
   const coppers = useMemo(() => (stack ? stack.layers.filter((l) => l.kind === 'copper') : []), [stack]);
   const layerId = p.lay && coppers.some((l) => l.id === p.lay) ? p.lay : (coppers.find((l) => l.role !== 'plane')?.id ?? coppers[0]?.id ?? '');
   const sg = useMemo(() => (stack && layerId ? geometryForLayer(stack, layerId) : null), [stack, layerId]);
+
+  // From KiCad Project: the interface named by the pair or class, the project stackup and layer, the pair's length
+  const kp = useKicadProject();
+  const [kicadNote, setKicadNote] = useState<string | null>(null);
+  const applyKicad = (v: KicadPickValues) => {
+    if (!kp.data) return;
+    const r = interfaceRulesPatch(kp.data, v, { ifid: p.ifid }, saveImportedStackup);
+    set(r.patch);
+    setKicadNote(r.note);
+  };
 
   const [line, setLine] = useState<LineMetrics | null>(null);
   const [second, setSecond] = useState<{ w: number; s?: number } | null>(null);
@@ -187,6 +205,17 @@ export default function InterfaceRules() {
   }, [scanKey]);
 
   const L = (mm: number) => `${fmt(fromMm(mm, unit), 3)} ${unit}`;
+
+  // Your routing: the picked pair against this interface, as the routing check of /kicad-project checks it
+  const Lr = useMemo(() => (mm: number) => fmt(fromMm(mm, unit), 4), [unit]);
+  const pairCheck = useInterfacePairCheck(kp.data, p.kpair, spec?.id ?? '', p.kmask, Lr, unit);
+  const projectSelected = isProjectStackup(construction, kp.data, p.kmask);
+  const designed = (layer: string): Designed | null => {
+    if (!projectSelected) return null;
+    if (layer === coppers.find((l) => l.id === layerId)?.name) return line && !busy ? { w: line.w, s: line.s } : null;
+    const f = scan?.find((x) => x.name === layer);
+    return f ? { w: f.w, s: f.s, fast: true } : null;
+  };
   const fab = { minW: p.minW, minS: p.minS, maxW: p.maxW };
   const rows: CheckRow[] = spec && line ? evaluateInterface(spec, line, fab, p.len, L, second ?? undefined) : [];
   // Until the first solve finishes, the same rule rows are drawn without values, so the panels below
@@ -325,6 +354,11 @@ export default function InterfaceRules() {
         </div>
         {sg && <p className="text-faint">{sg.note}</p>}
       </Section>
+      <KicadProjectSource
+        pick={['pair', 'netclass', 'layer']}
+        onApply={applyKicad}
+        note={kicadNote ?? 'Apply selects the interface named by the pair or net class, the project stackup and layer, and the pair’s route length, then compares the pair’s routing with this interface under Your routing.'}
+      />
       <Section title="Fabrication Limits">
         <LenField label="Minimum trace width" value={p.minW} onChange={(v) => set({ minW: v })} />
         <LenField label="Minimum spacing" value={p.minS} onChange={(v) => set({ minS: v })} />
@@ -440,6 +474,21 @@ export default function InterfaceRules() {
               </table>
             )}
           </Panel>
+          {p.kpair && (
+            <YourRoutingPanel
+              status={kp.status}
+              data={kp.data}
+              pair={p.kpair}
+              spec={spec}
+              plan={pairCheck.plan}
+              res={pairCheck.res}
+              designed={designed}
+              designedNote={projectSelected ? undefined : 'Designed values appear when the project stackup is selected under Board; Apply selects it.'}
+              mask={p.kmask}
+              L={L}
+              onClear={() => set({ kpair: '' })}
+            />
+          )}
           {sg && !errors.length && <Panel title="Continue the Design" className="mt-3">
             <div className="flex flex-wrap gap-2 px-3 py-3">
               {handoff ? (

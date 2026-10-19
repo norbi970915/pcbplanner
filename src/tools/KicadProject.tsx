@@ -16,13 +16,13 @@ import { useUrlState } from '../state/useUrlState';
  */
 const KICAD_PROJECT_TOOLS: { path: string; label: string; takes: string; ready: boolean }[] = [
   { path: '/impedance', label: 'Impedance', takes: 'a signal layer’s cross-section, and W and S from a net class or a routed pair', ready: true },
-  { path: '/interface-rules', label: 'Interface rules', takes: 'the stackup layer and the routed pair to check against an interface', ready: false },
-  { path: '/trace-loss', label: 'Trace loss', takes: 'the layer, the line width and the routed length', ready: false },
-  { path: '/timing', label: 'Delay & timing', takes: 'the layer and the routed length and skew of a net or pair', ready: false },
-  { path: '/crosstalk', label: 'Crosstalk', takes: 'the layer and two nets: width, spacing and parallel length', ready: false },
+  { path: '/interface-rules', label: 'Interface rules', takes: 'the stackup layer and the routed pair to check against an interface', ready: true },
+  { path: '/trace-loss', label: 'Trace loss', takes: 'the layer, the line width and the routed length', ready: true },
+  { path: '/timing', label: 'Delay & timing', takes: 'the layer and the routed length and skew of a net or pair', ready: true },
+  { path: '/crosstalk', label: 'Crosstalk', takes: 'the layer and two nets: width, spacing and parallel length', ready: true },
   { path: '/trace-width', label: 'Trace width / current', takes: 'the copper thickness of a layer and a net’s width', ready: false },
   { path: '/via', label: 'Via', takes: 'the board thickness and the copper layers', ready: false },
-  { path: '/pdn', label: 'PDN', takes: 'the plane layers and their distance', ready: false },
+  { path: '/pdn', label: 'PDN', takes: 'the power and ground plane pair: overlap area, dielectric thickness and εr', ready: true },
   { path: '/stackup', label: 'Layer Stack Manager', takes: 'the whole stackup, to edit or export (Open in Layer Stack Manager under Impedance by Layer)', ready: true },
 ];
 

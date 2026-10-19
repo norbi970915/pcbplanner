@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { KicadPlaneSource, type KicadPlaneApplied } from '../components/KicadPlaneSource';
 import { ToolPage } from '../components/ToolPage';
 import { Check, LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { capBand, capImpedance, capsNeeded, logSpace, pdnImpedance, planeCapacitance, planeCapPerCm2, srf, targetImpedance, type CapModel } from '../lib/pdn';
@@ -25,6 +26,7 @@ const DEFAULTS = {
 
 export default function Pdn() {
   const [p, set, reset] = useUrlState(DEFAULTS);
+  const [kicad, setKicad] = useState<KicadPlaneApplied | null>(null);
   const errors: string[] = [];
   if (!(p.v > 0)) errors.push('Supply voltage must be greater than 0.');
   if (!(p.ripple > 0)) errors.push('Allowed ripple must be greater than 0 %.');
@@ -53,6 +55,21 @@ export default function Pdn() {
   const zTotal = pdnImpedance(cap, n, cp, fHz);
   const zPlane = 1 / (2 * Math.PI * fHz * cp);
 
+  // From KiCad project: the plane pair's overlap area (as L × W), dielectric thickness and series εr
+  const applyKicad = (v: KicadPlaneApplied) => {
+    set(v.fields);
+    setKicad(v);
+  };
+  const f = kicad?.fields;
+  const kicadCurrent = !!f && f.pl === p.pl && f.pw === p.pw && (f.pd === undefined || f.pd === p.pd) && (f.er === undefined || f.er === p.er);
+  const kicadNote = kicad && f && (
+    <>
+      Applied: L {fmt(f.pl, 6)} mm × W {fmt(f.pw, 6)} mm (the x extent of the overlap, and the area divided by L){f.pd !== undefined ? `, d ${fmt(f.pd, 6)} mm, εr ${fmt(f.er ?? NaN, 6)}` : ''}.
+      {Number.isFinite(kicad.c) && <> The pair: {si(kicad.c, 'F', 5)}; equation (2) with these inputs: {si(planeCapacitance(f.pl * f.pw, f.pd ?? p.pd, f.er ?? p.er), 'F', 5)}.</>}
+      {!kicadCurrent && ' The plane inputs have been changed since.'}
+    </>
+  );
+
   const notes: string[] = [];
   if (ok && p.esr * 1e-3 > zt) notes.push(`ESR alone (${si(cap.esr, 'Ω', 3)}) is above the target, so even at resonance each capacitor needs company: at least ${Math.ceil(cap.esr / zt)} in parallel.`);
   if (ok && zTotal > zt * 1.0001) notes.push(`With the plane capacitance included, |Z| at ${si(fHz, 'Hz', 3)} is ${si(zTotal, 'Ω', 3)}, above the target. Look for a parallel-resonance peak in the plot.`);
@@ -75,6 +92,7 @@ export default function Pdn() {
         <LenField label="Dielectric thickness" symbol="d" value={p.pd} onChange={(v) => set({ pd: v })} units={['mm', 'mil', 'um']} />
         <NumField label="Dielectric constant" symbol="εr" value={p.er} onChange={(v) => set({ er: v })} min={1} allowZero />
       </Section>
+      <KicadPlaneSource onApply={applyKicad} note={kicadNote} />
       <Section title="Decoupling capacitor">
         <NumField label="Capacitance" symbol="C" value={p.c} onChange={(v) => set({ c: v })} unit="nF" />
         <NumField label="ESR" value={p.esr} onChange={(v) => set({ esr: v })} unit="mΩ" allowZero />
@@ -115,6 +133,9 @@ export default function Pdn() {
                   <Result label="Plane capacitance" value={si(cp, 'F')} strong />
                   <Result label="Per unit area" value={si(cpCm2, 'F')} unit="/cm²" />
                   <Result label="Area" value={fmt((p.pl * p.pw) / 100, 4)} unit="cm²" />
+                  {kicadCurrent && kicad && Number.isFinite(kicad.c) && (
+                    <Result label="KiCad plane pair" value={si(kicad.c, 'F')} sub={`${kicad.label}; ${Math.abs(cp - kicad.c) <= 1e-4 * kicad.c ? 'agrees with the line above within 0.01 %' : `${fmt((100 * (cp - kicad.c)) / kicad.c, 3)} % from the line above`}`} />
+                  )}
                   <Result label={`|Z| at ${si(fHz, 'Hz', 3)}`} value={si(zPlane, 'Ω')} sub="ideal capacitor, no spreading inductance" />
                 </tbody>
               </table>
@@ -312,6 +333,29 @@ export function Method() {
         The model leaves out the voltage regulator (which dominates below roughly 100 kHz), the spreading inductance and cavity resonances of the planes, the package and on-die
         capacitance (which dominate above roughly 100 MHz), and differences in the position of each capacitor. A real design mixes capacitor values and should be checked with a PDN
         simulator or a measurement. Use this page to check that the numbers are the right order of magnitude.
+      </p>
+      <h3>From a KiCad project</h3>
+      <p>
+        With a KiCad project loaded, the From KiCad Project section takes the plane pair from the board. Choose the power net and the ground net (it starts at the largest net
+        whose name reads as ground: GND, AGND, VSS and the like). A plane pair is two neighbouring copper layers in the stackup, one with a zone of the power net and the other
+        with a zone of the ground net. Its area is the overlap of the two nets’ zone outlines inside the board outline (Edge.Cuts). A zone’s cut-outs are removed, and so are
+        higher-priority zones of other nets and keepouts that forbid pours on the same layer. The area is computed exactly for polygons: the board is cut into horizontal strips
+        at every vertex and every crossing of two edges, and inside each strip the covered width changes linearly, so its mid-height value times the strip height is the
+        strip’s area. Arcs are split into chords of at most 5°, which makes a circle 0.13 % small.
+      </p>
+      <p>
+        The dielectric thickness <i>d</i> is the sum of the plies between the two copper layers in the stackup. The plies are capacitors in series, so <i>ε</i>
+        <sub>r</sub> is their thickness-weighted harmonic mean, <i>d</i> / Σ(<i>t</i>
+        <sub>i</sub>/<i>ε</i>
+        <sub>ri</sub>); with one ply that is the ply’s own <i>ε</i>
+        <sub>r</sub>, and with several it makes equation (2) give the series capacitance. Apply sets <i>L</i> to the width of the overlap in x and <i>W</i> to the area divided
+        by <i>L</i>, so <i>L</i> × <i>W</i> is the overlap area. When the two nets form several pairs on the same dielectric they can be summed into one; pairs on different
+        dielectrics are taken one at a time, because the calculator models one plane pair.
+      </p>
+      <p>
+        Limits: the area comes from zone outlines, not from the filled copper, so anti-pads, clearances around other nets’ pads and vias, thermal reliefs, islands removed
+        by the fill and hatched fills are not subtracted unless the outline itself leaves them out. Fringing is ignored, as in equation (2). Without the saved board text (a
+        project that is not saved in this browser) only the zone areas per layer are known, and the overlap is taken as the smaller of the two: an upper bound.
       </p>
       <h2>References</h2>
       <ol>

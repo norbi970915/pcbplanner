@@ -1,6 +1,10 @@
+import { useRef, useState } from 'react';
+import { KicadProjectSource, type KicadPickValues } from '../components/KicadProjectSource';
 import { ToolPage } from '../components/ToolPage';
 import { LenField, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import { microstripHJ } from '../lib/closedform';
+import { timingPatch, timingSource } from '../lib/kicadLossTiming';
+import { cachedSolve } from '../lib/kicadRoutingSolve';
 import { bandwidthFromRise, delayPsPerMm, kneeFrequency, wavelength } from '../lib/signal';
 import { fmt, fromMm, si } from '../lib/units';
 import { useSettings } from '../state/settings';
@@ -20,6 +24,29 @@ export default function Timing() {
   const trS = p.tr * 1e-12;
   const critical = trS / (tpd * 1e-12);
   const lambda = wavelength(p.f * 1e6, eeff) * 1e3;
+
+  // From KiCad Project: εeff is solved on the worker (the routing check's solve, shared cache), then everything is set at once
+  const [kicadNote, setKicadNote] = useState<string | null>(null);
+  const applyRun = useRef(0);
+  const applyKicad = async (v: KicadPickValues) => {
+    const run = ++applyRun.current;
+    const src = timingSource(v, L);
+    if ('error' in src) {
+      setKicadNote(src.error);
+      return;
+    }
+    setKicadNote(`Solving the line on ${src.layer}…`);
+    const r = await cachedSolve(src.req);
+    if (run !== applyRun.current) return;
+    const e = r.ok && r.result ? (src.diff ? r.result.odd?.eeff : r.result.se?.eeff) : undefined;
+    if (!e) {
+      setKicadNote(`The field solver found no εeff for ${src.what}${r.ok ? '' : `: ${r.error}`}.`);
+      return;
+    }
+    const out = timingPatch(v, src, e, L);
+    set(out.patch);
+    setKicadNote(out.note);
+  };
 
   const properties = (
     <>
@@ -56,6 +83,12 @@ export default function Timing() {
         <NumField label="Rise time (10–90 %)" symbol="tr" value={p.tr} onChange={(v) => set({ tr: v })} unit="ps" />
         <NumField label="Frequency" symbol="f" value={p.f} onChange={(v) => set({ f: v })} unit="MHz" />
       </Section>
+      <KicadProjectSource
+        pick={['layer', 'pair', 'net']}
+        labels={{ layer: 'εeff from layer' }}
+        onApply={(v) => void applyKicad(v)}
+        note={kicadNote ?? 'Apply sets εeff of the line on the layer (field solver, as the routing check), and the lengths: P and N of a pair, the length of a net, or a pair against a net.'}
+      />
     </>
   );
 
