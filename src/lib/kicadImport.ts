@@ -13,6 +13,8 @@
 // and the header and outline of each zone are parsed into small trees. Tracks and vias are read with
 // regexes; their geometry goes to the routing check (kicadRouting.ts).
 import { analyseRouting, trackLength, type RawTrack, type RawVia, type RoutingSummary } from './kicadRouting';
+import { addVoids, type FillPoly } from './kicadVoids';
+import { sweepArea } from './polygonArea';
 import { MASK_DF, type CopperRole, type Layer, type Stackup } from './stackups';
 
 /* ------------------------------------------------------------------ s-expressions */
@@ -209,31 +211,6 @@ const shoelace = (p: Pt[]) => {
   return Math.abs(a / 2);
 };
 
-/** Sutherland–Hodgman clip of a polygon to an axis-aligned rectangle. */
-export function clipToBox(poly: Pt[], [x0, y0, x1, y1]: [number, number, number, number]): Pt[] {
-  let out = poly;
-  const edges: [(p: Pt) => boolean, (a: Pt, b: Pt) => Pt][] = [
-    [(p) => p[0] >= x0, (a, b) => [x0, a[1] + ((b[1] - a[1]) * (x0 - a[0])) / (b[0] - a[0])]],
-    [(p) => p[0] <= x1, (a, b) => [x1, a[1] + ((b[1] - a[1]) * (x1 - a[0])) / (b[0] - a[0])]],
-    [(p) => p[1] >= y0, (a, b) => [a[0] + ((b[0] - a[0]) * (y0 - a[1])) / (b[1] - a[1]), y0]],
-    [(p) => p[1] <= y1, (a, b) => [a[0] + ((b[0] - a[0]) * (y1 - a[1])) / (b[1] - a[1]), y1]],
-  ];
-  for (const [inside, cut] of edges) {
-    const src = out;
-    out = [];
-    for (let i = 0; i < src.length; i++) {
-      const a = src[(i + src.length - 1) % src.length];
-      const b = src[i];
-      if (inside(b)) {
-        if (!inside(a)) out.push(cut(a, b));
-        out.push(b);
-      } else if (inside(a)) out.push(cut(a, b));
-    }
-    if (!out.length) break;
-  }
-  return out;
-}
-
 const xy = (n: SNode[] | undefined): Pt | undefined => {
   const x = num(n, 1);
   const y = num(n, 2);
@@ -257,9 +234,10 @@ function ptsOf(pts: SNode[] | undefined): Pt[] {
   return out;
 }
 
-/** Board outline from Edge.Cuts graphics: the largest closed shape, else the bounding box. */
-function outlineFrom(items: SNode[][]): KicadBoard['board'] {
+/** Board outline from Edge.Cuts graphics: the largest closed shape, else the bounding box. `loops` are the closed shapes, filled even-odd. */
+function outlineFrom(items: SNode[][]): KicadBoard['board'] & { loops: Pt[][] } {
   const closed: number[] = [];
+  const loops: Pt[][] = [];
   const edges: Pt[][] = [];
   let bbox: [number, number, number, number] | null = null;
   const grow = (p: Pt) => {
@@ -277,6 +255,7 @@ function outlineFrom(items: SNode[][]): KicadBoard['board'] {
       const r: Pt[] = [s, [e[0], s[1]], e, [s[0], e[1]]];
       r.forEach(grow);
       closed.push(shoelace(r));
+      loops.push(r);
     } else if (kind === 'gr_circle') {
       const c = xy(child(it, 'center'));
       if (c && e) {
@@ -284,11 +263,15 @@ function outlineFrom(items: SNode[][]): KicadBoard['board'] {
         grow([c[0] - r, c[1] - r]);
         grow([c[0] + r, c[1] + r]);
         closed.push(Math.PI * r * r);
+        loops.push(Array.from({ length: 72 }, (_, i): Pt => [c[0] + r * Math.cos((Math.PI * i) / 36), c[1] + r * Math.sin((Math.PI * i) / 36)]));
       }
     } else if (kind === 'gr_poly') {
       const p = ptsOf(child(it, 'pts'));
       p.forEach(grow);
-      if (p.length > 2) closed.push(shoelace(p));
+      if (p.length > 2) {
+        closed.push(shoelace(p));
+        loops.push(p);
+      }
     } else if (kind === 'gr_curve') ptsOf(child(it, 'pts')).forEach(grow);
   }
   for (const e of edges) e.forEach(grow);
@@ -323,21 +306,44 @@ function outlineFrom(items: SNode[][]): KicadBoard['board'] {
       const fwd = key(e[0]) === endKey;
       loop.push(...(fwd ? e.slice(1) : [...e].reverse().slice(1)));
     }
-    if (ok) closed.push(shoelace(loop));
+    if (ok) {
+      closed.push(shoelace(loop));
+      loops.push(loop);
+    }
   }
   const b = bbox as [number, number, number, number] | null;
-  if (closed.length) return { area: Math.max(...closed), bbox: b, source: 'outline' };
-  if (b && (b[2] - b[0]) * (b[3] - b[1]) > 0) return { area: (b[2] - b[0]) * (b[3] - b[1]), bbox: b, source: 'bbox' };
-  return { area: 0, bbox: null, source: 'none' };
+  if (closed.length) return { area: Math.max(...closed), bbox: b, source: 'outline', loops };
+  if (b && (b[2] - b[0]) * (b[3] - b[1]) > 0) return { area: (b[2] - b[0]) * (b[3] - b[1]), bbox: b, source: 'bbox', loops: [] };
+  return { area: 0, bbox: null, source: 'none', loops: [] };
 }
 
 interface RawZone {
   net: string;
   layers: string[];
   polys: Pt[][];
+  fills: FillPoly[];
 }
 
-/** Header (net, layers, keepout) and outline polygons of one top-level zone. Fill polygons are skipped. */
+const RE_XY = /\(xy\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)/g;
+const RE_FILL_LAYER = /^\(filled_polygon\s+\(layer\s+"?([^"\s)]+)"?/;
+
+/** The (filled_polygon …) lists of a zone: its copper as KiCad last filled it, read with regexes (they can be large). */
+function readFills(text: string, from: number, end: number, layer0: string | undefined): FillPoly[] {
+  const out: FillPoly[] = [];
+  for (let i = text.indexOf('(filled_polygon', from); i >= 0 && i < end; i = text.indexOf('(filled_polygon', i + 15)) {
+    const e = listEnd(text, i, end);
+    const s = text.slice(i, e);
+    const layer = RE_FILL_LAYER.exec(s)?.[1] ?? layer0;
+    if (!layer) continue;
+    const xy: number[] = [];
+    for (const m of s.matchAll(RE_XY)) xy.push(Number(m[1]), Number(m[2]));
+    if (xy.length >= 6 && xy.every(Number.isFinite)) out.push({ layer, xy: Float64Array.from(xy) });
+    i = e - 15;
+  }
+  return out;
+}
+
+/** Header (net, layers, keepout), outline polygons and fill polygons of one top-level zone. */
 function readZone(text: string, start: number, end: number): RawZone | null {
   const filled = text.indexOf('(filled_polygon', start);
   const stop = filled >= 0 && filled < end ? filled : end - 1;
@@ -361,7 +367,7 @@ function readZone(text: string, start: number, end: number): RawZone | null {
       if (pts.length > 2) polys.push(pts);
     }
   }
-  return { net: net || '(no net)', layers, polys };
+  return { net: net || '(no net)', layers, polys, fills: filled >= 0 && filled < end ? readFills(text, filled, end, layers.find(isCopperName)) : [] };
 }
 
 const RE_START = /\(start\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)/;
@@ -567,7 +573,8 @@ export function parseKicadBoard(text: string): KicadBoard {
   }
   copper.sort((a, b) => copperOrder(a.name) - copperOrder(b.name));
 
-  let board = outlineFrom(edgeItems);
+  const { loops: outline, ...outlineInfo } = outlineFrom(edgeItems);
+  let board: KicadBoard['board'] = outlineInfo;
   if (board.source === 'none' && zones.length) {
     // no outline: measure against the extent of all zones (reported as a note)
     const all = zones.flatMap((z) => z.polys.flat());
@@ -577,18 +584,29 @@ export function parseKicadBoard(text: string): KicadBoard {
     board = { area: (bb[2] - bb[0]) * (bb[3] - bb[1]), bbox: bb, source: 'zones' };
   }
 
-  // zone area per layer and net, clipped to the board's bounding box and capped at the board area
-  const perLayer = new Map<string, Map<string, number>>();
+  // zone area per layer and net: the union of the net's zones on the layer, each zone its outline less
+  // its cut-outs (KiCad: the first polygon is the outline, the others are holes), inside the board outline
+  // (its bounding box when Edge.Cuts has no closed shape), capped at the board area
+  const clip: Pt[][] = outline.length ? outline : board.bbox ? [[[board.bbox[0], board.bbox[1]], [board.bbox[2], board.bbox[1]], [board.bbox[2], board.bbox[3]], [board.bbox[0], board.bbox[3]]]] : [];
+  const zonesOn = new Map<string, Map<string, Pt[][][]>>();
   for (const z of zones) {
-    const area = z.polys.reduce((a, p) => a + shoelace(board.bbox ? clipToBox(p, board.bbox) : p), 0);
     const targets = z.layers.includes('*.Cu') ? copper.map((c) => c.name) : z.layers.map((l) => alias.get(l) ?? l).filter(isCopperName);
     for (const layer of targets) {
-      const m = perLayer.get(layer) ?? new Map<string, number>();
-      m.set(z.net, (m.get(z.net) ?? 0) + area);
-      perLayer.set(layer, m);
+      const m = zonesOn.get(layer) ?? new Map<string, Pt[][][]>();
+      m.set(z.net, [...(m.get(z.net) ?? []), z.polys]);
+      zonesOn.set(layer, m);
       const c = copper.find((x) => x.name === layer);
       if (c) c.zones++;
     }
+  }
+  const perLayer = new Map<string, Map<string, number>>();
+  for (const [layer, m] of zonesOn) {
+    const areas = new Map<string, number>();
+    for (const [net, shapes] of m) {
+      const area = clip.length ? sweepArea([clip, ...shapes], (odd) => odd[0] === 1 && odd.some((v, i) => i > 0 && v === 1)).area : sweepArea(shapes, (odd) => odd.includes(1)).area;
+      areas.set(net, area);
+    }
+    perLayer.set(layer, areas);
   }
   for (const c of copper) {
     const nets = [...(perLayer.get(c.name) ?? new Map<string, number>()).entries()]
@@ -614,6 +632,12 @@ export function parseKicadBoard(text: string): KicadBoard {
     v.layers = v.layers.map((l) => alias.get(l) ?? l);
   }
   const routing = analyseRouting(cuTracks, rawVias, [...netNames.values()].filter(Boolean));
+  addVoids(
+    routing,
+    cuTracks,
+    zones.flatMap((z) => z.fills.map((p) => ({ ...p, layer: alias.get(p.layer) ?? p.layer })).filter((p) => isCopperName(p.layer))),
+    board.bbox,
+  );
 
   const st = stackupNode ? readStackup(stackupNode) : null;
   const ms = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;

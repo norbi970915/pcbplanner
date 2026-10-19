@@ -116,6 +116,8 @@ export interface PairCheckPlan {
   lossGHz: number;
   z: Map<string, SolveReq>; // by layer name
   loss: Map<string, SolveReq | { error: string }>;
+  /** Copper layers whose zone fills are in the file (reference-plane gaps are checked on these). */
+  filled: string[];
 }
 
 /** Loss frequency for a target, as the routing check takes it (kicadRoutingSolve.lossGHz). */
@@ -151,7 +153,7 @@ export function pairCheckPlan(d: KicadProjectData, pair: string, targetId: strin
       loss.set(l.layer, { error: e instanceof Error ? e.message : String(e) });
     }
   }
-  return { item, target, kindMismatch, plans, lossGHz: f, z, loss };
+  return { item, target, kindMismatch, plans, lossGHz: f, z, loss, filled: d.board.routing?.filled ?? [] };
 }
 
 export type ZAnswer = { z?: number; eeff?: number; err?: string };
@@ -177,7 +179,8 @@ export function pairCheckResult(plan: PairCheckPlan, zs: Record<string, ZAnswer>
     }
     const zr = zs[l.layer];
     const lr = losses[l.layer];
-    solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!plan.target && !lr && !zr.err } : { pending: true };
+    const refs = byLayer.get(l.layer)!.refs.filter((r) => plan.filled.includes(r));
+    solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!plan.target && !lr && !zr.err, refs } : { pending: true };
   }
   return checkItem(plan.item, plan.target, solves, L, unit);
 }

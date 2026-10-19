@@ -40,6 +40,18 @@ export interface NetLayerStat {
   w: number; // length-weighted dominant width, mm
   wMin: number;
   wMax: number;
+  /** Stretches over no copper on another layer's zone fills (kicadVoids.ts), only where one reaches VOID.report. */
+  voids?: VoidStat[];
+}
+
+/** The longest and the total stretch of a net's routing on one layer that runs over no copper on `layer`, mm. */
+export interface VoidStat {
+  layer: string;
+  longest: number;
+  total: number;
+  /** Where the longest stretch is, in the board's coordinates (as KiCad's PCB editor shows them), mm. */
+  x: number;
+  y: number;
 }
 
 export interface NetStat {
@@ -73,7 +85,20 @@ export interface RoutingSummary {
   arcs: number;
   vias: number;
   ms: number;
+  /** Copper layers with zone fills in the file: on these the reference-plane gaps were measured. */
+  filled?: string[];
 }
+
+/** Reference-plane gaps (stated in the Method section; measured in kicadVoids.ts). */
+export const VOID = {
+  /** A stretch over no copper at least this long (mm) is recorded … */
+  report: 0.5,
+  /** … and one at least this long makes the layer a warning. */
+  warn: 1,
+  /** Raster resolution of the zone fills (mm), and the most pixels a layer may take. */
+  res: 0.05,
+  maxPixels: 16e6,
+};
 
 /** Coupling rules (stated in the Method section). */
 export const COUPLING = {
@@ -814,6 +839,7 @@ export interface LayerSolve {
   dbPerIn?: number; // at the target's loss frequency
   err?: string;
   noRef?: boolean; // the layer has no reference plane in the stackup
+  refs?: string[]; // reference planes of the layer whose zone fills are in the file
   pending?: boolean; // impedance not solved yet
   lossPending?: boolean; // loss not solved yet
 }
@@ -889,6 +915,17 @@ export const solveWidth = (l: { w: number; wN?: number }) => (l.wN !== undefined
 /** True when a layer of a pair has enough coupled length to be checked. */
 export const pairCoupled = (l: { coupled?: number; gap?: number }) => l.gap !== undefined && (l.coupled ?? 0) >= COUPLING.minCoupled;
 
+/** The worst stretch of an item on a layer over no copper on one of its reference planes, when it reaches VOID.warn. */
+function refGap(item: RouteItem, layer: string, refs: string[] | undefined): VoidStat | undefined {
+  if (!refs?.length) return undefined;
+  const nets = item.kind === 'pair' ? [item.p, item.n] : [item.net];
+  let worst: VoidStat | undefined;
+  for (const n of nets)
+    for (const v of n?.layers.find((x) => x.layer === layer)?.voids ?? [])
+      if (refs.includes(v.layer) && v.longest >= VOID.warn && (!worst || v.longest > worst.longest)) worst = v;
+  return worst;
+}
+
 /**
  * Check an item against its target. `solves` gives the field-solver answer per layer (keyed by
  * layer name). Impedance is checked per layer, skew and length per net, loss over all layers.
@@ -933,6 +970,15 @@ export function checkItem(item: RouteItem, target: Target | null, solves: Record
           tag = 'partly uncoupled';
           reason += `; ${L(l.len - l.coupled)} of ${L(l.len)} ${unit} not coupled`;
         }
+      }
+    }
+    // a stretch over a gap, slot or split in the reference plane
+    const gap = status === 'pending' || !coupledOk(l) ? undefined : refGap(item, l.layer, solve.refs);
+    if (gap) {
+      reason += `${reason ? '; ' : ''}${L(gap.total)} ${unit} over no copper on ${gap.layer}, the longest ${L(gap.longest)} ${unit} at x ${gap.x}, y ${gap.y} mm`;
+      if (target && status !== 'fail') {
+        status = 'warn';
+        tag = `over a gap in ${gap.layer}`;
       }
     }
     return { ...l, solve, status, reason, tag };

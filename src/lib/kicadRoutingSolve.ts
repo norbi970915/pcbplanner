@@ -155,7 +155,8 @@ export function useRoutingCheck(o: {
           const s = item.kind === 'pair' ? l.gap : undefined;
           const zr = zs[zKey(l.layer, w, s)];
           const lr = losses[lKey(l.layer, w, s, f)];
-          solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!target && !lr && !zr.err } : { pending: true };
+          const refs = plan.refs.filter((r) => routing?.filled?.includes(r));
+          solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!target && !lr && !zr.err, refs } : { pending: true };
         }
         out.push({ group: g, item, target, res: checkItem(item, target, solves, L, unit) });
       }

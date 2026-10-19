@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { designLine } from './design';
 import { EXAMPLE_FILE, EXAMPLE_PRESET_ID, EXAMPLE_PROJECT_FILE, exampleBoard, exampleProject } from './kicadExample';
-import { boardNotes, clipToBox, guessRoles, kicadStackup, parseKicadBoard, parseSexpr, readStackup, type SNode } from './kicadImport';
+import { boardNotes, guessRoles, kicadStackup, parseKicadBoard, parseSexpr, readStackup, type SNode } from './kicadImport';
 import { calcStackup, designRequest, impedanceLink, lossRequest, planLayers, TARGETS, toCsv, toText, type ImpedanceSettings } from './kicadImpedance';
 import { toKicad } from './stackupExport';
 import { geometryForLayer, PRESETS, type Stackup } from './stackups';
@@ -182,10 +182,18 @@ describe('plane detection from zones', () => {
     expect(parseKicadBoard(board(TWO, '(gr_line (start 0 0) (end 20 0) (layer "Edge.Cuts")) (gr_line (start 20 0) (end 20 10) (layer "Edge.Cuts"))')).board).toMatchObject({ area: 200, source: 'bbox' });
     expect(parseKicadBoard(board(TWO, '(gr_rect (start 0 0) (end 20 10) (layer "F.SilkS"))')).board.source).toBe('none');
   });
-  it('clipToBox clips a polygon to a rectangle', () => {
-    const c = clipToBox([[-10, -10], [10, -10], [10, 10], [-10, 10]], [0, 0, 20, 20]);
-    expect(c).toHaveLength(4);
-    expect(c.every(([x, y]) => x >= 0 && y >= 0)).toBe(true);
+  it('zone cut-outs are subtracted, overlapping zones of a net are counted once, zones are clipped to the real outline', () => {
+    // KiCad writes a zone's cut-outs as further (polygon …) lists after the outline
+    const holed = parseKicadBoard(board(four, outline + zone('GND', 'In1.Cu', rect(0, 0, 100, 50) + rect(10, 10, 60, 40)), layers4));
+    expect(holed.copper.find((c) => c.name === 'In1.Cu')!.zoneArea).toBeCloseTo(5000 - 1500, 6);
+    expect(guessRoles(holed)['In1.Cu'].coverage).toBeCloseTo(0.7, 6);
+    const overlap = parseKicadBoard(board(four, outline + zone('GND', 'In1.Cu', rect(0, 0, 60, 50)) + zone('GND', 'In1.Cu', rect(40, 0, 100, 50)), layers4));
+    expect(overlap.copper.find((c) => c.name === 'In1.Cu')!.nets).toEqual([{ net: 'GND', area: expect.closeTo(5000, 6) }]);
+    // an L-shaped board: the zone over the missing corner does not count
+    const lShape = '(gr_poly (pts (xy 0 0) (xy 100 0) (xy 100 25) (xy 50 25) (xy 50 50) (xy 0 50)) (layer "Edge.Cuts"))';
+    const l = parseKicadBoard(board(four, lShape + zone('GND', 'In1.Cu', rect(0, 0, 100, 50)), layers4));
+    expect(l.board.area).toBeCloseTo(3750, 6);
+    expect(l.copper.find((c) => c.name === 'In1.Cu')!.zoneArea).toBeCloseTo(3750, 6);
   });
 });
 
