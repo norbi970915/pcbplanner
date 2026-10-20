@@ -134,7 +134,7 @@ export function evaluateInterface(spec: InterfaceSpec, line: LineMetrics, fab: F
       label: `Insertion loss at ${freqLabel(spec.nyquistGHz)}`,
       required: `≤ ${spec.lossBudgetDb} dB`,
       value: `${used.toFixed(2)} dB over ${L(lengthMm)}`,
-      status: used <= spec.lossBudgetDb ? (used > 0.8 * spec.lossBudgetDb ? 'warn' : 'ok') : 'fail',
+      status: used > 0.8 * spec.lossBudgetDb ? 'warn' : 'ok', // informative or vendor budgets: a warning, never a fail
       note: spec.lossNote,
     });
     rows.push({
@@ -158,12 +158,13 @@ export function evaluateInterface(spec: InterfaceSpec, line: LineMetrics, fab: F
     });
   }
 
+  // published length limits are vendor guidelines (often for one chip), so a longer route is a warning
   if (spec.maxLenMm !== undefined) {
     rows.push({
-      label: 'Maximum length in the specification',
+      label: 'Longest route in the guidelines',
       required: L(spec.maxLenMm),
       value: L(lengthMm),
-      status: lengthMm <= spec.maxLenMm ? 'ok' : 'fail',
+      status: lengthMm <= spec.maxLenMm ? 'ok' : 'warn',
     });
   }
 

@@ -66,8 +66,8 @@ describe('interface checks', () => {
     // 6.5 dB / 0.025 dB per mm
     expect(row(rows, 'Longest route')?.value).toBe('260.000 mm');
   });
-  it('flags a route that is over budget, and warns just below it', () => {
-    expect(row(evaluateInterface(spec, line, fab, 300, L), 'Insertion loss')?.status).toBe('fail');
+  it('warns over 80 % of the budget and over it (budgets are informative or vendor figures)', () => {
+    expect(row(evaluateInterface(spec, line, fab, 300, L), 'Insertion loss')?.status).toBe('warn');
     expect(row(evaluateInterface(spec, line, fab, 220, L), 'Insertion loss')?.status).toBe('warn');
   });
   it('converts both skew limits with the delay of this layer', () => {
@@ -122,6 +122,16 @@ describe('interface library', () => {
       expect(i.nyquistGHz).toBeGreaterThan(0);
       for (const r of i.rules) expect(i.sources[r.src], `${i.id}: rule “${r.label}” points at source ${r.src}`).toBeDefined();
       for (const s of i.sources) expect(s.url).toMatch(/^https?:\/\//);
+    }
+  });
+  it('every layout guideline names an existing source, and every listed source is cited', () => {
+    for (const i of INTERFACES) {
+      const cited = new Set(i.rules.map((r) => r.src));
+      for (const [k, g] of Object.entries(i.layout ?? {})) {
+        expect(i.sources[g.src], `${i.id}: layout.${k} points at source ${g.src}`).toBeDefined();
+        cited.add(g.src);
+      }
+      i.sources.forEach((s, n) => expect(cited.has(n), `${i.id}: source ${n} (${s.title}) is listed but nothing cites it`).toBe(true));
     }
   });
 });

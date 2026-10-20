@@ -1234,7 +1234,8 @@ export function checkItem(item: RouteItem, target: Target | null, solves: Record
   }
 
   const spec = target ? INTERFACES.find((s) => s.id === target.id) : undefined;
-  if (spec?.maxLenMm !== undefined) res.length = { status: len <= spec.maxLenMm ? 'ok' : 'fail', reason: `length ${L(len)} ${unit}, limit ${L(spec.maxLenMm)} ${unit} (${spec.name})` };
+  // the published length limits are vendor guidelines (often for one chip): over one is a warning
+  if (spec?.maxLenMm !== undefined) res.length = { status: len <= spec.maxLenMm ? 'ok' : 'warn', reason: `length ${L(len)} ${unit}, guideline ${L(spec.maxLenMm)} ${unit} (${spec.name})` };
 
   // loss over all layers at the target's frequency
   if (target) {
@@ -1250,7 +1251,8 @@ export function checkItem(item: RouteItem, target: Target | null, solves: Record
     const budget = spec?.lossBudgetDb;
     if (pending) res.loss = { db, status: 'pending', reason: 'loss: solving…' };
     else if (budget !== undefined) {
-      const status: Status = db > budget ? 'fail' : db > 0.8 * budget ? 'warn' : 'ok';
+      // the published budgets are informative or vendor figures, so even over one the pair only warns
+      const status: Status = db > 0.8 * budget ? 'warn' : 'ok';
       res.loss = { db, status, reason: `loss ${db.toFixed(2)} dB, budget ${budget} dB${missing ? ' (layers that could not be solved are not counted)' : ''}` };
     } else res.loss = { db, status: 'info', reason: `loss ${db.toFixed(2)} dB${missing ? ' (layers that could not be solved are not counted)' : ''}` };
   }

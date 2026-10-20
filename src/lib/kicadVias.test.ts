@@ -70,7 +70,7 @@ describe('via checks against the interface guidelines (warnings, with the source
     const res = checkItem(itemOf(pairBoard('In1.Cu', 1)), targetById('usb3-gen1'), solves({ 'F.Cu': ['In2.Cu'], 'In1.Cu': ['In2.Cu'] }), L);
     const stub = res.checks!.find((c) => c.key === 'stub')!;
     expect(stub.status).toBe('warn');
-    expect(stub.reason).toMatch(/2 of 2 vias over 0\.381 mm \(TI SLLA414\), the longest 1\.470 mm at x 30, y 20(\.3)? mm \(signal on F\.Cu and In1\.Cu, via F\.Cu to B\.Cu\)/);
+    expect(stub.reason).toMatch(/2 of 2 vias over 0\.381 mm \(TI SLLA414A\), the longest 1\.470 mm at x 30, y 20(\.3)? mm \(signal on F\.Cu and In1\.Cu, via F\.Cu to B\.Cu\)/);
     expect(res.overall).toBe('warn');
     const ok = checkItem(itemOf(pairBoard('B.Cu', 1)), targetById('usb3-gen1'), solves({ 'F.Cu': ['In1.Cu'], 'B.Cu': ['In2.Cu'] }), L);
     expect(ok.checks!.find((c) => c.key === 'stub')!.status).toBe('ok');
@@ -81,7 +81,7 @@ describe('via checks against the interface guidelines (warnings, with the source
     expect(checkItem(itemOf(pairBoard('B.Cu', 1)), t, change, L).checks!.find((c) => c.key === 'return')!.status).toBe('ok');
     const far = checkItem(itemOf(pairBoard('B.Cu', 8)), t, change, L).checks!.find((c) => c.key === 'return')!;
     expect(far.status).toBe('warn');
-    expect(far.reason).toMatch(/no ground via within 5\.080 mm \(TI SLLA414\); at x 30, y 20(\.3)? mm \(F\.Cu to B\.Cu\) the nearest is 8\.\d+ mm away \(GND\)/);
+    expect(far.reason).toMatch(/no ground via within 5\.080 mm \(TI SLLA414A\); at x 30, y 20(\.3)? mm \(F\.Cu to B\.Cu\) the nearest is 8\.\d+ mm away \(GND\)/);
     // the same plane above and below the change: no return via needed
     expect(checkItem(itemOf(pairBoard('In2.Cu', 8)), t, solves({ 'F.Cu': ['In1.Cu'], 'In2.Cu': ['In1.Cu', 'B.Cu'] }), L).checks!.find((c) => c.key === 'return')).toBeUndefined();
   });
@@ -106,7 +106,7 @@ describe('spacing to other signals', () => {
     const res = checkItem(item, targetById('usb3-gen1'), solves({ 'F.Cu': ['In1.Cu'] }), L);
     const sp = res.checks!.find((c) => c.key === 'space')!;
     expect(sp.status).toBe('warn');
-    expect(sp.reason).toMatch(/closer than 0\.762 mm to other signals \(TI SLLA414\) and 5W to other pairs \(TI SLLA414\), outside 2\.5 mm of pads and vias; nearest 0\.400 mm to SIG/);
+    expect(sp.reason).toMatch(/closer than 0\.762 mm to other signals \(TI SLLA414A\) and 5W to other pairs \(TI SLLA414A\), outside 2\.5 mm of pads and vias; nearest 0\.400 mm to SIG/);
     // the same signal 2 mm away is fine
     const far = itemOf(board(seg(2, 'F.Cu', 0, 20, 60, 20) + seg(3, 'F.Cu', 0, 20.3, 60, 20.3) + seg(4, 'F.Cu', 20, 22.6, 40, 22.6)));
     expect(checkItem(far, targetById('usb3-gen1'), solves({ 'F.Cu': ['In1.Cu'] }), L).checks!.find((c) => c.key === 'space')!.status).toBe('ok');

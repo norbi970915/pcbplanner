@@ -411,15 +411,18 @@ describe('checks against interfaces.ts limits', () => {
     expect(ok.skew!.limitMm).toBeCloseTo(dp.intraPairPs! / pm, 9);
     expect(ok.skew!.status).toBe(1 <= dp.intraPairPs! / pm ? 'ok' : 'fail');
   });
-  it('loss against the budget: over 80 % is a warning, over 100 % fails; maximum length from the specification', () => {
-    const t = targetById('usb3-gen1'); // 8.5 dB, 9 in
+  it('loss against the budget and length against the guideline: both warn, never fail', () => {
+    const t = targetById('usb3-gen2'); // 8.5 dB informative budget
     const at = (dbPerIn: number, len: number) => checkItem(pairItem([{ layer: 'F.Cu', w: 0.1, gap: 0.15, len }]), t, { 'F.Cu': { z: 90, eeff: 3, dbPerIn } }, L);
     expect(at(0.5, 100).loss?.status).toBe('ok');
     expect(at(1, 190).loss?.status).toBe('warn');
-    expect(at(1, 228).loss?.status).toBe('fail');
-    expect(at(0.1, 228).length?.status).toBe('ok');
-    expect(at(0.1, 240).length?.status).toBe('fail');
-    expect(at(0.1, 240).overall).toBe('fail');
+    expect(at(1, 228).loss?.status).toBe('warn');
+    const usb2 = targetById('usb2-hs'); // TI: 12 in maximum
+    const len = (l: number) => checkItem(pairItem([{ layer: 'F.Cu', w: 0.1, gap: 0.15, len: l }]), usb2, { 'F.Cu': { z: 90, eeff: 3, dbPerIn: 0.01 } }, L);
+    expect(len(300).length?.status).toBe('ok');
+    expect(len(310).length).toMatchObject({ status: 'warn' });
+    expect(len(310).length!.reason).toMatch(/guideline 304.8/);
+    expect(len(310).overall).not.toBe('fail');
   });
   it('breakout layers are not checked; an uncoupled run is a warning; a coupled layer with long uncoupled parts warns', () => {
     const r = checkItem(
