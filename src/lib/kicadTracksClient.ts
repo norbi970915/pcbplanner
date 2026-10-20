@@ -40,7 +40,7 @@ async function readInWorker(text: string): Promise<PackedTracks> {
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** The saved board text when it is the board that is loaded (the store saves it just after loading, so a fresh load is waited for briefly). */
-async function boardText(d: KicadProjectData): Promise<string | null> {
+export async function boardText(d: KicadProjectData): Promise<string | null> {
   const s = indexedDbStorage();
   for (let i = 0; s && i < 6; i++) {
     try {

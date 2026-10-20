@@ -3,6 +3,7 @@ import { StackPreview } from '../components/StackPreview';
 import { ToolPage } from '../components/ToolPage';
 import { Notes, Panel, Section } from '../components/ui';
 import { AnalysisMethod } from '../components/kicad/AnalysisMethod';
+import { KicadBoardPanel } from '../components/kicad/KicadBoardPanel';
 import { AnalysisProperties, BoardSummary, ImpedanceByLayerPanel, NoStackupNote, RoutingPanel } from '../components/kicad/KicadAnalysis';
 import { analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
 import { useKicadFileLoader } from '../components/kicad/KicadFileLoader';
@@ -218,6 +219,30 @@ export default function KicadProject() {
       )}
       <Notes kind="error" items={[...loadErrors, ...(data ? a.errors : [])]} />
       {data && (
+        <nav aria-label="Project views" className="flex gap-1 border-b border-line">
+          {(
+            [
+              ['overview', 'Overview'],
+              ['board', 'Board'],
+            ] as const
+          ).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              aria-current={p.view === v ? 'page' : undefined}
+              className={`-mb-px border-b-2 px-3 py-1.5 ${p.view === v ? 'border-[var(--accent-ink)] font-semibold text-ink' : 'border-transparent text-muted hover:text-ink'}`}
+              onClick={() => set({ view: v })}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      )}
+      {data && p.view === 'board' && calc && (
+        <KicadBoardPanel data={data} checked={a.routingCheck.checked} solving={a.routingCheck.progress.done < a.routingCheck.progress.total} selected={p.item} onSelect={(item) => set({ item })} />
+      )}
+      {data && p.view === 'board' && !calc && <Notes items={['The board view needs the stackup of the board: load a board saved with KiCad 6 or later.']} />}
+      {data && p.view !== 'board' && (
         <>
           <Panel title="Project" allowInvalid>
             <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
@@ -234,7 +259,7 @@ export default function KicadProject() {
           {calc && (
             <>
               <ImpedanceByLayerPanel a={a} p={p} />
-              <RoutingPanel a={a} />
+              <RoutingPanel a={a} onShow={(item) => set({ view: 'board', item })} />
             </>
           )}
           <UseInPanel />
@@ -269,6 +294,14 @@ export function Method() {
       <p>
         Press <b>Close project</b> on this page: both stored files and the layer roles are deleted at once, in every open tab of the site. Clearing the site data of pcbplanner.com in your browser settings
         removes it as well. The files on your computer are never changed.
+      </p>
+      <h2>Board view</h2>
+      <p>
+        The Board tab draws the board from the same file: the outline, and on each copper layer the zone fills as KiCad last filled them, the tracks and arcs, the pads of every footprint
+        in their shape and rotation, and the vias with their drill holes. A pad's position is taken from its footprint's position and angle, as KiCad does. The routing check marks
+        where it found something: a gap in a reference plane, a via stub over the guideline, a via without a ground via near it (with a dashed line to the nearest one), and the
+        closest spacing to another signal. Choose a pair or net in the list, a marker on the board, or the board link in the routing check to highlight its copper and zoom to it;
+        a click on a track highlights its net. Problems that belong to the whole route, such as impedance, skew or length, highlight the pair without a marker.
       </p>
       <h2>Net classes and pairs</h2>
       <p>

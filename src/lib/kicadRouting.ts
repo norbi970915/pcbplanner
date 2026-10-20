@@ -47,6 +47,8 @@ export interface ViaUse {
   stub?: number; // longest unused barrel, mm; absent when back-drilled, reached from one layer only, or without a stackup
   ret?: number; // centre distance to the nearest via of a plane net, mm
   retNet?: string;
+  rx?: number; // where that via is
+  ry?: number;
 }
 
 /** Last part of a hierarchical net name. */
@@ -906,6 +908,8 @@ export interface LayerResult {
   reason: string;
   tag: string; // a few words for a table cell
   change?: boolean; // impedance differs from another layer of the same net
+  /** The places on the board that made this layer a warning (gaps in the reference plane). */
+  points?: CheckPoint[];
 }
 
 export interface ItemResult {
@@ -923,10 +927,22 @@ export interface ItemResult {
   notes: string[];
 }
 
+/** Where on the board a check found something, for the board view: a point, or a point and the point it relates to. */
+export interface CheckPoint {
+  x: number;
+  y: number;
+  x2?: number; // e.g. the nearest return via
+  y2?: number;
+  layer?: string;
+  note: string;
+}
+
 export interface SubCheck {
   key: 'stub' | 'return' | 'vias' | 'space' | 'lane';
   status: Status;
   reason: string;
+  /** The places on the board that made it a warning or a failure. */
+  points?: CheckPoint[];
 }
 
 export type Fmt = (mm: number) => string;
@@ -1015,6 +1031,7 @@ function viaChecks(item: RouteItem, spec: InterfaceSpec, solves: Record<string, 
         key: 'stub',
         status: 'warn',
         reason: `via stubs: ${over.length} of ${vias.length} vias over ${L(lim)} ${unit}${cite(g.viaStubMm.src)}, the longest ${L(w.stub!)} ${unit} at ${at(w)} (signal on ${w.used.join(' and ')}, via ${w.span.join(' to ')}); back-drill them or use blind vias${tail}`,
+        points: over.map((v) => ({ x: v.x, y: v.y, note: `via stub ${L(v.stub!)} ${unit} (signal on ${v.used.join(' and ')})` })),
       });
     } else if (measured.length) out.push({ key: 'stub', status: 'ok', reason: `via stubs: all ${measured.length} measured vias within ${L(lim)} ${unit}${tail}` });
   }
@@ -1036,6 +1053,7 @@ function viaChecks(item: RouteItem, spec: InterfaceSpec, solves: Record<string, 
         key: 'return',
         status: 'warn',
         reason: `return vias: ${far.length} of ${changes.length} vias that change the reference plane have no ground via within ${L(lim)} ${unit}${cite(g.returnViaMm.src)}; at ${at(w)} (${w.used[0]} to ${w.used[w.used.length - 1]}) the nearest is ${w.ret === undefined ? 'not found' : `${L(w.ret)} ${unit} away (${netLeaf(w.retNet ?? '')})`}`,
+        points: far.map((v) => ({ x: v.x, y: v.y, x2: v.rx, y2: v.ry, note: v.ret === undefined ? 'no ground via nearby' : `nearest ground via ${L(v.ret)} ${unit} away` })),
       });
     } else if (changes.length) out.push({ key: 'return', status: 'ok', reason: `return vias: a ground via within ${L(lim)} ${unit} of all ${changes.length} vias that change the reference plane` });
   }
@@ -1070,6 +1088,7 @@ function viaChecks(item: RouteItem, spec: InterfaceSpec, solves: Record<string, 
         key: 'space',
         status: 'warn',
         reason: `spacing: ${bad.map((x) => `${L(x.close / 2)} ${unit} on ${x.layer}`).join(', ')} closer than ${limits}, outside ${SPACING.breakout} mm of pads and vias; nearest ${L(b.near!.d)} ${unit} to ${netLeaf(b.near!.net)} at x ${b.near!.x}, y ${b.near!.y} mm`,
+        points: bad.filter((x) => x.near).map((x) => ({ x: x.near!.x, y: x.near!.y, layer: x.layer, note: `${L(x.near!.d)} ${unit} to ${netLeaf(x.near!.net)} on ${x.layer}` })),
       });
     } else out.push({ key: 'space', status: 'ok', reason: `spacing: ${limits} kept outside ${SPACING.breakout} mm of pads and vias` });
   }
@@ -1122,14 +1141,13 @@ export const solveWidth = (l: { w: number; wN?: number }) => (l.wN !== undefined
 export const pairCoupled = (l: { coupled?: number; gap?: number }) => l.gap !== undefined && (l.coupled ?? 0) >= COUPLING.minCoupled;
 
 /** The worst stretch of an item on a layer over no copper on one of its reference planes, when it reaches VOID.warn. */
-function refGap(item: RouteItem, layer: string, refs: string[] | undefined): VoidStat | undefined {
+function refGap(item: RouteItem, layer: string, refs: string[] | undefined): { worst: VoidStat; all: VoidStat[] } | undefined {
   if (!refs?.length) return undefined;
   const nets = item.kind === 'pair' ? [item.p, item.n] : [item.net];
-  let worst: VoidStat | undefined;
-  for (const n of nets)
-    for (const v of n?.layers.find((x) => x.layer === layer)?.voids ?? [])
-      if (refs.includes(v.layer) && v.longest >= VOID.warn && (!worst || v.longest > worst.longest)) worst = v;
-  return worst;
+  const all: VoidStat[] = [];
+  for (const n of nets) for (const v of n?.layers.find((x) => x.layer === layer)?.voids ?? []) if (refs.includes(v.layer) && v.longest >= VOID.warn) all.push(v);
+  if (!all.length) return undefined;
+  return { worst: all.reduce((a, b) => (b.longest > a.longest ? b : a)), all };
 }
 
 /**
@@ -1179,15 +1197,18 @@ export function checkItem(item: RouteItem, target: Target | null, solves: Record
       }
     }
     // a stretch over a gap, slot or split in the reference plane
-    const gap = status === 'pending' || !coupledOk(l) ? undefined : refGap(item, l.layer, solve.refs);
-    if (gap) {
+    const found = status === 'pending' || !coupledOk(l) ? undefined : refGap(item, l.layer, solve.refs);
+    let points: CheckPoint[] | undefined;
+    if (found) {
+      const gap = found.worst;
       reason += `${reason ? '; ' : ''}${L(gap.total)} ${unit} over no copper on ${gap.layer}, the longest ${L(gap.longest)} ${unit} at x ${gap.x}, y ${gap.y} mm`;
       if (target && status !== 'fail') {
         status = 'warn';
         tag = `over a gap in ${gap.layer}`;
       }
+      points = found.all.map((v) => ({ x: v.x, y: v.y, layer: l.layer, note: `${L(v.longest)} ${unit} over no copper on ${v.layer}` }));
     }
-    return { ...l, solve, status, reason, tag };
+    return { ...l, solve, status, reason, tag, ...(points ? { points } : {}) };
   });
 
   // a layer change where the impedance changes: the classic mistake

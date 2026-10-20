@@ -112,7 +112,7 @@ function readZone(text: string, start: number, end: number, copper: string[]): Z
 }
 
 /** Closed loops of the Edge.Cuts graphics: rectangles, circles, polygons and chains of lines, arcs and curves. */
-function outlineLoops(items: SNode[][]): Pt[][] {
+export function outlineLoops(items: SNode[][]): Pt[][] {
   const loops: Pt[][] = [];
   const edges: Pt[][] = [];
   for (const it of items) {

@@ -105,7 +105,10 @@ export function RoutingCheckPanel({
   boardName,
   baseName,
   download,
+  onShow,
 }: {
+  /** Show a pair or net on the board view (by its group key and name). */
+  onShow?: (key: string) => void;
   checked: CheckedItem[];
   progress: { done: number; total: number };
   routing: RoutingSummary | undefined;
@@ -227,6 +230,11 @@ export function RoutingCheckPanel({
             <td rowSpan={span} className="min-w-[150px] align-top">
               <span className="whitespace-nowrap font-semibold">{title}</span>{' '}
               {res.overall !== 'info' && <Mark s={res.overall} says text={statusLabel(res.overall).replace(/^[^ ]+ /, '')} />}
+              {onShow && (res.overall === 'warn' || res.overall === 'fail') && (
+                <button type="button" className="ml-1.5 text-[var(--accent-ink)] underline" onClick={() => onShow(`${c.group.key}|${item.name}`)}>
+                  board
+                </button>
+              )}
               {item.pair && <span className="block whitespace-nowrap text-faint">{`${leaf(item.pair.p)} / ${leaf(item.pair.n)}`}</span>}
               <span className="block text-muted">
                 {item.cls.name} · {target ? target.label : 'no target'}

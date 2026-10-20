@@ -75,8 +75,8 @@ export function addVias(routing: RoutingSummary, tracks: RawTrack[], vias: RawVi
       if (l) l.push(v);
       else ret.set(k, [v]);
     }
-  const nearestReturn = (x: number, y: number): { d: number; net: string } | undefined => {
-    let best: { d: number; net: string } | undefined;
+  const nearestReturn = (x: number, y: number): { d: number; net: string; x: number; y: number } | undefined => {
+    let best: { d: number; net: string; x: number; y: number } | undefined;
     const cx = Math.floor(x / cell);
     const cy = Math.floor(y / cell);
     for (let r = 0; r <= 8; r++) {
@@ -85,7 +85,7 @@ export function addVias(routing: RoutingSummary, tracks: RawTrack[], vias: RawVi
           if (Math.max(Math.abs(i - cx), Math.abs(j - cy)) !== r) continue;
           for (const v of ret.get(`${i},${j}`) ?? []) {
             const d = Math.hypot(v.x - x, v.y - y);
-            if (!best || d < best.d) best = { d, net: v.net };
+            if (!best || d < best.d) best = { d, net: v.net, x: v.x, y: v.y };
           }
         }
       if (best && best.d <= r * cell) break; // nothing in a farther ring can be nearer
@@ -119,6 +119,8 @@ export function addVias(routing: RoutingSummary, tracks: RawTrack[], vias: RawVi
     if (r) {
       use.ret = Math.round(r.d * 1e4) / 1e4;
       use.retNet = r.net;
+      use.rx = r.x;
+      use.ry = r.y;
     }
     n.viaUse = [...(n.viaUse ?? []), use];
   }

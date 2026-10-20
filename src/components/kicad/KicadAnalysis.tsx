@@ -270,10 +270,11 @@ export function ImpedanceByLayerPanel({ a, p }: { a: KicadAnalysis; p: KicadAnal
 }
 
 /** The routing check of the loaded board (shown once the inputs are valid). */
-export function RoutingPanel({ a }: { a: KicadAnalysis }) {
+export function RoutingPanel({ a, onShow }: { a: KicadAnalysis; onShow?: (key: string) => void }) {
   if (!a.inputsOk || !a.data) return null;
   return (
     <RoutingCheckPanel
+      onShow={onShow}
       checked={a.routingCheck.checked}
       progress={a.routingCheck.progress}
       routing={a.data.board.routing}

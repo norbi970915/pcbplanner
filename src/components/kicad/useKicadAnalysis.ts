@@ -12,7 +12,7 @@ import { fmt, fromMm } from '../../lib/units';
 import { useSettings } from '../../state/settings';
 
 /** Inputs of the analysis, kept in the page address (useUrlState). */
-export const KICAD_ANALYSIS_DEFAULTS = { t50: true, t90: true, t100: true, t85: false, grule: 'fixed', gap: 0.127, f: 4, mask: true, foil: 'ed', rt: '' };
+export const KICAD_ANALYSIS_DEFAULTS = { t50: true, t90: true, t100: true, t85: false, grule: 'fixed', gap: 0.127, f: 4, mask: true, foil: 'ed', rt: '', view: 'overview', item: '' };
 export type KicadAnalysisInputs = typeof KICAD_ANALYSIS_DEFAULTS;
 export type SetKicadInputs = (patch: Partial<KicadAnalysisInputs>) => void;
 
@@ -34,16 +34,6 @@ export function download(name: string, data: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Query string of the analysis inputs that differ from the defaults (to carry them to the other KiCad page). */
-export function analysisQuery(p: KicadAnalysisInputs): string {
-  const q = new URLSearchParams();
-  for (const [k, def] of Object.entries(KICAD_ANALYSIS_DEFAULTS)) {
-    const v = p[k as keyof KicadAnalysisInputs];
-    if (v !== def) q.set(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v));
-  }
-  const s = q.toString();
-  return s ? `?${s}` : '';
-}
 
 /** Everything the width table, the routing check and the notes need, solved on the worker pool. */
 export function useKicadAnalysis(data: KicadProjectData | null, p: KicadAnalysisInputs, set: SetKicadInputs) {

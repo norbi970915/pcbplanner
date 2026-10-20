@@ -330,7 +330,7 @@ const RE_XY = /\(xy\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s*\)/g;
 const RE_FILL_LAYER = /^\(filled_polygon\s+\(layer\s+"?([^"\s)]+)"?/;
 
 /** The (filled_polygon …) lists of a zone: its copper as KiCad last filled it, read with regexes (they can be large). */
-function readFills(text: string, from: number, end: number, layer0: string | undefined): FillPoly[] {
+export function readFills(text: string, from: number, end: number, layer0: string | undefined): FillPoly[] {
   const out: FillPoly[] = [];
   for (let i = text.indexOf('(filled_polygon', from); i >= 0 && i < end; i = text.indexOf('(filled_polygon', i + 15)) {
     const e = listEnd(text, i, end);
@@ -390,7 +390,7 @@ const netKey = (m: RegExpExecArray | null) => (!m ? '' : m[1] !== undefined ? `#
 const layerList = (s: string | undefined) => (s ? [...s.matchAll(/"((?:[^"\\]|\\.)*)"|([^\s"]+)/g)].map((m) => (m[1] !== undefined ? unescape(m[1]) : m[2])) : []);
 
 /** Geometry, width, layer and net of a top-level (segment …) or (arc …). */
-function readTrack(text: string, start: number, end: number, arc: boolean): RawTrack | null {
+export function readTrack(text: string, start: number, end: number, arc: boolean): RawTrack | null {
   const s = text.slice(start, end);
   const a = RE_START.exec(s);
   const b = RE_END.exec(s);
@@ -415,7 +415,7 @@ const RE_VIA_KIND = /^\(via\s+(blind|buried|micro)\b|\(type\s+"?(blind|buried|mi
 const RE_MACHINING = /\((?:backdrill|back_drill|post_machining|front_post_machining|back_post_machining)\b[^()]*(?:\([^()]*\)[^()]*)*\)/g;
 
 /** Position, layers, net, size, drill, kind (through, blind, micro) and back-drilling of a top-level (via …). */
-function readVia(text: string, start: number, end: number): RawVia | null {
+export function readVia(text: string, start: number, end: number): RawVia | null {
   const raw = text.slice(start, end);
   // a back-drill or post-machining list has its own size and layers: read the via's own outside it
   const s = raw.replace(RE_MACHINING, '');
