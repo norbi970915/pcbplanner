@@ -132,7 +132,8 @@ export type DcResult =
       nodes: number;
       iterations: number;
       residual: number;
-      loads: { ref: string; amps: number; dropMv: number; maxMv: number; connected: boolean }[];
+      /** onNet: the part has pads on the net; connected: the copper joins every one of them to the source. */
+      loads: { ref: string; amps: number; dropMv: number; maxMv: number; connected: boolean; onNet: boolean }[];
       tracks: TrackLoad[];
       vias: ViaLoad[];
       layers: DcLayerMap[];
@@ -465,7 +466,7 @@ export function solveDc(req: DcRequest): DcResult {
     const ns = partNodes(ld.ref);
     const vs = ns.map(val).filter(Number.isFinite);
     const connected = vs.length > 0 && ns.every((n) => reach[n]);
-    return { ref: ld.ref, amps: ld.amps, dropMv: vs.length ? mv(vs.reduce((a, b) => a + b, 0) / vs.length) : NaN, maxMv: vs.length ? mv(Math.max(...vs)) : NaN, connected };
+    return { ref: ld.ref, amps: ld.amps, dropMv: vs.length ? mv(vs.reduce((a, b) => a + b, 0) / vs.length) : NaN, maxMv: vs.length ? mv(Math.max(...vs)) : NaN, connected, onNet: ns.length > 0 };
   });
   const tracks: TrackLoad[] = nc.tracks.map((t, j) => {
     let amps = 0;

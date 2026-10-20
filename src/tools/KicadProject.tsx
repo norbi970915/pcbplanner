@@ -352,8 +352,14 @@ export function Method() {
         The result is the drop at every load (the mean over its pads), the copper loss, the real current and IPC-2221 rise of every track and via, and a heat map on a chosen layer of the
         drop or of the sheet current density in amperes per millimetre of width (its colours span 99 % of the copper; the few hottest cells by the vias and pads are shown at the top colour).
         A load the copper does not connect to the source is named and draws no current. The drop between two places changes by a few per cent with the grid, mostly through how a via
-        meets a plane, so read the result to that accuracy. What is not modelled: the return current in the ground net (solve the ground net with the same parts for its share), the
-        resistance inside the parts and their pins, solder, plating on the outer layers, temperature that varies over the board, and AC effects (decoupling, inductance).
+        meets a plane, so read the result to that accuracy. What is not modelled: the resistance inside the parts and their pins, solder, plating on the outer layers, temperature that
+        varies over the board, and AC effects (decoupling, inductance).
+      </p>
+      <p>
+        The current comes back through the return net. By default it is the ground net that reaches the source and the most loads (choose another, or none, under Return net). The
+        return is solved the same way, with each load's current flowing from its pads on the return net back to the source's: the load sees the supply drop and the return drop added,
+        and the table gives both and their total. A load with no pad on the return net returns its current some other way (through another part), so its total is left out; a source
+        with no pad on the return net cannot be solved for the return. The map shows either net's copper.
       </p>
       <h2>Net classes and pairs</h2>
       <p>

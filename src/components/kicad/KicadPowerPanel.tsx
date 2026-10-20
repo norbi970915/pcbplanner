@@ -2,7 +2,9 @@
 // the board. Track current: every track and via of the net carries the whole net current (worst case), and
 // its IPC-2221 temperature rise colours it. DC drop: the source part feeds the net, the load parts draw their
 // currents, and the solved copper shows the drop (or the current density) as a heat map on a layer, with the
-// real current and rise of every track and via. The engine is kicadPower.ts.
+// real current and rise of every track and via. The currents come back through the return (ground) net from
+// the loads' ground pads to the source's, solved the same way: a load sees the supply and the return drop
+// added. The engine is kicadPower.ts.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NumField, Panel, Row, Segmented, SelectField } from '../ui';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
@@ -55,6 +57,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
   const [dc, setDc] = useState<{ key: string; result?: DcResult; error?: string } | null>(null);
+  const [ret, setRet] = useState<{ key: string; result?: DcResult; error?: string } | null>(null);
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -107,21 +110,63 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const dcNow = dc?.key === dcKey ? dc : null;
   const solved = dcNow?.result?.ok ? dcNow.result : null;
 
-  // the map: a layer of the solved copper
-  const mapLayers = solved ? solved.layers.map((l) => l.layer) : [];
-  const mapLayer = mapLayers.includes(p.player) ? p.player : (solved?.layers.slice().sort((a, b) => count(b.drop) - count(a.drop))[0]?.layer ?? '');
+  // the return: the ground net the loads send their current back on, from their ground pads to the source's.
+  // Auto picks the ground net that reaches the source and the most loads.
+  const grounds = nets.filter((n) => n.kind === 'ground' && n.net !== net);
+  const returnNet = useMemo(() => {
+    if (mode !== 'dc' || !d || p.pret === 'none' || nets.find((n) => n.net === net)?.kind === 'ground') return '';
+    if (grounds.some((g) => g.net === p.pret)) return p.pret;
+    const score = (g: string) => {
+      const refs = new Set(d.pads.filter((q) => q.net === g).map((q) => q.ref));
+      return (refs.has(source) ? 1000 : 0) + loads.filter((l) => refs.has(l.ref)).length;
+    };
+    return grounds.map((g) => g.net).sort((a, b) => score(b) - score(a))[0] ?? '';
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, d, p.pret, net, nets, source, encodeLoads(loads)]);
+  const retNc = useMemo(() => (d && returnNet ? netCopper(d, returnNet) : null), [d, returnNet]);
+  const retRefs = useMemo(() => new Set(retNc?.pads.map((q) => q.ref) ?? []), [retNc]);
+  const retLoads = useMemo(() => loads.filter((l) => retRefs.has(l.ref)), [loads, retRefs]);
+  const retKey = `${returnNet}|${source}|${encodeLoads(retLoads)}|${p.pdt}|${p.pamb}`;
+  const retSourceOk = !!returnNet && retRefs.has(source);
+  useEffect(() => {
+    if (mode !== 'dc' || !retNc || !settings || !retSourceOk || !retLoads.some((l) => l.amps > 0)) return;
+    let live = true;
+    const t = setTimeout(() => {
+      setRet({ key: retKey });
+      solveDcInWorker({ nc: retNc, source, loads: retLoads, s: settings }, 'return').then(
+        (result) => live && setRet({ key: retKey, result }),
+        (e: unknown) => live && setRet({ key: retKey, error: e instanceof Error ? e.message : String(e) }),
+      );
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, retNc, settings, retKey, retSourceOk]);
+  const retNow = returnNet && ret?.key === retKey ? ret : null;
+  const retSolved = retNow?.result?.ok ? retNow.result : null;
+
+  // the map: a layer of the solved copper of the supply or the return net
+  const mapOf = p.pmapnet === 'return' && retSolved ? retSolved : solved;
+  const mapLayers = mapOf ? mapOf.layers.map((l) => l.layer) : [];
+  const mapLayer = mapLayers.includes(p.player) ? p.player : (mapOf?.layers.slice().sort((a, b) => count(b.drop) - count(a.drop))[0]?.layer ?? '');
   const heat = useMemo((): BoardHeat | null => {
-    if (!solved || p.pmap === 'off') return null;
-    const m = solved.layers.find((l) => l.layer === mapLayer);
+    if (!mapOf || p.pmap === 'off') return null;
+    const m = mapOf.layers.find((l) => l.layer === mapLayer);
     if (!m) return null;
     const values = p.pmap === 'density' ? m.density : m.drop;
     // the density peaks at a few cells by the vias and pads: the colours span 99 % of the copper
     const finite = Array.from(values).filter(Number.isFinite).sort((a, b) => a - b);
     const max = finite.length ? (p.pmap === 'density' ? finite[Math.floor(0.99 * (finite.length - 1))] : finite[finite.length - 1]) : 0;
     return { layer: m.layer, x0: m.x0, y0: m.y0, res: m.res, nx: m.nx, ny: m.ny, values, max };
-  }, [solved, mapLayer, p.pmap]);
+  }, [mapOf, mapLayer, p.pmap]);
 
-  const loadsOf: { tracks: TrackLoad[]; vias: ViaLoad[] } | null = mode === 'quick' ? quick : solved;
+  const loadsOf = useMemo((): { tracks: TrackLoad[]; vias: ViaLoad[] } | null => {
+    if (mode === 'quick') return quick;
+    if (!solved) return null;
+    return retSolved ? { tracks: [...solved.tracks, ...retSolved.tracks], vias: [...solved.vias, ...retSolved.vias] } : solved;
+  }, [mode, quick, solved, retSolved]);
   const trackColors = useMemo(() => {
     const m = new Map<number, string>();
     for (const t of loadsOf?.tracks ?? []) m.set(t.i, t.amps > 0 ? riseColor(t.dT, p.pdt) : '#6e7681');
@@ -132,7 +177,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     for (const v of loadsOf?.vias ?? []) m.set(v.i, v.amps > 0 ? riseColor(v.dT, p.pdt) : '#6e7681');
     return m;
   }, [loadsOf, p.pdt]);
-  const highlight = useMemo(() => new Set(net ? [net] : []), [net]);
+  const highlight = useMemo(() => new Set([net, returnNet].filter(Boolean)), [net, returnNet]);
 
   if (!drawing || drawing.board !== data.board) return <Panel title="Power"><p className="p-3" role="status">Drawing the board…</p></Panel>;
   if (drawing.error || !d || !settings) return <Panel title="Power"><p className="p-3">{drawing.error}</p></Panel>;
@@ -146,7 +191,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   };
   const zoomAt = (x: number, y: number) => setFocus([x - 2, y - 2, x + 2, y + 2]);
   const zoomPart = (ref: string) => {
-    const ps = nc?.pads.filter((q) => q.ref === ref) ?? [];
+    const ps = [...(nc?.pads ?? []), ...(retNc?.pads ?? [])].filter((q) => q.ref === ref);
     if (!ps.length) return;
     setFocus([Math.min(...ps.map((q) => q.x)) - 2, Math.min(...ps.map((q) => q.y)) - 2, Math.max(...ps.map((q) => q.x)) + 2, Math.max(...ps.map((q) => q.y)) + 2]);
   };
@@ -188,6 +233,19 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
         <>
           <SelectField label="Source" value={source} width={170} onChange={(v) => set({ psrc: v })} options={parts.map((x) => ({ value: x.ref, label: `${x.ref} (${x.pads} ${x.pads === 1 ? 'pad' : 'pads'})` }))} />
           <NumField label="Net voltage" value={volts} unit="V" allowZero onChange={(v) => set({ pv: v })} hint="Read from the net name where it says it (+3V3, 5V); used only to give the drop in percent." />
+          {nets.find((n) => n.net === net)?.kind !== 'ground' && (
+            <SelectField
+              label="Return net"
+              value={p.pret === 'none' ? 'none' : grounds.some((g) => g.net === p.pret) ? p.pret : ''}
+              width={170}
+              onChange={(v) => set({ pret: v, pmapnet: 'supply', player: '' })}
+              options={[
+                { value: '', label: returnNet ? `Auto (${netLeaf(returnNet)})` : 'Auto (none found)' },
+                ...grounds.map((g) => ({ value: g.net, label: netLeaf(g.net) })),
+                { value: 'none', label: 'None: the supply only' },
+              ]}
+            />
+          )}
         </>
       )}
     </div>
@@ -260,8 +318,19 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
           {l}
         </label>
       ))}
-      {mode === 'dc' && solved && solved.layers.length > 0 && (
+      {mode === 'dc' && solved && (solved.layers.length > 0 || (retSolved?.layers.length ?? 0) > 0) && (
         <span className="flex flex-wrap items-center gap-2">
+          {retSolved && (
+            <Segmented
+              label="Map net"
+              value={p.pmapnet === 'return' ? 'return' : 'supply'}
+              onChange={(v) => set({ pmapnet: v, player: '' })}
+              options={[
+                { value: 'supply', label: netLeaf(net) },
+                { value: 'return', label: netLeaf(returnNet) },
+              ]}
+            />
+          )}
           <Segmented
             label="Map"
             value={(['drop', 'density', 'off'] as const).includes(p.pmap as 'drop') ? (p.pmap as 'drop' | 'density' | 'off') : 'drop'}
@@ -319,7 +388,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
       </span>
       {heat && visible[heat.layer] && (
         <span className="flex items-center gap-1.5">
-          {p.pmap === 'density' ? 'Current density' : 'Drop'} on {heat.layer}: 0
+          {p.pmap === 'density' ? 'Current density' : 'Drop'} of {netLeaf(mapOf === retSolved ? returnNet : net)} on {heat.layer}: 0
           <i aria-hidden="true" className="inline-block h-2 w-24 rounded-sm" style={{ background: HEAT_GRADIENT }} />
           {p.pmap === 'density' ? `≥ ${num(heat.max, 2)} A/mm` : `${num(heat.max, 2)} mV`}
         </span>
@@ -341,7 +410,8 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
             {worstTracks.slice(0, 40).map((t) => (
               <li key={t.i}>
                 <button type="button" className="w-full rounded px-1.5 py-0.5 text-left hover:bg-[var(--hover)]" onClick={() => zoomTrack(t)}>
-                  <span className={riseTone(t.dT, p.pdt)}>ΔT {num(t.dT, 1)} °C</span> {t.layer}, {num(t.w, 3)} mm wide, {num(t.len, 1)} mm long
+                  <span className={riseTone(t.dT, p.pdt)}>ΔT {num(t.dT, 1)} °C</span> {retSolved && `${netLeaf(d.tracks[t.i]?.net ?? '')}, `}
+                  {t.layer}, {num(t.w, 3)} mm wide, {num(t.len, 1)} mm long
                   {mode === 'dc' && <span className="text-faint"> · {num(t.amps, 2)} A</span>}
                 </button>
               </li>
@@ -358,7 +428,8 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
               return (
                 <li key={v.i}>
                   <button type="button" className="w-full rounded px-1.5 py-0.5 text-left hover:bg-[var(--hover)]" onClick={() => zoomAt(v.x, v.y)}>
-                    <span className={riseTone(v.dT, p.pdt)}>ΔT {num(v.dT, 1)} °C</span> via {num(via?.drill ?? 0.3, 2)} mm drill at {num(v.x, 1)}, {num(v.y, 1)}
+                    <span className={riseTone(v.dT, p.pdt)}>ΔT {num(v.dT, 1)} °C</span> {retSolved && `${netLeaf(via?.net ?? '')} `}via {num(via?.drill ?? 0.3, 2)} mm drill at{' '}
+                    {num(v.x, 1)}, {num(v.y, 1)}
                     {mode === 'dc' && <span className="text-faint"> · {num(v.amps, 2)} A</span>}
                   </button>
                 </li>
@@ -395,6 +466,28 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     </div>
   );
 
+  // the drop each load sees: its supply drop plus its return drop
+  const totals = (solved?.loads ?? []).map((l) => {
+    const r = retSolved?.loads.find((x) => x.ref === l.ref);
+    const total = !l.connected ? NaN : retSolved ? (r?.onNet && r.connected ? l.dropMv + r.dropMv : NaN) : l.dropMv;
+    return { ref: l.ref, amps: l.amps, supply: l, ret: r, total };
+  });
+  const worstTotal = Math.max(0, ...totals.map((t) => t.total).filter(Number.isFinite));
+  const returnNote =
+    mode !== 'dc' || !returnNet
+      ? ''
+      : !retSourceOk
+        ? `${source} has no pad on ${netLeaf(returnNet)}, so the return could not be solved: choose a source with a ground pad, or another return net.`
+        : retNow?.error
+          ? retNow.error
+          : retNow?.result && !retNow.result.ok
+            ? retNow.result.error
+            : !retSolved
+              ? `Solving the return through ${netLeaf(returnNet)}…`
+              : totals.some((t) => t.supply.connected && !t.ret?.onNet)
+                ? `A load without a pad on ${netLeaf(returnNet)} returns its current some other way; its total is left out.`
+                : '';
+
   const dcSummary = mode === 'dc' && (
     <div aria-live="polite">
       {!loads.some((l) => l.amps > 0) ? (
@@ -412,12 +505,14 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
               <tr>
                 <th className="font-normal">Load</th>
                 <th className="text-right font-normal">Current</th>
-                <th className="text-right font-normal">Drop</th>
+                <th className="text-right font-normal">{retSolved ? netLeaf(net) : 'Drop'}</th>
+                {retSolved && <th className="text-right font-normal">{netLeaf(returnNet)}</th>}
+                {retSolved && <th className="text-right font-normal">Total</th>}
                 {volts > 0 && <th className="text-right font-normal">of {volts} V</th>}
               </tr>
             </thead>
             <tbody>
-              {solved.loads.map((l) => (
+              {totals.map((l) => (
                 <tr key={l.ref}>
                   <td>
                     <button type="button" className="underline decoration-dotted" onClick={() => zoomPart(l.ref)}>
@@ -425,16 +520,32 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
                     </button>
                   </td>
                   <td className="text-right">{num(l.amps, 3)} A</td>
-                  <td className="text-right">{l.connected ? `${num(l.dropMv, 2)} mV` : <span className="text-[var(--err-line)]">not connected</span>}</td>
-                  {volts > 0 && <td className="text-right">{l.connected ? `${num((l.dropMv / 10 / volts), 2)} %` : '–'}</td>}
+                  <td className="text-right">{l.supply.connected ? `${num(l.supply.dropMv, 2)} mV` : <span className="text-[var(--err-line)]">not connected</span>}</td>
+                  {retSolved && (
+                    <td className="text-right">
+                      {!l.ret?.onNet ? <span className="text-faint">no pad</span> : l.ret.connected ? `${num(l.ret.dropMv, 2)} mV` : <span className="text-[var(--err-line)]">not connected</span>}
+                    </td>
+                  )}
+                  {retSolved && <td className="text-right font-semibold">{Number.isFinite(l.total) ? `${num(l.total, 2)} mV` : '–'}</td>}
+                  {volts > 0 && <td className="text-right">{Number.isFinite(l.total) ? `${num(l.total / 10 / volts, 2)} %` : '–'}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
           <p className="mt-1 text-muted">
-            Largest drop {num(solved.maxDropMv, 2)} mV{volts > 0 && ` (${num(solved.maxDropMv / 10 / volts, 2)} % of ${volts} V)`}, {num(solved.powerW * 1000, 1)} mW lost in the copper. Grid{' '}
-            {num(solved.res, 2)} mm, finer around the source and the loads; {solved.nodes.toLocaleString()} nodes.
+            {retSolved ? (
+              <>
+                Largest drop seen by a load {num(worstTotal, 2)} mV{volts > 0 && ` (${num(worstTotal / 10 / volts, 2)} % of ${volts} V)`}: up to {num(solved.maxDropMv, 2)} mV on {netLeaf(net)} and{' '}
+                {num(retSolved.maxDropMv, 2)} mV on {netLeaf(returnNet)}. {num((solved.powerW + retSolved.powerW) * 1000, 1)} mW lost in the copper of both nets.
+              </>
+            ) : (
+              <>
+                Largest drop {num(solved.maxDropMv, 2)} mV{volts > 0 && ` (${num(solved.maxDropMv / 10 / volts, 2)} % of ${volts} V)`}, {num(solved.powerW * 1000, 1)} mW lost in the copper.
+              </>
+            )}{' '}
+            Grid {num(solved.res, 2)} mm, finer around the source and the loads; {(solved.nodes + (retSolved?.nodes ?? 0)).toLocaleString()} nodes.
           </p>
+          {returnNote && <p className="mt-1 text-muted">{returnNote}</p>}
           {solved.loads.some((l) => !l.connected) && (
             <p className="mt-1 text-[var(--err-line)]">A load not connected to {source} by the copper of {netLeaf(net)} (a missing track or an unfilled zone) draws no current.</p>
           )}

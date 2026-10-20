@@ -91,6 +91,17 @@ describe('DC drop', () => {
     if (!r.ok) throw new Error(r.error);
     expect(r.loads[0].connected).toBe(true);
     expect(r.loads[1].connected).toBe(false);
+    expect(r.loads[1].onNet).toBe(true);
+  });
+
+  it('a load without pads on the net is told apart from one the copper does not reach', () => {
+    const nc = net({ tracks: [track(0, 0, 0, 5, 0, 0.2)], pads: [pad('J1', 0, 0), pad('U1', 5, 0)] });
+    const r = solveDc({ nc, source: 'J1', loads: [{ ref: 'U1', amps: 1 }, { ref: 'R9', amps: 1 }], s: S });
+    if (!r.ok) throw new Error(r.error);
+    expect(r.loads[1].onNet).toBe(false);
+    expect(r.loads[1].connected).toBe(false);
+    // the missing load draws nothing: U1's drop is that of its own 1 A
+    expect(r.loads[0].dropMv).toBeCloseTo(((RHO * 5) / (0.2 * 0.035)) * 1000, 3);
   });
 
   it('a source without pads on the net is an error', () => {

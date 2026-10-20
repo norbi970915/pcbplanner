@@ -1,18 +1,19 @@
-// Runs a DC voltage drop solve in a worker; a newer request ends the one before it.
+// Runs a DC voltage drop solve in a worker; a newer request on the same channel ends the one before it
+// (the supply and the return net solve side by side on two channels).
 import type { DcRequest, DcResult } from './kicadPower';
 import type { KicadPowerResponse } from './kicadPower.worker';
 
-let current: Worker | null = null;
+const current = new Map<string, Worker>();
 let nextId = 1;
 
-export async function solveDcInWorker(req: DcRequest): Promise<DcResult> {
+export async function solveDcInWorker(req: DcRequest, channel = 'supply'): Promise<DcResult> {
   if (typeof Worker === 'undefined') {
     const { solveDc } = await import('./kicadPower');
     return solveDc(req);
   }
-  current?.terminate();
+  current.get(channel)?.terminate();
   const worker = new Worker(new URL('./kicadPower.worker.ts', import.meta.url), { type: 'module' });
-  current = worker;
+  current.set(channel, worker);
   const id = nextId++;
   try {
     return await new Promise<DcResult>((resolve, reject) => {
@@ -26,12 +27,12 @@ export async function solveDcInWorker(req: DcRequest): Promise<DcResult> {
     });
   } finally {
     worker.terminate();
-    if (current === worker) current = null;
+    if (current.get(channel) === worker) current.delete(channel);
   }
 }
 
 /** Ends a running solve (its promise never settles). */
-export function cancelDcSolve() {
-  current?.terminate();
-  current = null;
+export function cancelDcSolve(channel = 'supply') {
+  current.get(channel)?.terminate();
+  current.delete(channel);
 }
