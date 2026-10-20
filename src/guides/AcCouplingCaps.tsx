@@ -7,16 +7,16 @@ export default function AcCouplingCaps() {
         { text: 'PCI-SIG, PCI Express Card Electromechanical (CEM) Specification, Revision 3.0, 2013 (§4.7.1 AC coupling on the transmit pair).', url: 'https://pcisig.com/specifications' },
         { text: 'PCI-SIG, PCI Express Base Specification, Revision 2.0, 2006 (Table 4-9, AC coupling capacitor 75–200 nF).', url: 'https://pcisig.com/specifications' },
         { text: 'USB 3.2 Specification, Revision 1.1, June 2022 (Table 6-18 transmitter, Table 6-22 receiver).', url: 'https://www.usb.org/document-library/usb-32-revision-11-june-2022' },
-        { text: 'Universal Serial Bus Specification, Revision 2.0, 2000 (§7.1.6.1, edge-rate capacitance).', url: 'https://www.usb.org/document-library/usb-20-specification' },
+        { text: 'Universal Serial Bus Specification, Revision 2.0, 2000 (§7.1.6.1, edge-rate capacitance; §7.1.6.2, high-speed capacitance to ground).', url: 'https://www.usb.org/document-library/usb-20-specification' },
         { text: 'SATA-IO, Serial ATA Revision 3.1, Gold Revision (Table 35; §7.2.2.1.10 capacitor size and return loss).', url: 'https://sata-io.org/system/files/specifications/SerialATA_Revision_3_1_Gold.pdf' },
         { text: 'USB Type-C Cable and Connector Specification, Release 2.0, August 2019 (§E.2.2, placement for alternate modes).', url: 'https://www.usb.org/sites/default/files/USB%20Type-C%20Spec%20R2.0%20-%20August%202019.pdf' },
         { text: 'Texas Instruments SNLA426, High-Speed PCB Layout for PCIe Gen 5, 2023.', url: 'https://www.ti.com/lit/pdf/snla426' },
         { text: 'Texas Instruments SLLA414A, High-Speed Layout Guidelines for Signal Conditioners and USB Hubs, rev. 2026.', url: 'https://www.ti.com/lit/an/slla414/slla414.pdf' },
         { text: 'Texas Instruments DP83869HM data sheet SNLS614 (§9.4, SGMII coupling capacitors).', url: 'https://www.ti.com/lit/ds/symlink/dp83869hm.pdf' },
         { text: 'NXP AN10798, DisplayPort PCB layout guidelines, Rev. 01, 2009 (§2.4).', url: 'https://www.nxp.com/docs/en/application-note/AN10798.pdf' },
-        { text: 'Texas Instruments TMDS1204 data sheet SLLSF57A (§7.2.7, §7.2.13.1, AC-coupled transmit mode).', url: 'https://www.ti.com/lit/ds/symlink/tmds1204.pdf' },
+        { text: 'Texas Instruments TMDS1204 data sheet SLLSF57A (§5.3, AC-coupling capacitor 85–253 nF; §7.2.7, §7.2.13.1, AC-coupled transmit mode).', url: 'https://www.ti.com/lit/ds/symlink/tmds1204.pdf' },
         { text: 'Microchip KSZ9031RNX data sheet DS00002117 (§12.0, transformer centre taps).', url: 'https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/KSZ9031RNX-Data-Sheet-DS00002117.pdf' },
-        { text: 'Texas Instruments SPRACP4A, Jacinto 7 High-Speed Interface Design Guidelines, rev. 2024 (MIPI D-PHY).', url: 'https://www.ti.com/lit/pdf/spracp4' },
+        { text: 'Texas Instruments SPRACP4A, Jacinto 7 High-Speed Interface Design Guidelines, rev. 2024 (§3.4.1 CSI-2 and DSI high-level schematics).', url: 'https://www.ti.com/lit/pdf/spracp4' },
       ]}
     >
       <p>
@@ -55,12 +55,12 @@ export default function AcCouplingCaps() {
           <tr>
             <td>PCIe Gen 3 and later</td>
             <td>Required, transmit pair</td>
-            <td>The range changed at 8 GT/s <Cite n={1} />; vendors use 75–220 nF, typically 220 nF <Cite n={7} /></td>
+            <td>176–265 nF at 8 GT/s <Cite n={1} />; TI uses 75–220 nF, typically 220 nF, which fits every generation <Cite n={7} /></td>
           </tr>
           <tr>
             <td>USB 2.0 High Speed</td>
             <td><b>Not allowed</b></td>
-            <td>DC-coupled. An edge-rate capacitor is permitted, but everything at the driver must stay under 75 pF <Cite n={4} /></td>
+            <td>No series capacitor; at High Speed keep at most 10 pF per line to ground (§7.1.6.2). The 75 pF edge-rate allowance is for low and full speed only <Cite n={4} /></td>
           </tr>
           <tr>
             <td>USB 3.2 Gen 1 / Gen 2</td>
@@ -69,8 +69,8 @@ export default function AcCouplingCaps() {
           </tr>
           <tr>
             <td>SATA 3.0</td>
-            <td>Required from Gen 2i upward</td>
-            <td><b>12 nF maximum</b>, and the specification advises against values under about 300 pF <Cite n={5} /></td>
+            <td>Required for every SATA variant except Gen1i, where it is optional</td>
+            <td><b>12 nF maximum</b>, and the specification advises against values under 300 pF <Cite n={5} /></td>
           </tr>
           <tr>
             <td>SGMII</td>
@@ -90,12 +90,12 @@ export default function AcCouplingCaps() {
           <tr>
             <td>1000BASE-T (MDI)</td>
             <td><b>None in series</b></td>
-            <td>The transformer isolates. Each PHY-side centre tap gets its own 0.1 µF to ground <Cite n={12} /></td>
+            <td>The transformer isolates. For voltage-mode PHYs, each PHY-side centre tap gets its own 0.1 µF to ground <Cite n={12} /></td>
           </tr>
           <tr>
             <td>MIPI D-PHY</td>
-            <td><b>Never</b></td>
-            <td>A series capacitor destroys the single-ended low-power mode <Cite n={13} /></td>
+            <td><b>None</b></td>
+            <td>TI's CSI-2 and DSI schematics connect each lane straight through, with only vias in the path <Cite n={13} />. The low-power mode is DC-coupled single-ended signalling, which a series capacitor would block</td>
           </tr>
           <tr>
             <td>DDR4 / LPDDR4</td>
@@ -111,12 +111,12 @@ export default function AcCouplingCaps() {
 
       <h2>Why there is a minimum and a maximum</h2>
       <p>
-        The capacitor and the line form a high-pass filter. Each line of the pair sees its own capacitor into a 50 Ω single-ended impedance, so the corner frequency is
-        <b> f = 1 / (2π · 50 Ω · C)</b>: about 32 kHz for 100 nF, 12 kHz for 265 nF, and 265 kHz for SATA's 12 nF ceiling.
+        The capacitor and the line form a high-pass filter. Each line of the pair sees its own capacitor between a 50 Ω source and a 50 Ω load, so the time constant is 100 Ω · C and
+        the corner frequency is <b> f = 1 / (2π · 100 Ω · C)</b>: about 16 kHz for 100 nF, 6 kHz for 265 nF, and 133 kHz for SATA's 12 nF ceiling.
       </p>
       <p>
         The <b>minimum</b> protects the low-frequency end. Scrambled or 8b/10b-coded data still contains long runs of the same polarity, and if the corner creeps into that content the
-        baseline wanders and the eye closes from the top and bottom. The <b>maximum</b> exists because the capacitor has to charge: USB 3.2 requires a coupled receiver to discharge to
+        baseline wanders and the eye closes from the top and bottom. The <b>maximum</b> presumably exists because the capacitor has to charge and discharge; USB 3.2 requires a coupled receiver to discharge to
         500 mV within 250 ms, tested against a transmitter at its largest permitted capacitance <Cite n={3} />, and a larger part is also a larger pad.
       </p>
 
@@ -125,12 +125,12 @@ export default function AcCouplingCaps() {
         At 2.5 GHz and above, the capacitor is not really a capacitor — it is a discontinuity with a value written on it. The pads are wider than the trace, and the reference plane
         beneath them adds capacitance exactly where the line should stay at 90 or 100 Ω.
       </p>
-      <p>The SATA specification is unusually blunt about this: bodies larger than 0603, it says, are likely to fail the return-loss requirement outright <Cite n={5} />. In practice:</p>
+      <p>The SATA specification is unusually blunt about this: bodies larger than 0603, it says, are likely to fail the return-loss requirement <Cite n={5} />. In practice:</p>
       <ul>
         <li><b>0402 or smaller</b>, and 0201 where the layout allows it; 0603 is the largest any of these documents tolerates <Cite n={[5, 8]} />.</li>
         <li><b>Void the reference plane under the pads</b>, 100 % of the pad area and at least two layers deep <Cite n={8} />.</li>
-        <li><b>Both capacitors of a pair identical</b> — same value, same package, same orientation, placed symmetrically. Rotating one of them relative to the other is enough to show up in return loss <Cite n={[8, 10]} />.</li>
-        <li>Keep the stub into the pad symmetrical and short; twenty mil of stub already reflects at these frequencies <Cite n={7} />.</li>
+        <li><b>Both capacitors of a pair identical</b> — use the same value and package for both capacitors of a pair and place them symmetrically <Cite n={[8, 10]} />.</li>
+        <li>Keep the stub into the pad symmetrical and short <Cite n={7} />.</li>
       </ul>
       <TryIt to="/impedance">See what a wider pad does to the impedance of your pair</TryIt>
 
@@ -144,16 +144,16 @@ export default function AcCouplingCaps() {
         <li><b>Chip to chip on one board:</b> as close to the receiver as possible <Cite n={7} />.</li>
         <li>
           <b>USB Type-C with an orientation switch or alternate-mode mux:</b> between the mux and the receptacle, so the mux operates inside the common-mode limits set by the local PHY{' '}
-          <Cite n={6} />. The specification states this twice in consecutive paragraphs, which is a fair indication of how often it is got wrong.
+          <Cite n={6} />.
         </li>
       </ul>
 
       <h2>Four ways to get it wrong</h2>
       <ol>
-        <li><b>Coupling twice.</b> An SFP cage already contains coupling capacitors on its SGMII pairs; adding your own puts two in series and halves the capacitance <Cite n={9} />.</li>
+        <li><b>Coupling twice.</b> An SFP transceiver usually has integrated AC-coupling capacitors, so external ones may not be needed <Cite n={9} />. If you add a second set anyway, two equal capacitors in series halve the capacitance.</li>
         <li><b>A SATA-sized part on a USB pair, or the reverse.</b> 12 nF and 100 nF are both “the coupling cap” in a library, and only one is right for each link.</li>
         <li><b>Coupling something that must not be coupled.</b> A capacitor on a MIPI D-PHY lane breaks low-power mode; on HDMI it removes the bias the sink provides. If an HDMI redriver is used in AC-coupled transmit mode, it needs 85–253 nF <i>and</i> a 499 Ω pull-down to ground on each output between the capacitor and the receptacle <Cite n={11} />.</li>
-        <li><b>Tying the Ethernet centre taps together.</b> Each PHY-side centre tap needs its own 0.1 µF to ground; the common-mode voltage differs between pairs and with the speed mode <Cite n={12} />.</li>
+        <li><b>Tying the Ethernet centre taps together.</b> For voltage-mode PHYs, each PHY-side centre tap needs its own 0.1 µF to ground; the common-mode voltage differs between pairs and with the speed mode <Cite n={12} />.</li>
       </ol>
 
       <h2>Checklist</h2>

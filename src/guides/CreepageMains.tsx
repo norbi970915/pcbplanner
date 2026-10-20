@@ -5,10 +5,11 @@ export default function CreepageMains() {
   return (
     <Guide
       sources={[
-        { text: 'IEC 60664-1:2007 (Ed. 2), Insulation coordination for equipment within low-voltage systems – Part 1: Principles, requirements and tests. Tables F.1, F.2, F.4, A.2; clauses 5.1.6, 5.2.2.6, 6.2. Ed. 3 (2020) keeps the same table values.', url: 'https://webstore.iec.ch/en/publication/2522' },
+        { text: 'IEC 60664-1:2007 (Ed. 2), Insulation coordination for equipment within low-voltage systems – Part 1: Principles, requirements and tests. Tables F.1, F.2, F.4, A.2; clauses 5.1.6, 5.2.2.6, 6.2. Ed. 3 (2020) keeps these values but renumbers the creepage table as F.5 (rationalised voltages in F.3/F.4), restructures clauses 4–5 and adds an altitude-correction table, F.10.', url: 'https://webstore.iec.ch/en/publication/2522' },
         { text: 'IEC 62368-1, Audio/video, information and communication technology equipment – Part 1: Safety requirements.' },
         { text: 'IEC 60664-3, Use of coating, potting or moulding for protection against pollution.' },
         { text: 'IPC-2221, Generic Standard on Printed Board Design, Table 6-1 (electrical conductor spacing).' },
+        { text: 'W. Zhang and T. LaBella, Demystifying Clearance and Creepage Distance for High-Voltage End Equipment, Texas Instruments Power Supply Design Seminar SLUP419, March 2024.', url: 'https://www.ti.com/lit/pdf/slup419' },
       ]}
     >
       <p>
@@ -39,7 +40,10 @@ export default function CreepageMains() {
           continuous voltage, moisture and dirt. It is sized from the <b>RMS working voltage</b>.
         </li>
       </ul>
-      <p>On a flat PCB the two paths are often the same line, but they are checked separately, and a creepage distance may never be shorter than the clearance <Cite n={1} />.</p>
+      <p>
+        On a flat PCB the two paths are often the same line, but they are checked separately, and a creepage distance may never be shorter than the clearance (IEC 60664-1 and
+        product standards; TI SLUP419: “the creepage distance cannot be less than the clearance distance”) <Cite n={[1, 5]} />.
+      </p>
 
       <h2>Step 1: the impulse voltage</h2>
       <p>
@@ -94,7 +98,7 @@ export default function CreepageMains() {
         <li>General column, material group IIIa: 2.5 mm</li>
       </ul>
       <p>
-        Use the working voltage your product standard specifies. For 230 V mains that is often 250 V (the rated or rationalised voltage), not 230 V. Linear interpolation between table
+        Use the working voltage your product standard specifies. For 230 V mains that is often 250 V (the rated or rationalised voltage), not 230 V; for 120 V mains it is 125 V. Linear interpolation between table
         rows is allowed for creepage.
       </p>
 
@@ -130,15 +134,15 @@ export default function CreepageMains() {
             <td className="v">3.0 mm*</td>
           </tr>
           <tr>
-            <td>120 V, OVC II, basic (150 V working)</td>
+            <td>120 V, OVC II, basic (125 V rationalised)</td>
             <td className="v">0.5 mm</td>
-            <td className="v">0.36 mm</td>
+            <td className="v">0.25 mm</td>
             <td className="v">0.5 mm*</td>
           </tr>
           <tr>
             <td>120 V, OVC II, reinforced</td>
             <td className="v">1.5 mm (2.5 kV)</td>
-            <td className="v">0.71 mm</td>
+            <td className="v">0.50 mm</td>
             <td className="v">1.5 mm*</td>
           </tr>
         </tbody>
@@ -160,7 +164,8 @@ export default function CreepageMains() {
           <b>Conformal coating</b> qualified to IEC 60664-3 can allow the pollution-degree-1 values under the coating <Cite n={3} />.
         </li>
         <li>
-          <b>High-CTI laminate</b> (group I or II) reduces the general-column creepage at pollution degree 3.
+          <b>High-CTI laminate</b> (group I or II) reduces the general-column creepage at pollution degree 2 and 3 (at 250 V and PD2: group I 1.25 mm, II 1.8 mm, IIIa 2.5 mm);
+          a group IIIb laminate cannot use the PD2 printed-wiring column <Cite n={1} />.
         </li>
       </ul>
 

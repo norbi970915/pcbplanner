@@ -11,13 +11,13 @@ export default function RgmiiDelayGuide() {
         { text: 'Linux kernel, Documentation/networking/phy.rst (“(RG)MII/electrical interface considerations” and “Common problems with RGMII delay mismatch”).', url: 'https://github.com/torvalds/linux/blob/master/Documentation/networking/phy.rst' },
         { text: 'Texas Instruments DP83867IR/CR data sheet SNLS484J, revised June 2026 (§6.9 RGMII timing, §7.4.1.1.2 1000 Mb/s timing, Table 8-45 RGMIIDCTL, §9.2.2.1.1 RGMII layout guidelines).', url: 'https://www.ti.com/lit/ds/symlink/dp83867ir.pdf' },
         { text: 'Microchip KSZ9031RNX data sheet DS00002117K, 2024 (§3.9.3 RGMII pad skew registers, Tables 3-5 and 3-6, §7.1 RGMII timing).', url: 'https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/KSZ9031RNX-Data-Sheet-DS00002117.pdf' },
-        { text: 'Microchip ENT-AN1231, VSC8541 Design and Layout Guide, VPPD-04420 Revision 1.1, September 2017 (§6.1 RGMII interface clock considerations).', url: 'https://ww1.microchip.com/downloads/en/Appnotes/VPPD-04420.pdf' },
+        { text: 'Microsemi (now Microchip) ENT-AN1231, VSC8541 Design and Layout Guide, VPPD-04420 Revision 1.1, September 2017 (§6.1 RGMII interface clock considerations).', url: 'https://ww1.microchip.com/downloads/en/Appnotes/VPPD-04420.pdf' },
       ]}
     >
       <p>
         <b>
-          RGMII sends clock and data edge-aligned, so the clock has to reach the receiver delayed by more than 1.5 ns and less than 2.0 ns relative to its data: before RGMII 2.0
-          that delay had to come from extra clock trace on the board, and since 2.0 a device may add it internally, which the specification calls RGMII-ID.
+          RGMII sends clock and data edge-aligned, so the clock has to be delayed: before RGMII 2.0 the board adds 1.5–2.0 ns of extra clock trace delay, so the clock arrives
+          1.0–2.6 ns after the data (T<sub>skewR</sub>), and since 2.0 a device may add the delay internally, which the specification calls RGMII-ID.
         </b>{' '}
         <Cite n={[1, 2]} /> In a Linux device tree, <code>phy-mode</code> (or <code>phy-connection-type</code>) records which delays the board already provides, and the driver makes
         the MAC or the PHY add the rest, so that each clock is delayed exactly once. <Cite n={[3, 4]} />
@@ -91,7 +91,7 @@ export default function RgmiiDelayGuide() {
         Note 1 of the table turns the skew rows into a board rule: the PCB “will require clocks to be routed such that an additional trace delay of greater than 1.5ns and less than 2.0ns
         will be added to the associated clock signal.” <Cite n={[1, 2]} /> The two rows are consistent: a transmitter skew of −0.5 to +0.5 ns plus a board delay of 1.5 to 2.0 ns
         arrives at the receiver as 1.0 to 2.5 ns, inside the 1.0–2.6 ns window. The 2.0 ns upper limit was added in version 1.3 “to ensure minimum setup time for subsequent edges”.
-        <Cite n={1} /> At 10 and 100 Mb/s the clock slows to 2.5 and 25 MHz, and the maximum is unspecified. <Cite n={1} />
+        <Cite n={1} /> At 10 and 100 Mb/s the clock slows to 2.5 and 25 MHz, and the T<sub>skewR</sub> maximum (2.6 ns at gigabit) is unspecified. <Cite n={1} />
       </p>
 
       <h2>RGMII 1.3 and RGMII 2.0 (RGMII-ID)</h2>
@@ -144,7 +144,7 @@ export default function RgmiiDelayGuide() {
       </table>
       <p>
         The microstrip ε<sub>eff</sub> comes from the Hammerstad–Jensen expressions in the calculator; solder mask raises it slightly and shortens the required length. Aim for the middle
-        of the window, 1.75 ns, so that laminate tolerance and the transmitter's ±500 ps do not push the result outside 1.5–2.0 ns.
+        of the window, 1.75 ns, so that laminate and length tolerances keep the board delay inside 1.5–2.0 ns.
       </p>
       <TryIt to="/timing?src=stripline&len=306&lenB=50">Check a 306 mm stripline clock against a 50 mm data line (1.75 ns of skew)</TryIt>
       <TryIt to="/timing?src=microstrip&w=0.173&len=354&lenB=50">Check the same delay on 50 Ω outer-layer microstrip</TryIt>
@@ -361,7 +361,7 @@ export default function RgmiiDelayGuide() {
         <li>If gigabit fails while 100 Mb/s works, check the delays first.</li>
       </ol>
       <p>
-        The rest of the RGMII layout rules — 50 Ω lines, 11 ps matching within a group, trace length and series termination — are collected on the{' '}
+        The rest of the RGMII layout rules — 50 Ω lines, 11 ps matching within TXD[3:0] and within RXD[3:0], trace length and series termination — are collected on the{' '}
         <Link to="/interface-rules/rgmii">RGMII layout guidelines</Link> page.
       </p>
       <TryIt to="/interface-rules/rgmii">See every RGMII layout rule with its source</TryIt>

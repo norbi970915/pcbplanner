@@ -8,6 +8,7 @@ export default function DecouplingCapacitors() {
         { text: 'Murata, Noise Suppression Measures around Digital IC Power Supplies, section 6-3: mounting inductance, parallel capacitors and antiresonance.', url: 'https://www.murata.com/en-GB/products/emc/emifil/library/knowhow/basic/s2-chapter06-p1' },
         { text: 'Murata, Ceramic Capacitors FAQ: capacitance changes under applied DC voltage.', url: 'https://www.murata.com/en-us/support/faqs/capacitor/ceramiccapacitor/char/0005' },
         { text: 'pcbplanner PDN Impedance Calculator, Method, formulas and references: target impedance and the lumped capacitor/plane model.', url: '/pdn#method' },
+        { text: 'Texas Instruments SPRAC76H, Sitara Processor Power Distribution Networks: Implementation and Analysis, section 5: VRIPPLE = ITRANSIENT × ZPDN and the frequency-domain target impedance method.', url: 'https://www.ti.com/lit/an/sprac76h/sprac76h.pdf' },
       ]}
     >
       <p>
@@ -85,10 +86,10 @@ export default function DecouplingCapacitors() {
       <p>
         A first estimate is Ztarget = ΔV / ΔI. For a 3.3 V rail with 3 % allocated to the transient excursion, ΔV = 99 mV.
         A 1 A load step gives a target of 0.099 Ω. This allocation needs to fit inside the device's supply limits after allowing for regulator accuracy, DC drop and other noise.
-        <Cite n={4} />
+        <Cite n={[4, 5]} />
       </p>
       <p>
-        At 10 MHz, either single-capacitor model in the table is just below that illustrative target, although the 100 nF model has almost no margin.
+        Both models meet that illustrative target at 10 MHz: the 10 µF model with about 35 % margin, the 100 nF model with almost none.
         At 100 MHz both are above it. Passing at one chosen frequency therefore does not establish that the rail meets its transient requirement.
       </p>
       <p>

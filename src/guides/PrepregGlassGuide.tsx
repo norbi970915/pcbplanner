@@ -51,7 +51,7 @@ export default function PrepregGlassGuide() {
       </table>
       <p>
         Counts, yarns, inch thicknesses and weights are from Isola's style table; the millimetre values are from its individual style pages, which match the inch values (the table's
-        own millimetre column differs by a few micrometres for some styles) <Cite n={2} />.
+        own millimetre column differs by up to 11 µm for some styles) <Cite n={2} />.
       </p>
       <p>
         The yarn code reads letter by letter: E for E-glass, C for continuous filaments, then the filament diameter class (C, D, E, DE or G). The first number is the yardage in one
@@ -106,12 +106,12 @@ export default function PrepregGlassGuide() {
           56 % differ by 0.02 in Dk but by 33 µm in thickness.
         </li>
         <li>
-          <b>Resin-rich plies tend to have a higher Df.</b> At 1 GHz the standard 7628 has 0.018 and the standard 106 has 0.025. For every row, Dk is lower and Df higher at 10 GHz
+          <b>Resin-rich plies tend to have a higher Df.</b> At 1 GHz the standard 7628 at 45 % resin has 0.018 and the standard 106 has 0.025. For every row, Dk is lower and Df higher at 10 GHz
           than at 1 GHz.
         </li>
       </ul>
       <p>
-        The 370HR data sheet gives a single Dk of 4.04 at 2 GHz (Bereskin stripline) <Cite n={8} />. The table shows that a ply's Dk depends on its style and resin content, so for
+        The 370HR data sheet gives a headline Dk of 4.04 at 2 GHz (Bereskin stripline), and 4.24 to 3.92 from 100 MHz to 10 GHz <Cite n={8} />. The table shows that a ply's Dk depends on its style and resin content, so for
         a thin prepreg under a trace, use the row for the ply that is actually in the stackup. The{' '}
         <Link to="/pcb-materials/370hr">370HR material page</Link> lists the data-sheet values.
       </p>
@@ -140,7 +140,7 @@ export default function PrepregGlassGuide() {
         </tbody>
       </table>
       <p>
-        The table lists 1080 with 1078, 106 with 1037 and 2313 with 3313 in shared rows, and other resin contents for each, for example 2116 from 50 % to 58 % and 7628 from 43 % to
+        The table lists 1080 with 1078, 106 with 1037 and 2313 with 3313 in shared rows, and other resin contents for most, for example 2116 from 50 % to 58 % and 7628 from 43 % to
         50 % <Cite n={4} />. The trend is the same as for 370HR, but the numbers come from a different resin, test method and set of resin contents, so do not combine
         rows from the two tables in one stackup. The <Link to="/pcb-materials/s1141">S1141 material page</Link> has the laminate data sheet values.
       </p>
@@ -220,7 +220,7 @@ export default function PrepregGlassGuide() {
       <p>
         Dudek, Kuhn and Goldman compared traditional E-glass fabric with spread-fibre fabric; the two fabrics in their Figure 1 are both style 1080 with equal amounts of glass{' '}
         <Cite n={6} />. In a low-loss resin the measured range of laminate Dk across trace positions was 0.50 for traditional E-glass and 0.14 for spread E-glass. For a 100 Ω
-        differential pair, their finite-element model predicted worst-case skew of
+        differential pair, their finite-element model predicted worst-case skew (their Table II, which does not state a fabric style) of
         13.8 ps/in for traditional E-glass and 2.52 ps/in for spread E-glass, and their HyperLynx simulations gave 9.87 and 2.23 ps/in. Traditional E-glass with FR-4 resin came out
         lower than with the low-loss resin (7.26 ps/in simulated, 9.71 ps/in predicted), because FR-4 resin has a Dk closer to that of E-glass <Cite n={6} />.
       </p>

@@ -5,12 +5,13 @@ export default function TraceWidthGuide() {
     { text: 'D. G. Brooks with J. Adam, Trace Currents and Temperatures Revisited, April 2015: IPC-2152 measurements, external-trace regression and board-condition limitations. Author paper, hosted copy.', url: 'https://www.mathscinotes.com/wp-content/uploads/2016/06/pcbtempr.pdf' },
     { text: 'PCBPlanner Trace Width calculator, Method, formulas and references: implemented IPC-2221 coefficients, units and IPC-2152 curve-fit scope.', url: 'https://www.pcbplanner.com/trace-width#method' },
     { text: 'D. Brooks and J. Adam, UltraCAD thermal mini-course: trace heating, cooling and current density.', url: 'https://www.ultracad.com/mini_course/mini.htm' },
+    { text: 'CircuitCalculator.com, PCB Trace Width Calculator: k, b and c constants from curve fitting to the IPC-2221 curves, and the range of the original IPC-D-275 charts.', url: 'https://circuitcalculator.com/wordpress/2006/01/31/pcb-trace-width-calculator/' },
   ]}>
     <p><b>A trace can meet a temperature-rise estimate and still lose too much voltage.</b> Size the conductor for both thermal and electrical requirements, using the actual copper thickness, route length and operating conditions. A calculator width is an estimate for its stated model, not a board-wide current rating.</p>
     <h2>What the IPC-2221 calculation does</h2>
     <p>The implemented relationship is:</p>
     <div className="eq">I = k · ΔT<sup>0.44</sup> · A<sup>0.725</sup></div>
-    <p>I is in amperes, A in square mils, and ΔT is the rise above ambient in °C. PCBPlanner uses k = 0.048 for external layers and 0.024 for internal layers. It solves for cross-section, then divides by copper thickness to get width. Do not enter square millimetres into the square-mil equation. <Cite n={2} /></p>
+    <p>I is in amperes, A in square mils, and ΔT is the rise above ambient in °C. It is a widely used curve fit to the IPC-2221 (IPC-D-275) charts, valid roughly up to 35 A, 0.4 in of width, 10–100 °C of rise and 0.5–3 oz copper, with k = 0.048 for external layers and 0.024 for internal layers. <Cite n={4} /> PCBPlanner solves it for cross-section, then divides by copper thickness to get width. Do not enter square millimetres into the square-mil equation. <Cite n={2} /></p>
     <h2>Worked example: 3 A through a 50 mm trace</h2>
     <p>Assume 35 µm copper, a 10 °C allowed rise, 25 °C ambient and 50 mm route length. The IPC-2221 model gives the following values; resistance is evaluated at the resulting 35 °C conductor temperature.</p>
     <table className="tbl"><thead><tr><th>Quantity</th><th className="v">External</th><th className="v">Internal</th></tr></thead><tbody>

@@ -8,6 +8,7 @@ export default function CopperCooling() {
         { text: 'JEDEC JESD51-7, High Effective Thermal Conductivity Test Board for Leaded Surface Mount Packages.' },
         { text: 'JEDEC JESD51-3, Low Effective Thermal Conductivity Test Board for Leaded Surface Mount Packages.' },
         { text: 'Texas Instruments SPRA953, “Semiconductor and IC Package Thermal Metrics.”', url: 'https://www.ti.com/lit/pdf/spra953' },
+        { text: 'Texas Instruments LM1117 datasheet, SNOS412Q (January 2023): Thermal Information (SOT-223 RθJB 10.4 °C/W) and Table 9-2, RθJA for different heat-sink areas (SOT-223, 1 in² top-side copper: 66 °C/W; Figure 9-11: 1 oz copper).', url: 'https://www.ti.com/lit/ds/symlink/lm1117.pdf' },
       ]}
     >
       <p>
@@ -23,7 +24,8 @@ export default function CopperCooling() {
         a particular design <Cite n={4} />.
       </p>
       <p>
-        A more useful split is junction-to-board (θ<sub>JB</sub>, a property of the package) plus <b>board-to-ambient</b>, which is the part you control with copper.
+        A more useful split is junction-to-board (θ<sub>JB</sub>, largely set by the package and measured on a JEDEC test board (JESD51-8) <Cite n={4} />) plus <b>board-to-ambient</b>,
+        which is the part you control with copper.
       </p>
 
       <h2>How copper spreads heat</h2>
@@ -74,7 +76,7 @@ export default function CopperCooling() {
           <b>A small pour is not enough.</b> 10 × 10 mm gives about 160 °C/W: at 1 W the copper under the part would sit around 200 °C. The area simply cannot shed 1 W to still air.
         </li>
         <li>
-          <b>Area helps, with diminishing returns.</b> Going from 1 in² to 4× the area (50 mm square) on 1 oz copper only lowers the resistance from 53 to 32 °C/W, because the fin
+          <b>Area helps, with diminishing returns.</b> Going from 1 in² to about 4× the area (50 mm square) on 1 oz copper only lowers the resistance from 53 to 32 °C/W, because the fin
           efficiency falls from about 80 % to 47 %: the outer copper stays cool.
         </li>
         <li>
@@ -96,8 +98,9 @@ export default function CopperCooling() {
       <h2>Limits of the model</h2>
       <p>
         The calculation assumes an isolated board in still air, a square pour centred on the part and no other heat sources. It neglects the sideways conduction of the FR-4 itself,
-        which is slightly conservative. In an enclosure, use the air temperature inside the box as the ambient. For 1 in² of 2 oz copper the model gives about 50 °C/W from the pad to
-        the air, which, with a typical θ<sub>JB</sub> added, is in the range of datasheet θ<sub>JA</sub> values for SOT-223 parts on similar copper.
+        which is slightly conservative. In an enclosure, use the air temperature inside the box as the ambient. For 1 in² of 1 oz copper the model gives 53 °C/W from the pad to
+        the air. Adding the 10.4 °C/W θ<sub>JB</sub> that TI lists for the LM1117 in SOT-223 gives about 63 °C/W, close to the 66 °C/W θ<sub>JA</sub> its datasheet gives for
+        1 in² of 1 oz top-side copper <Cite n={5} />. The test boards differ in detail, so treat this as a plausibility check, not a validation.
       </p>
     </Guide>
   );

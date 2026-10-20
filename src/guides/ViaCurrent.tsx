@@ -89,7 +89,7 @@ export default function ViaCurrent() {
         IPC's discussion of IPC-2152 shows why board construction and heat spreading matter to conductor sizing. <Cite n={3} />
       </p>
       <p>
-        As a separate reference, TI's motor-driver layout guide lists 0.84 A for a 12 mil via in its table for a 10 °C rise and a 1 oz PCB.
+        As a separate reference, TI's motor-driver layout guide lists 0.84 A for a 12 mil via in its table for a 10 °C rise and a 1 oz PCB, which TI attributes to IPC-2152.
         Twelve mil is 0.3048 mm, close to this example's hole size, but the table does not fully define the same barrel geometry and thermal environment.
         Treat that value as TI's published guidance, not a validation of either calculator coefficient. <Cite n={1} />
       </p>

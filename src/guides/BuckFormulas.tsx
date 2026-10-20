@@ -4,8 +4,9 @@ export default function BuckFormulas() {
   return (
     <Guide
       sources={[
-        { text: 'Texas Instruments SLVA477B, Basic Calculation of a Buck Converter\'s Power Stage: duty cycle, inductor, ripple current, switch current and capacitor equations.', url: 'https://www.ti.com/lit/an/slva477b/slva477b.pdf' },
+        { text: 'Texas Instruments SLVA477C, Basic Calculation of a Buck Converter\'s Power Stage: duty cycle, inductor, ripple current, switch current and capacitor equations.', url: 'https://www.ti.com/lit/an/slva477b/slva477b.pdf' },
         { text: 'pcbplanner Buck Converter Calculator, Method, formulas and references: the same equations applied across the input range, with component tolerance and rating checks.', url: '/buck-converter#method' },
+        { text: 'Texas Instruments SLTA055, Input and Output Capacitor Selection: minimum ceramic input capacitance (Equation 1) and input RMS current versus duty cycle for a single-phase buck regulator.', url: 'https://www.ti.com/lit/an/slta055/slta055.pdf' },
       ]}
     >
       <p>
@@ -14,7 +15,7 @@ export default function BuckFormulas() {
         is the worst case for each part.
       </p>
       <p>
-        The equations are the continuous-conduction (CCM) formulas from TI's application note SLVA477B, the same ones the buck converter calculator uses. <Cite n={[1, 2]} />
+        Most of the equations are the continuous-conduction (CCM) formulas from TI's application note SLVA477, the same ones the buck converter calculator uses. <Cite n={[1, 2]} />
       </p>
 
       <h2>The example converter</h2>
@@ -58,8 +59,11 @@ export default function BuckFormulas() {
       <h2>4. Peak switch current and inductor ratings</h2>
       <p>ISW,max = Iout + ΔIL / 2 &nbsp;&nbsp;·&nbsp;&nbsp; IL,rms = √(Iout² + ΔIL² / 12)</p>
       <p>
-        The example gives ISW,max = 2 + 0.275 = 2.275 A and IL,rms = 2.006 A. The inductor's saturation current must exceed the peak, and its RMS (heating) rating must
-        exceed the RMS current. The IC's minimum switch current limit sets the largest load it can deliver: Iout,max = ILIM,min − ΔIL / 2. <Cite n={1} />
+        The example gives ISW,max = 2 + 0.275 = 2.275 A. The IC's minimum switch current limit sets the largest load it can deliver: Iout,max = ILIM,min − ΔIL / 2. <Cite n={1} />
+      </p>
+      <p>
+        The RMS expression is the standard result for a triangular ripple on a DC current; here it gives IL,rms = 2.006 A. The inductor's saturation current must exceed
+        the peak, and its RMS (heating) rating must exceed the RMS current.
       </p>
       <p>
         Inductance tolerance matters here. A 10 µH part with −20 % tolerance can be 8 µH, which raises the ripple to 0.688 A and the peak to 2.344 A. The calculator applies
@@ -82,7 +86,8 @@ export default function BuckFormulas() {
       <p>Cin,min = Iout × D × (1 − D) / (fs × ΔVin) &nbsp;&nbsp;·&nbsp;&nbsp; ICIN,rms ≈ Iout × √(D × (1 − D))</p>
       <p>
         Both are largest at D = 0.5. The example never reaches 0.5, so the worst case is the lowest input (D = 0.3395). For 100 mV of input ripple:
-        Cin,min = 2 × 0.3395 × 0.6605 / (500 000 × 0.1) = 9.0 µF, and the RMS current is about 0.95 A. The input capacitor carries the pulsed switch current,
+        Cin,min = 2 × 0.3395 × 0.6605 / (500 000 × 0.1) = 9.0 µF, and the RMS current is about 0.95 A. TI's SLTA055 gives the capacitance equation and plots the
+        input RMS ripple current against duty cycle, with its maximum at 50 %. <Cite n={3} /> The input capacitor carries the pulsed switch current,
         so place it as close as possible to the IC's input and ground pins; that loop sets most of the converter's high-frequency noise.
       </p>
       <TryIt to="/buck-converter?l=10&cout=20">Load this 12 V to 3.3 V example in the calculator</TryIt>

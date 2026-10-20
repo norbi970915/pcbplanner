@@ -51,7 +51,7 @@ export default function ViaFence() {
       <p>f11 = c × √2 / (2 × s × √εr)</p>
       <p>
         Two planes stitched on a square grid of pitch s form small cavities. Treating each row of vias as a wall, the lowest resonance of a cell is f11. Real via rows leak,
-        so the true resonance is somewhat lower; keep it at least twice the highest frequency. <Cite n={[2, 4]} />
+        so the true resonance is somewhat lower. <Cite n={[2, 4]} /> This guide keeps it at least twice the highest frequency, the margin at which the calculator warns.
       </p>
       <table className="tbl">
         <thead>
@@ -78,7 +78,8 @@ export default function ViaFence() {
       <p>SE ≈ 20 × log10(λ / (2 × L))</p>
       <p>
         The space between two via pads behaves like a slot of length L. Ott's slot formula estimates how much it attenuates a field, and gives 0 dB when the slot is half
-        a wavelength long. <Cite n={1} /> The last column of the table uses the free-space wavelength, as the via stitching calculator does. Each halving of the gap adds
+        a wavelength long. <Cite n={1} /> The last column of the table uses the free-space wavelength, as the via stitching calculator does. Between planes the wavelength in the laminate is shorter, so with εr 4.2 the
+        leakage is about 6 dB higher than this column shows, and several gaps in a row add more. Each halving of the gap adds
         about 6 dB, which is the practical argument for a tighter fence around a sensitive RF section. Treat these values as order-of-magnitude estimates: they assume a
         single slot in a perfect wall, and a fence has many slots in a row. <Cite n={4} />
       </p>

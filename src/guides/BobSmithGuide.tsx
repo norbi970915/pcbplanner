@@ -30,13 +30,14 @@ export default function BobSmithGuide() {
       <h2>The circuit</h2>
       <p>
         A 1000BASE-T port has four transformers, one per pair. The windings on the cable side each have a centre tap, and the termination hangs off those four taps. The
-        PHY-side taps are a separate matter: each goes to ground through its own 0.1 µF capacitor and is never tied to the others, because the common-mode voltage differs from pair
-        to pair and with the speed mode <Cite n={[6, 7]} />.
+        PHY-side taps are a separate matter: for voltage-mode PHYs (such as the DP83867 and KSZ9031), each goes to ground through its own 0.1 µF capacitor and is never tied to
+        the others, because the common-mode voltage differs from pair to pair and with the speed mode <Cite n={[6, 7]} />. TI’s 10/100 PHYTER guide instead pulls the PHY-side
+        centre taps to VDD <Cite n={5} />.
       </p>
       <ul>
         <li><b>Cable-side centre taps:</b> 4 × 75 Ω to a common node <Cite n={[6, 7, 8]} />.</li>
         <li><b>Common node:</b> 1000 pF / 2 kV to chassis ground <Cite n={[7, 8]} />.</li>
-        <li><b>PHY-side centre taps:</b> 4 × 0.1 µF, one per tap, to signal ground <Cite n={[6, 7]} />.</li>
+        <li><b>PHY-side centre taps (voltage-mode PHY):</b> 4 × 0.1 µF, one per tap, to signal ground <Cite n={[6, 7]} />.</li>
       </ul>
       <p>
         In magnetics with an auto-transformer stage (Microchip’s “12-core” type), the auto-transformer is what presents the low common-mode impedance into the termination; in
@@ -106,7 +107,7 @@ export default function BobSmithGuide() {
             <td>TI AN-1469 (10/100 PHYTER)</td>
             <td>75 Ω each, the two unused pairs included</td>
             <td>Text: 1000 pF, at least 2 kV. Figure: 1500 pF, 2 kV</td>
-            <td>Chassis ground <Cite n={5} /></td>
+            <td>Chassis ground in the text (§2.3); Figure 2 draws it to ordinary ground <Cite n={5} /></td>
           </tr>
           <tr>
             <td>Satterwhite (critique)</td>
@@ -123,7 +124,8 @@ export default function BobSmithGuide() {
           documents explains how the value was chosen.
         </li>
         <li>
-          <b>Which ground.</b> The Microchip documents and AN-1469 take the capacitor to chassis ground <Cite n={[5, 7, 8, 9]} />. The DP83867 figure draws a parallel R and C between
+          <b>Which ground.</b> The Microchip documents and AN-1469 take the capacitor to chassis ground <Cite n={[5, 7, 8, 9]} />, although AN-1469’s Figure 2 draws it to
+          ordinary ground rather than to its chassis symbol <Cite n={5} />. The DP83867 figure draws a parallel R and C between
           the two grounds and leaves the values to a separate checklist <Cite n={6} />.
         </li>
         <li>
@@ -139,8 +141,8 @@ export default function BobSmithGuide() {
       <h2>What the 1000 pF does</h2>
       <p>
         The capacitor’s reactance is X = 1 / (2π f C). For 1000 pF that is about 3.2 MΩ at 50 Hz, 159 Ω at 1 MHz, 16 Ω at 10 MHz and 1.6 Ω at 100 MHz. At mains frequency the node
-        is effectively isolated from chassis; from about 10 MHz upward the capacitor is small next to the 75 Ω resistors, and the network behaves as a resistive
-        termination to chassis.
+        is effectively isolated from chassis. A common-mode signal on all four pairs sees the four 75 Ω resistors in parallel, 18.75 Ω, which is about the capacitor’s reactance
+        at 10 MHz; from about 50–100 MHz upward (3.2 Ω down to 1.6 Ω) the capacitor is small next to the resistors, and the network behaves as a resistive termination to chassis.
       </p>
       <TryIt to="/reactance?C=1e-9&f=30000000">Check the capacitor’s reactance at your frequency</TryIt>
       <p>
@@ -195,7 +197,7 @@ export default function BobSmithGuide() {
       <p>
         Two limits of this work are worth stating. It measures <b>reflection</b> of a common-mode wave, not radiated emissions from a product. And Satterwhite himself says Smith’s
         technique “does reduce the common mode radiation, but not optimally”, and calls for more cable types to be characterised <Cite n={2} />. His theoretical section, using an
-        estimated 200 Ω pair-to-pair impedance, gives R + R/3 = 200/3, which is 50 Ω rather than 52.3 Ω; the difference is small next to his ±15 % cable variation.
+        estimated 200 Ω pair-to-pair impedance, gives R + R/3 = 200/3 Ω (66.7 Ω), which gives R = 50 Ω rather than 52.3 Ω; the difference is small next to his ±15 % cable variation.
       </p>
 
       <h2>The critique: does it make any difference?</h2>
@@ -224,19 +226,20 @@ export default function BobSmithGuide() {
       <h2>Board-level rules that are not in dispute</h2>
       <ul>
         <li>
-          <b>Keep the PHY-side centre taps separate.</b> Each gets its own 0.1 µF to ground; Microchip also advises against magnetics whose centre taps are ganged inside the part{' '}
+          <b>Keep the PHY-side centre taps separate.</b> On voltage-mode PHYs each gets its own 0.1 µF to ground; Microchip also advises against magnetics whose centre taps are ganged inside the part{' '}
           <Cite n={[6, 7, 9]} />.
         </li>
         <li>
           <b>No metal under the magnetics</b> on any layer; metal under an RJ45 with integrated magnetics is allowed <Cite n={10} />.
         </li>
         <li>
-          <b>Isolate chassis ground</b> from the rest of the board with a keep-out of at least 20 mil on all layers, bridged only by a capacitor and a resistor of 1 MΩ or more{' '}
-          <Cite n={10} />. Older TI guidance bridged it with two 1206 zero-ohm resistors either side of the RJ45, to be removed or replaced during certification testing{' '}
-          <Cite n={5} />. The Bob Smith resistors connect to the cable side of the transformer, so they sit on the isolated side of the port together with the connector.
+          <b>Isolate earth ground</b> from the rest of the board with a keep-out of at least 20 mil on all layers, bridged only by a capacitor and a resistor of 1 MΩ or more{' '}
+          <Cite n={10} />. Older TI guidance calls the isolated plane chassis ground and bridged it to system ground with two 1206 zero-ohm resistors either side of the RJ45,
+          which can be removed or replaced if necessary <Cite n={5} />. The Bob Smith resistors connect to the cable side of the transformer, so they sit on the isolated side of the port together with the connector.
         </li>
         <li>
-          <b>Size the capacitor for the isolation test.</b> Every vendor document that gives a rating uses 2 kV; the port must survive 1500 V rms from the port to chassis <Cite n={[5, 9]} />.
+          <b>Check the capacitor’s withstand rating against the hipot test voltage</b> (1500 V rms is about 2.1 kV peak). Every vendor document that gives a rating uses 2 kV; the
+          port must survive 1500 V rms from the port to chassis <Cite n={[5, 9]} />.
         </li>
         <li>
           <b>ESD protection on the PHY side.</b> The connector side can see high common-mode voltage swings, and a protector placed there can fail during them <Cite n={10} />.
@@ -252,7 +255,7 @@ export default function BobSmithGuide() {
       <p>
         Many RJ45 jacks with built-in magnetics already contain the termination. Würth’s 7499111121A, a 1000BASE-T jack, has four 75 Ω resistors from the cable-side centre taps
         to a common node and a 0.001 µF / 2 kV capacitor inside the housing, brought out to a pin the data sheet labels GND (pin 10); its insulation test is 1500 V rms for one minute
-        <Cite n={11} />. The 100BASE-TX 7499010211A has the same arrangement for two pairs, with the two unused pairs also terminated through 75 Ω, and a 0.001 µF capacitor to
+        <Cite n={11} />. Pin 10 also returns the four PHY-side 0.01 µF centre-tap capacitors, whose taps tie to pin 9 (VCC), so it is not a chassis-only pin <Cite n={11} />. The 100BASE-TX 7499010211A has the same arrangement for two pairs, with the two unused pairs also terminated through 75 Ω, and a 0.001 µF capacitor to
         pin 8 <Cite n={12} />.
       </p>
       <p>With a jack like this:</p>
@@ -270,10 +273,10 @@ export default function BobSmithGuide() {
       <ol>
         <li>Four 75 Ω resistors from the cable-side centre taps to one node, unless you have measured a better value for your cable and magnetics.</li>
         <li>1000 pF from that node to chassis ground, rated at least 2 kV.</li>
-        <li>PHY-side centre taps separate, each with its own 0.1 µF to ground.</li>
+        <li>PHY-side centre taps separate, each with its own 0.1 µF to ground (voltage-mode PHYs; follow your PHY’s data sheet otherwise).</li>
         <li>With PoE, follow your PHY and PSE vendor; Microchip isolates the resistors from the PoE DC voltage with blocking capacitors of about 10 nF.</li>
         <li>Integrated-magnetics jack: check whether the network is already inside before adding one.</li>
-        <li>Chassis island isolated by at least 20 mil on all layers; no metal under discrete magnetics; ESD parts on the PHY side.</li>
+        <li>Earth-ground (chassis) island isolated by at least 20 mil on all layers; no metal under discrete magnetics; ESD parts on the PHY side.</li>
       </ol>
       <TryIt to="/interface-rules/ethernet-1000base-t">See every 1000BASE-T layout rule with its source</TryIt>
       <p>

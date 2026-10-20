@@ -5,7 +5,7 @@ export default function CrosstalkSpacing() {
   return (
     <Guide
       sources={[
-        { text: 'Autodesk, 10 High-Speed PCB Design Rules to Follow, rule 6: centre-to-centre 3W spacing and the adjacent reference plane.', url: 'https://www.autodesk.com/products/fusion-360/blog/10-high-speed-pcb-design-rules/' },
+        { text: 'Autodesk, 10 High-Speed PCB Design Rules to Follow, rule 7: centre-to-centre 3W spacing and the adjacent reference plane.', url: 'https://www.autodesk.com/products/fusion-360/blog/10-high-speed-pcb-design-rules/' },
         { text: 'Texas Instruments SPRAAR7J, High-Speed Interface Layout Guidelines, sections 2.4, 3.1 and 3.4: reference planes and spacing between differential pairs.', url: 'https://www.ti.com/lit/an/spraar7j/spraar7j.pdf' },
         { text: 'pcbplanner Crosstalk Calculator, Method, formulas and references: even/odd-mode field solution and first-order NEXT/FEXT model.', url: '/crosstalk#method' },
       ]}

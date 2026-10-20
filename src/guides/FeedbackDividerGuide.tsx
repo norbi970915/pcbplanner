@@ -4,7 +4,7 @@ export default function FeedbackDividerGuide() {
   return <Guide sources={[
     { text: 'Analog Devices, How to Improve Power Supply Output Regulation Accuracy with the LTpowerCAD Resistor Divider Tool: resistor selection, reference accuracy and bias-current direction.', url: 'https://www.analog.com/en/resources/analog-dialogue/articles/how-to-improve-power-supply-output-regulation-accuracy-with-the-ltpowercad-resistor-divider-tool.html' },
     { text: 'Analog Devices, Voltage Dividers in Power Supplies: divider current, power loss and feedback-node sensitivity.', url: 'https://www.analog.com/en/resources/technical-articles/a101121-voltage-dividers-in-power-supplies.html' },
-    { text: 'Texas Instruments TPS62160 datasheet, section 9.2.2.2: an example of device-specific feedback-resistor requirements.', url: 'https://www.ti.com/lit/ds/symlink/tps62160.pdf' },
+    { text: 'Texas Instruments TPS62160 datasheet, section 9.2.2.2: an example of device-specific feedback-resistor recommendations.', url: 'https://www.ti.com/lit/ds/symlink/tps62160.pdf' },
   ]}>
     <p><b>The resistor ratio sets the nominal output; the absolute resistor values set the divider current and its sensitivity to feedback-pin current.</b> Choosing a pair means checking both. This guide uses R1 for the upper resistor from VOUT to FB and R2 for the lower resistor from FB to ground. Datasheets may name them differently. <Cite n={[1, 2]} /></p>
     <h2>Start with the ratio and the divider current</h2>
@@ -33,7 +33,7 @@ export default function FeedbackDividerGuide() {
     <p>For the fixed pair above, an assumed 100 nA into FB adds 3.57 mV. Multiplying both resistors by ten keeps the ideal ratio, but increases this shift to 35.7 mV and divides the R2 current by ten. A pin that sources current instead has the opposite sign. The calculator re-ranks its candidate pairs when IFB changes, so it may choose a different pair to compensate the nominal shift.</p>
     <TryIt to="/feedback-divider?vfb=0.8&vout=3.3&idiv=10&ifb=100&tol=1&series=E96">Explore a lower-current divider with 100 nA flowing into FB</TryIt>
     <h2>Choose values the regulator can use</h2>
-    <p>There is no universal divider-current rule. As one example, TI's TPS62160 specifies at least 2 µA through its divider and limits R2 to 400 kΩ; this is a requirement for that device. Follow the selected IC's resistor ranges, leakage limits and any feed-forward capacitor guidance. <Cite n={3} /></p>
+    <p>There is no universal divider-current rule. As one example, TI recommends at least 2 µA through the TPS62160 divider, meaning R2 should not exceed 400 kΩ; this recommendation applies to that device. Follow the selected IC's resistor ranges, leakage limits and any feed-forward capacitor guidance. <Cite n={3} /></p>
     <p>Higher resistance reduces wasted divider power but makes leakage and noise pickup more significant. Keep FB routing short and away from switching nodes, and check resistor voltage and power ratings. Preferred-value series and tolerance are separate choices: selecting E96 values does not itself guarantee the resistors you buy are 1%. <Cite n={[1, 2]} /></p>
   </Guide>;
 }

@@ -7,6 +7,7 @@ export default function BoostFormulas() {
         { text: 'Texas Instruments SLVA372D, Basic Calculation of a Boost Converter\'s Power Stage: duty cycle, inductor, ripple current, switch current, maximum output current and output capacitor equations.', url: 'https://www.ti.com/lit/an/slva372d/slva372d.pdf' },
         { text: 'pcbplanner Boost Converter Calculator, Method, formulas and references: the same equations applied across the input range, with component tolerance and rating checks.', url: '/boost-converter#method' },
         { text: 'R. W. Erickson, D. Maksimović, Fundamentals of Power Electronics, 2nd ed., Springer, 2001: the right-half-plane zero of the boost converter in continuous conduction.' },
+        { text: 'Texas Instruments SLVA274A, Voltage Mode Boost Converter Small Signal Control Loop Analysis Using the TPS61030: right-half-plane zero fRHP-zero = R / (2πL) × (VIN / Vo)².', url: 'https://www.ti.com/lit/an/slva274a/slva274a.pdf' },
       ]}
     >
       <p>
@@ -26,7 +27,7 @@ export default function BoostFormulas() {
           <tr><td>Output</td><td className="v">5 V at 1 A</td></tr>
           <tr><td>Switching frequency</td><td className="v">1 MHz</td></tr>
           <tr><td>Estimated efficiency η</td><td className="v">85 %</td></tr>
-          <tr><td>Inductor ripple target</td><td className="v">30 % of the inductor current</td></tr>
+          <tr><td>Inductor ripple target</td><td className="v">30 % of Iout × Vout/Vin (SLVA372 estimate)</td></tr>
           <tr><td>Output ripple budget</td><td className="v">30 mV (capacitive part)</td></tr>
         </tbody>
       </table>
@@ -87,7 +88,7 @@ export default function BoostFormulas() {
       <h2>6. The diode, and the loop that matters</h2>
       <p>
         The rectifier diode (or synchronous switch) carries the load current on average, 1 A, but at the inductor's peak current. For a Schottky diode the loss is roughly
-        Iout × VF. Its reverse voltage rating must exceed Vout. <Cite n={1} />
+        Iout × VF. Its reverse voltage rating must exceed Vout.
       </p>
       <p>
         In a boost converter the pulsed current flows in the output loop: switch, diode and output capacitor. Keep that loop as small as possible, with the output capacitor
@@ -97,9 +98,10 @@ export default function BoostFormulas() {
       <h2>7. The right-half-plane zero</h2>
       <p>fRHPZ = (1 − D)² × Rload / (2π × L)</p>
       <p>
-        A boost converter in CCM has a right-half-plane zero that limits how fast its control loop can be. With a 5 Ω load (5 V at 1 A), D = 0.49 and 2.2 µH it sits at about
-        94 kHz, and the loop crossover is typically placed well below it. A larger inductor or a heavier load moves the zero lower. Most integrated boost converters
-        have internal compensation designed for a recommended inductor range, which is one more reason to stay within the datasheet's inductor values. <Cite n={3} />
+        A boost converter in CCM has a right-half-plane zero that limits how fast its control loop can be. TI writes the same expression with (Vin / Vout)², which equals (1 − D)²
+        for the ideal duty cycle. With a 5 Ω load (5 V at 1 A) and 2.2 µH at 3.0 V it sits at ≈94 kHz with the loss-adjusted duty cycle D = 0.49 (130 kHz with the ideal
+        D = 1 − Vin/Vout), and the loop crossover is typically placed well below it. A larger inductor or a heavier load moves the zero lower. Most integrated boost converters
+        have internal compensation designed for a recommended inductor range, which is one more reason to stay within the datasheet's inductor values. <Cite n={[3, 4]} />
       </p>
 
       <h2>Checklist</h2>

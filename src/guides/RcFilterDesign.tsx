@@ -4,7 +4,7 @@ export default function RcFilterDesign() {
   return <Guide sources={[
     { text: 'Analog Devices University, An Introduction to Electrical Filters: passive RC topologies and frequency response.', url: 'https://wiki.analog.com/university/courses/engineering_discovery/lab_5' },
     { text: 'Analog Devices, A Filter Primer: poles, filter order and practical response characteristics.', url: 'https://www.analog.com/en/resources/technical-articles/a-filter-primer.html' },
-    { text: 'Texas Instruments SBAA178, Determining Minimum Acquisition Times for SAR ADCs: input resistance, sample capacitance and settling.', url: 'https://www.ti.com/lit/pdf/sbaa178' },
+    { text: 'Texas Instruments SBAA178, Determining Minimum Acquisition Times for SAR ADCs When a DC Voltage is Applied to the Input: input resistance, sample capacitance and settling.', url: 'https://www.ti.com/lit/pdf/sbaa178' },
     { text: 'Texas Instruments SPRACZ0A, Charge-Sharing Driving Circuits for C2000 ADCs: external filter capacitors and sample-capacitor charge sharing.', url: 'https://www.ti.com/lit/pdf/spracz0' },
   ]}>
     <p><b>A cutoff frequency does not uniquely specify an RC filter.</b> A 1 kΩ resistor with 100 nF and a 10 kΩ resistor with 10 nF have the same ideal pole, but they load the source differently and behave differently at an ADC input. Start with the frequency response you need, then check the surrounding circuit. <Cite n={[1, 3]} /></p>

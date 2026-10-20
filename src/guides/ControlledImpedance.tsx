@@ -127,7 +127,7 @@ export default function ControlledImpedance() {
           <tr>
             <th>Trace width</th>
             <th className="v">No mask</th>
-            <th className="v">With mask (30 µm, Dk 3.8)</th>
+            <th className="v">With mask (30.5 µm over laminate, 15.2 µm over trace, Dk 3.8)</th>
           </tr>
         </thead>
         <tbody>
@@ -149,13 +149,13 @@ export default function ControlledImpedance() {
         </tbody>
       </table>
       <p>
-        That is about 3.5 Ω, or 7 %, which is most of a typical ±10 % fab tolerance. A trace designed for 50 Ω without mask (about 0.137 mm here) ends up near 47 Ω on a real,
+        That is about 3–3.5 Ω, or 6–7 %, which is most of a typical ±10 % fab tolerance. A trace designed for 50 Ω without mask (about 0.137 mm here) ends up near 47 Ω on a real,
         masked board. Always design outer layers with the mask included; fabricators' impedance calculators do the same.
       </p>
 
       <h2>Etching and copper thickness</h2>
       <p>
-        Etched traces are trapezoidal: the top is narrower than the bottom, by roughly 0.5 mil (12.7 µm) on 1 oz copper. All numbers in this guide include that etch. Thicker copper
+        Etched traces are trapezoidal: the top is narrower than the bottom, by a common default of 0.5 mil (12.7 µm) on 1 oz copper (fabricators' etch factors vary). All numbers in this guide include that etch. Thicker copper
         adds side-wall capacitance and lowers the impedance slightly. Fabs adjust the final width to their own etch process when you order controlled impedance, which is one reason to
         let them tune it rather than fighting over the third decimal.
       </p>

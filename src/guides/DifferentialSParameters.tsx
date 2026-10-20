@@ -22,7 +22,7 @@ export default function DifferentialSParameters() {
     <p>For the example port mapping and equal real references within each pair, the transformation gives:</p>
     <div className="eq">SDD21 = ½(S31 − S32 − S41 + S42)</div>
     <div className="eq">SCD21 = ½(S31 − S32 + S41 − S42)</div>
-    <p>These additions operate on complex numbers. Combine real/imaginary values, or convert magnitude/phase to complex form first; only then calculate 20 log<sub>10</sub>|S|. Averaging two plotted dB traces loses the phase information needed for cancellation. <Cite n={1} /></p>
+    <p>These additions operate on complex numbers. Combine real/imaginary values, or convert magnitude/phase to complex form first; only then calculate 20 log<sub>10</sub>|S|. Averaging two plotted dB traces loses the phase information needed for cancellation.</p>
     <h2>A downloadable example with known results</h2>
     <p>The <a href="/examples/differential-demo.s4p" download>synthetic differential-channel S4P file</a> contains two uncoupled paths with transmission magnitudes 0.8 and 0.6, each delayed by 100 ps. Every single-ended port has a reflection magnitude of 0.1; cross-path terms are zero. This is an illustrative reciprocal, passive network for testing the mathematics, not a measured connector or a compliance model.</p>
     <p>Since the paths have the same phase, differential transmission is (0.8 + 0.6)/2 = 0.7, while differential-to-common conversion is (0.8 − 0.6)/2 = 0.1. At 1 GHz, both transmitted modes have −36° phase from the entered delay:</p>
@@ -37,7 +37,7 @@ export default function DifferentialSParameters() {
     <p>The unequal paths create mode conversion even though there is no coupling between them. An otherwise balanced pair with unequal amplitude or delay can also convert modes. Reversing one pair’s polarity flips the corresponding differential phase; choosing the wrong input/output pairs changes the network you are analysing.</p>
     <h2>Check references, signs and the operating band</h2>
     <p>For two equal single-ended references R, the standard power-wave transformation uses differential reference 2R and common-mode reference R/2. This example uses 50 Ω single-ended ports, giving 100 Ω differential and 25 Ω common-mode references. These are normalisation impedances, not a measurement proving that the board has those physical impedances. <Cite n={1} /></p>
-    <p>The viewer converts single-ended four-port data after loading. Files already declaring a Touchstone [Mixed-Mode Order] are currently unsupported. A two-port differential export can instead contain SDD data under ordinary S11/S21 labels; inspect its documentation and reference impedance before interpreting it. <Cite n={1} /></p>
+    <p>The viewer converts single-ended four-port data after loading. Files already declaring a Touchstone [Mixed-Mode Order] are currently unsupported. <Cite n={1} /> In practice, a two-port differential export from some tools can instead contain SDD data under ordinary S11/S21 labels, so inspect its documentation and reference impedance before interpreting it.</p>
     <p>For a real channel, inspect the full required band, port references and measurement planes. Plotted SDD21 is usually negative dB; insertion loss is its positive negative-log counterpart. Low mode conversion is useful, but does not by itself establish an EMI result or interface compliance. Use the actual interface’s channel requirements and the rest of the system model.</p>
   </Guide>;
 }

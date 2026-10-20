@@ -11,6 +11,8 @@ export default function ChoosingStackup() {
         { text: 'J. Loyer, R. Kunze, X. Ye, “Fiber Weave Effect: Practical Impact Analysis and Mitigation Strategies,” DesignCon 2007.' },
         { text: 'H. W. Ott, Electromagnetic Compatibility Engineering, Wiley, 2009 (return currents and plane assignment).' },
         { text: 'E. Bogatin, Signal and Power Integrity – Simplified, 3rd ed., Prentice Hall, 2018.' },
+        { text: 'B. Simonovich, “Bert’s Practical Design Notes: Fiber Weave-Induced Timing Skew,” I-Connect007 Design007, 17 September 2011 (flatter weave, glass-style substitutions, 10° routing).', url: 'https://iconnect007.com/article/61693/berts-practical-design-notes-fiber-weaveinduced-timing-skew/61696/design' },
+        { text: 'L. Simonovich, “Practical Fiber Weave Effect Modeling”, white paper, Issue 2, 2011 (summary of Intel’s measurements and mitigation paper).', url: 'https://smtnet.com/library/files/upload/Practical_Fiber_Weave_Modeling.pdf' },
       ]}
     >
       <p>
@@ -72,19 +74,19 @@ export default function ChoosingStackup() {
           <tr>
             <th>Glass style</th>
             <th className="v">Resin content</th>
-            <th className="v">Pressed thickness per ply</th>
+            <th className="v">Thickness per ply</th>
             <th className="v">Dk at 1 GHz</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>106</td>
+            <td>106 / 1037</td>
             <td className="v">71 %</td>
             <td className="v">0.053 mm</td>
             <td className="v">3.66</td>
           </tr>
           <tr>
-            <td>1080</td>
+            <td>1080 / 1078</td>
             <td className="v">64 %</td>
             <td className="v">0.081 mm</td>
             <td className="v">3.85</td>
@@ -114,13 +116,14 @@ export default function ChoosingStackup() {
       <h2>The outer prepreg decides your trace widths</h2>
       <p>
         For an outer-layer trace, the dielectric to the first plane is the prepreg under it. The trace width for a given impedance scales roughly with that thickness. On standard
-        4-layer, 1.6 mm FR-4 boards with 1 oz outer copper and solder mask, the field solver gives:
+        4-layer, 1.6 mm FR-4 boards with 1 oz outer copper and solder mask, the field solver gives (Dk from the table above):
       </p>
       <table className="tbl">
         <thead>
           <tr>
             <th>Prepreg under L1</th>
             <th className="v">Thickness</th>
+            <th className="v">Dk</th>
             <th className="v">50 Ω single-ended</th>
             <th className="v">90 Ω differential (W / S)</th>
           </tr>
@@ -129,31 +132,36 @@ export default function ChoosingStackup() {
           <tr>
             <td>1080</td>
             <td className="v">0.076 mm</td>
+            <td className="v">3.85</td>
             <td className="v">0.12 mm</td>
             <td className="v">0.125 / 0.19 mm</td>
           </tr>
           <tr>
             <td>3313</td>
             <td className="v">0.099 mm</td>
+            <td className="v">4.09</td>
             <td className="v">0.16 mm</td>
             <td className="v">0.17 / 0.26 mm</td>
           </tr>
           <tr>
             <td>2116</td>
             <td className="v">0.116 mm</td>
+            <td className="v">4.17</td>
             <td className="v">0.19 mm</td>
-            <td className="v">0.20 / 0.31 mm</td>
+            <td className="v">0.20 / 0.30 mm</td>
           </tr>
           <tr>
             <td>7628</td>
             <td className="v">0.210 mm</td>
+            <td className="v">4.40</td>
             <td className="v">0.35 mm</td>
             <td className="v">0.39 / 0.59 mm</td>
           </tr>
           <tr>
             <td>3 × 7628</td>
             <td className="v">0.646 mm</td>
-            <td className="v">1.17 mm</td>
+            <td className="v">4.40</td>
+            <td className="v">1.16 mm</td>
             <td className="v">1.31 / 1.97 mm</td>
           </tr>
         </tbody>
@@ -167,8 +175,9 @@ export default function ChoosingStackup() {
       <h2>Glass weave and differential skew</h2>
       <p>
         A coarse weave such as 7628 has visible bundles of glass with resin-rich gaps between them. If one trace of a differential pair runs over glass and the other over resin, the two
-        see different Dk and arrive at different times. This “fibre-weave effect” can create picoseconds of skew per inch, which matters at multi-gigabit data rates <Cite n={4} />. Fine and
-        spread-glass styles (1080, 1078, 1067, 2116, 3313) reduce it; routing pairs at a small angle to the weave is another mitigation described in the same study. The{' '}
+        see different Dk and arrive at different times. This “fibre-weave effect” can create picoseconds of skew per inch, which matters at multi-gigabit data rates <Cite n={4} />. Spread
+        glass reduces it, and so do tighter substitutes: 1086 for 1080, 1067 for 106 and two plies of 3313 for 7628 <Cite n={7} />. Intel also proposed routing pairs at about 10° to the
+        weave <Cite n={7} />, one of several mitigations in its paper <Cite n={8} />. The{' '}
         <Link to="/guides/glass-weave-skew">glass weave skew guide</Link> works out how long a pair can be at each data rate.
       </p>
 

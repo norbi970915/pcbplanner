@@ -13,7 +13,7 @@ export default function PcieRouting() {
         { text: 'Texas Instruments SNAA386, Clocking for PCIe Applications, 2023.', url: 'https://www.ti.com/lit/SNAA386' },
         { text: 'S. Krooswyk (Samtec), “Successful PCIe Interconnect Guidelines at 8, 16, and 32 GT/s,” 2021.', url: 'https://blog.samtec.com/wp-content/uploads/2021/04/04_15_2021_successful_PCIe_interconnect_guidelines.pdf' },
         { text: 'Astera Labs, “PCI Express 5.0 Architecture Channel Insertion Loss Budget.”', url: 'https://www.asteralabs.com/pci-express-5-0-architecture-channel-insertion-loss-budget/' },
-        { text: 'NXP (Philips) AN10373, PCI Express PCB routing guidelines, 2005.', url: 'https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/powerquicc/2284/2/philips_PCIe_pcb_routing_guide.pdf' },
+        { text: 'NXP (Philips) AN10373, PCI Express PCB routing guidelines, 2005 (§2.5 AC coupling capacitors, 75–200 nF).', url: 'https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/powerquicc/2284/2/philips_PCIe_pcb_routing_guide.pdf' },
       ]}
     >
       <p>
@@ -27,6 +27,7 @@ export default function PcieRouting() {
       </p>
       <p>
         The PCI-SIG specifications are available to members only; the numbers below are cited by document, section and table so you can check them against your own copy.
+        Because the CEM, Base and M.2 specifications are PCI-SIG member documents, the figures taken from them could not be checked against a free copy.
       </p>
 
       <h2>What “Gen3” means for the board</h2>
@@ -70,7 +71,7 @@ export default function PcieRouting() {
       </table>
       <p>
         The loss figures assume standard FR-4 (Df 0.015 at 1 GHz) and standard ED copper; with smoother reverse-treated foil the L1 figure drops to about 0.61 dB/in. Samtec quotes
-        about 0.8 dB/in at 4 GHz for standard FR-4 <Cite n={7} />, the same order of magnitude.
+        up to 0.85 dB/in at 4 GHz for FR-4 with a dissipation factor above 0.018 <Cite n={7} />, the same order of magnitude.
       </p>
       <TryIt to="/impedance">Calculate the 85 Ω pair on your own stackup</TryIt>
 
@@ -97,8 +98,8 @@ export default function PcieRouting() {
 
       <h2>AC coupling capacitors</h2>
       <p>
-        Each lane has series capacitors on its <b>transmit</b> pair only. For Gen3 the value must be <b>176–265 nF</b>, narrower than the 75–265 nF allowed at 2.5 and 5 GT/s{' '}
-        <Cite n={[1, 3]} />. Use 0402 or smaller, with identical parts and a symmetric placement on P and N, and remove the reference plane under the pads to reduce their capacitance{' '}
+        Each lane has series capacitors on its <b>transmit</b> pair only. For Gen3 the value must be <b>176–265 nF</b>, against the 75–200 nF allowed at 2.5 and 5 GT/s{' '}
+        <Cite n={[1, 3, 9]} />. Use 0402 or smaller, with identical parts and a symmetric placement on P and N, and remove the reference plane under the pads to reduce their capacitance{' '}
         <Cite n={[4, 9]} />.
       </p>
       <p>

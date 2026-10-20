@@ -64,9 +64,10 @@ export default function GlassWeaveSkew() {
         1 / c = 3.336 ps/mm (84.7 ps/in). For a stripline, Dk is the laminate value; on a microstrip it is the effective Dk of laminate, mask and air <Cite n={1} />, so less of the field sees the weave.
       </p>
       <p>
-        <b>Which Dk values to use.</b> Simonovich proposes taking the lowest-Dk prepreg of a material family (106, the most resin-rich) as Dk<sub>min</sub> and the highest (7628, the
-        most glass-rich) as Dk<sub>max</sub>, from the laminate maker’s tables <Cite n={1} />. Across the material families he analysed, the mean difference was 0.72 with a 3-sigma
-        tolerance of 0.09, so at most about 0.81, which agrees with the 0.8 Intel derived from its measurements <Cite n={1} />. His FR-4 example uses Dk<sub>min</sub> = 3.30 and
+        <b>Which Dk values to use.</b> Simonovich defines Dk<sub>min</sub> as the average Dk of a material family’s 106-style prepreg (the most resin-rich) minus half the 3-sigma
+        tolerance, 0.045, and Dk<sub>max</sub> as the average Dk of its 7628 (the most glass-rich) plus 0.045, from the laminate maker’s tables <Cite n={1} />. Across the material
+        families he analysed, the mean difference was 0.72 with a 3-sigma tolerance of 0.09, so at most about 0.81, which agrees with the 0.8 Intel derived from its measurements{' '}
+        <Cite n={1} />. His N4000-13EP stripline example uses Dk<sub>min</sub> = 3.30 and
         Dk<sub>max</sub> = 4.02 <Cite n={1} />:
       </p>
       <p className="eq">(√4.02 − √3.30) × 3.336 ps/mm = 0.628 ps/mm = 16.0 ps/in</p>
@@ -110,7 +111,7 @@ export default function GlassWeaveSkew() {
       </table>
       <p>
         The 5 GT/s row reproduces Simonovich’s result that a pair can exceed 42 ps after only 2.6 in <Cite n={1} />. The spread-glass column uses the worst-case skew that Dudek, Kuhn and
-        Goldman predicted for a 100 Ω pair on spread 1080 fabric in a low-loss resin, 2.52 ps/in, against 13.8 ps/in for the traditional weave of the same style <Cite n={6} />. The worst
+        Goldman predicted for a 100 Ω pair on spread E-glass fabric in a low-loss resin, 2.52 ps/in, against 13.8 ps/in for traditional E-glass <Cite n={6} />. The worst
         case is a statistical tail: as Simonovich puts it, a design over the length does not have to fail, but if you build enough boards, some will degrade <Cite n={1} />.
       </p>
 
@@ -167,7 +168,7 @@ export default function GlassWeaveSkew() {
       <p>What the published data says about the choice:</p>
       <ul>
         <li>
-          <b>Spread against traditional weave of the same style:</b> 2.52 against 13.8 ps/in predicted worst case for 1080 in a low-loss resin, and a measured range of laminate Dk
+          <b>Spread against traditional weave:</b> 2.52 against 13.8 ps/in predicted worst case for spread and traditional E-glass in a low-loss resin, and a measured range of laminate Dk
           across trace positions of 0.14 against 0.50 <Cite n={6} />. This is the largest single improvement in the data.
         </li>
         <li>
@@ -210,7 +211,7 @@ export default function GlassWeaveSkew() {
       <h2>A checklist</h2>
       <ol>
         <li>Work out the skew budget for each fast interface. At 8 GT/s and above, assume weave skew can use most of it on long straight pairs.</li>
-        <li>Specify spread glass for the layers under fast pairs and ask the fabricator which glass styles its stackup uses; prefer square weaves such as 1035, 1067, 1078, 1086 and 3313 over 106, 1080 and 7628.</li>
+        <li>Specify spread glass for the layers under fast pairs. In the one published comparison <Cite n={5} /> only 1035 kept the skew under 3 ps/in, so ask the fabricator which styles it can offer.</li>
         <li>Keep long pairs off the 0° and 90° axes where the layout allows, or ask the fabricator to rotate the image of those layers by 10° or more.</li>
         <li>Match lengths to the interface rule, but do not count on length tuning to remove weave skew.</li>
         <li>For PCIe Gen 4 and Gen 5, low-loss laminates, and pairs longer than a few centimetres, simulate the channel with Dk<sub>min</sub> and Dk<sub>max</sub> as Simonovich describes <Cite n={1} />.</li>
