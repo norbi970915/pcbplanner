@@ -14,6 +14,15 @@ describe('stitching', () => {
     expect(modes[1].f).toBeCloseTo(2 * modes[0].f, 3);
     for (let i = 1; i < modes.length; i++) expect(modes[i].f).toBeGreaterThanOrEqual(modes[i - 1].f);
   });
+  it('cavity: a huge plane returns its lowest modes at once instead of enumerating every mode below fmax', () => {
+    const t0 = performance.now();
+    const modes = cavityModes(1e9, 80, 4.3, 1.5e10, 10);
+    expect(performance.now() - t0).toBeLessThan(200);
+    expect(modes).toHaveLength(10);
+    // the same lowest modes a brute-force search over a wider range finds, for a board where that is cheap
+    const wide = cavityModes(300, 80, 4.3, 3e10, 500).slice(0, 10);
+    expect(cavityModes(300, 80, 4.3, 3e10, 10)).toEqual(wide);
+  });
   it('grid cell TM11: at resonance the pitch is λ/√2', () => {
     const f = gridCellResonance(10, 4);
     expect(wavelengthMm(f, 4) / Math.SQRT2).toBeCloseTo(10, 9);

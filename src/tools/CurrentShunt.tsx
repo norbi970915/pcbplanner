@@ -21,7 +21,7 @@ export default function CurrentShunt() {
   const candidates = result ? eValuesInRange(Math.max(result.idealMaxMilliOhms / 20, 1e-6), result.idealMaxMilliOhms / (1 + result.resistorErrorPct / 100), series).reverse().slice(0, 6) : [];
   const notes: string[] = [];
   if (result?.dropExceeded) notes.push('The selected shunt can exceed the allowed voltage drop at the high-resistance tolerance and temperature corner.');
-  if (result && p.minA === 0) notes.push('Percentage measurement error is undefined at zero current. Enter the smallest non-zero current you need to resolve.');
+  if (result && p.minA === 0) notes.push('A percentage measurement error has no meaning at zero current. Enter the smallest non-zero current you need to resolve.');
   if (result && !candidates.length) notes.push(`No ${series} value was found below the worst-case drop limit in the searched range. Check a different series or allow more burden voltage.`);
 
   return <ToolPage title="Current-Sense Shunt Selector" description="Choose a shunt from current range and allowed voltage drop, then check resistor power and a first-order measurement-error budget."

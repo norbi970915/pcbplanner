@@ -20,7 +20,17 @@ fs.mkdirSync(OUT, { recursive: true });
 // ---------------------------------------------------------------- routes
 const here = path.dirname(fileURLToPath(import.meta.url));
 const registrySrc = fs.readFileSync(path.join(here, '..', 'src', 'tools', 'registry.ts'), 'utf8');
-const TOOLS = [...registrySrc.matchAll(/path:\s*'([^']+)',\s*title:\s*(['"])(.*?)\2,\s*nav:\s*(['"])(.*?)\4/g)].map((m) => ({ path: m[1], title: m[3], nav: m[5] }));
+// each tool entry: its path, then (before the next entry's path) its title and nav, in any order with other fields between
+const TOOLS = registrySrc
+  .split(/\n\s*path:\s*/)
+  .slice(1)
+  .map((block) => {
+    const path = /^'([^']+)'/.exec(block)?.[1];
+    const title = /\n\s*title:\s*(['"])(.*?)\1,/.exec(block)?.[2];
+    const nav = /\n\s*nav:\s*(['"])(.*?)\1,/.exec(block)?.[2];
+    return path && title && nav ? { path, title, nav } : null;
+  })
+  .filter(Boolean);
 if (!TOOLS.length) throw new Error('could not parse routes from registry.ts');
 const ROUTES = ['/', ...TOOLS.map((t) => t.path)];
 const NO_PROPS = new Set(['/', '/units']);
@@ -553,7 +563,7 @@ async function flowImpedance(page) {
   ]) {
     await gotoFresh(page, route, `?type=${type}&mode=diff`);
     page.drain();
-    const inp = page.locator(PROPS).getByLabel(label, { exact: false }).first();
+    const inp = page.locator(PROPS).getByLabel(label, { exact: false }).and(page.locator('input')).first();
     await inp.fill(val);
     const t0 = Date.now();
     await settle(page, route, `impedance ${type} ${label}=${val}`, 30000);
@@ -608,7 +618,9 @@ async function flowAdvisor(page) {
   // the "Height to plane" LenField shows h
   const hShown = await page.evaluate(() => {
     const l = [...document.querySelectorAll('aside.order-first label')].find((x) => /Height to plane|Plane to trace/.test(x.innerText));
-    return l ? document.getElementById(l.htmlFor)?.value : null;
+    if (l) return document.getElementById(l.htmlFor)?.value ?? null;
+    // stacked plies (different Dk): the height is their total
+    return /Total ([\d.]+) mm/.exec(document.querySelector('aside.order-first')?.innerText ?? '')?.[1] ?? null;
   });
   await check(page, hShown !== null && near(Number(hShown), num('h'), 1e-4), route, `advisor "${bname}" H applied`, `field shows ${hShown}, url h=${q.get('h')}`);
   const z = await zFromStatus(page);
@@ -700,7 +712,6 @@ async function flowStackupEdit(page) {
   for (const [btn, delta] of [
     ['+ Dielectric', 1],
     ['+ Copper', 1],
-    ['+ Mask', 1],
   ]) {
     const before = await rows.count();
     await page.getByRole('button', { name: btn }).click();
@@ -723,7 +734,7 @@ async function flowStackupEdit(page) {
   await check(page, hint !== 'Layer selected' && delDisabled, route, 'lsm selection cleared after deleting the selected layer', `hint "${hint}", Delete Layer ${delDisabled ? 'disabled' : 'still enabled'} though no row is highlighted`);
   await check(page, /modified/.test(await statusText(page)), route, 'lsm status shows modified', await statusText(page));
   await checkPage(page, route, 'lsm after edits');
-  await check(page, n0 + 2 === (await rows.count()), route, 'lsm row count after edits', `${n0} -> ${await rows.count()}`);
+  await check(page, n0 + 1 === (await rows.count()), route, 'lsm row count after edits', `${n0} -> ${await rows.count()}`);
 
   // thickness / Dk inputs in the table
   const num = page.locator('main table').first().locator('tbody input[inputmode=decimal]');
@@ -738,13 +749,36 @@ async function flowStackupEdit(page) {
   }
   await num.first().fill(nt);
 
+  // a solder mask inside the copper stack is refused with a message, and saving waits until it is gone
+  const beforeMask = await rows.count();
+  await rows.nth(2).locator('td').nth(3).click(); // a layer inside the stack (adding needs a selected layer)
+  await page.getByRole('button', { name: '+ Mask' }).click();
+  await check(page, (await rows.count()) === beforeMask + 1, route, 'lsm + Mask', `rows ${beforeMask} -> ${await rows.count()}`);
+  const maskNote = await page.getByText(/solder mask belongs outside the copper stack/).count();
+  await check(page, maskNote > 0, route, 'lsm mask inside the stack is explained', 'no message for a solder mask between copper layers');
+  await check(page, await page.getByRole('button', { name: 'Save as Copy' }).isDisabled(), route, 'lsm Save as Copy waits for a valid stack', 'Save as Copy enabled with a mask inside the stack');
+  await rows.nth(3).locator('td').nth(3).click(); // the new layer goes in after the selected one, which stays selected
+  await page.getByRole('button', { name: 'Delete Layer' }).click();
+  await check(page, (await page.getByText(/solder mask belongs outside the copper stack/).count()) === 0, route, 'lsm deleting the mask clears the message', 'message still shown');
+
+  // the copper added above can sit against another copper layer: the page says so and saving waits;
+  // removing that layer makes the stack valid again
+  if (await page.getByText(/copper layers need dielectric separation/).count()) {
+    await check(page, await page.getByRole('button', { name: 'Save as Copy' }).isDisabled(), route, 'lsm Save as Copy waits while copper layers touch', 'Save as Copy enabled');
+    const added = await rows.evaluateAll((rs) => rs.findIndex((r) => [...r.querySelectorAll('input')].some((i) => i.value === 'Copper layer')));
+    await rows.nth(added).locator('td').nth(3).click();
+    await page.getByRole('button', { name: 'Delete Layer' }).click();
+    await check(page, (await page.getByText(/copper layers need dielectric separation/).count()) === 0, route, 'lsm removing the touching copper clears the message', 'message still shown');
+  }
+
   // save as copy, then delete it
+  const rowsSaved = await rows.count();
   await page.getByRole('button', { name: 'Save as Copy' }).click();
   await page.waitForTimeout(300);
   const id = new URL(page.url()).searchParams.get('id') ?? '';
   const mine = await page.locator('#lsm-s optgroup[label="My stackups"] option').allInnerTexts();
   await check(page, id.startsWith('custom-') && mine.some((t) => /\(copy\)/.test(t)), route, 'lsm Save as Copy appears under My stackups', `id=${id}, My stackups=${JSON.stringify(mine)}`);
-  await check(page, (await rows.count()) === n0 + 2, route, 'lsm copy keeps edits', `rows ${await rows.count()}`);
+  await check(page, (await rows.count()) === rowsSaved, route, 'lsm copy keeps edits', `rows ${await rows.count()}`);
   await checkPage(page, route, 'lsm saved copy');
   await page.reload({ waitUntil: 'networkidle' });
   await check(page, (await page.locator('#lsm-s').inputValue()) === id, route, 'lsm copy survives reload', `selected ${await page.locator('#lsm-s').inputValue()}`);
@@ -818,15 +852,18 @@ async function flowTabsMenus(page) {
   await check(page, (await f.inputValue()) === v0, route, 'File > Reset Inputs', `field "${await f.inputValue()}", default "${v0}"`);
   // Help > About goes home; View > Properties Panel toggles
   await clickMenu(page, 'Help', /^About/);
-  await check(page, new URL(page.url()).pathname === '/', route, 'Help > About', page.url());
+  await check(page, new URL(page.url()).pathname === '/about', route, 'Help > About opens the About page', page.url());
   await gotoFresh(page, '/via');
   await clickMenu(page, 'View', 'Properties Panel');
-  await check(page, (await page.locator(PROPS).count()) === 0, route, 'View > Properties Panel hides panel', 'panel still shown');
+  const propsShown = () => page.locator(`${PROPS}:not(.properties-panel-is-hidden)`).count();
+  await check(page, (await propsShown()) === 0, route, 'View > Properties Panel hides panel', 'panel still shown');
   await clickMenu(page, 'View', 'Properties Panel');
-  await check(page, (await page.locator(PROPS).count()) === 1, route, 'View > Properties Panel shows panel', 'panel not shown');
+  await check(page, (await propsShown()) === 1, route, 'View > Properties Panel shows panel', 'panel not shown');
   // status bar "Panels" opens the View menu
   await page.getByRole('button', { name: 'Panels' }).click();
-  await check(page, (await page.getByRole('menuitem', { name: 'Properties Panel' }).count()) === 1, route, 'status "Panels" opens View menu', 'menu not open');
+  // a panel toggle is a checkable menu item
+  const panelItem = page.getByRole('menuitem', { name: 'Properties Panel' }).or(page.getByRole('menuitemcheckbox', { name: 'Properties Panel' }));
+  await check(page, (await panelItem.count()) === 1, route, 'status "Panels" opens View menu', 'menu not open');
   await page.keyboard.press('Escape');
   // unknown route
   await page.goto(`${BASE}/no-such-tool`, { waitUntil: 'networkidle' });
@@ -880,7 +917,8 @@ async function runIsolated(browser, route, name, fn, ms) {
   try {
     await withTimeout(fn(page), ms, name);
   } catch (e) {
-    await fail(page, route, `${name} (aborted)`, e.message.split('\n')[0]);
+    const at = /e2e\.mjs:\d+/.exec(e.stack ?? '')?.[0];
+    await fail(page, route, `${name} (aborted)`, `${e.message.split('\n')[0]}${at ? ` @ ${at}` : ''}`);
   }
   await withTimeout(ctx.close(), 15000, 'close').catch(() => log('  (context close timed out)'));
 }

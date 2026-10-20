@@ -4,7 +4,7 @@
 // Tracks, vias and fills come from the same readers as the import (kicadImport.ts), the outline from the
 // plane reader (kicadPlanes.ts). Pads are read from each (footprint …): a pad's (at x y) is in the
 // footprint's frame and is turned by the footprint's angle; the pad's own angle in the file is already
-// absolute (KiCad 6 and later write the footprint angle into it). Angles are KiCad's: degrees,
+// absolute (KiCad 6 and later write the footprint angle into it, and leave it out when it is 0). Angles are KiCad's: degrees,
 // counter-clockwise as seen on screen, with y pointing down.
 import { isCopperName, listEnd, parseSexpr, readFills, readTrack, readVia, scanTopLevel, type SNode } from './kicadImport';
 import { outlineLoops, type Pt } from './kicadPlanes';
@@ -102,7 +102,7 @@ function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part
     // (net 5 "name") in KiCad 6 to 9, (net "name") from KiCad 10
     const net = netName !== undefined ? netName : netCode !== undefined && !/^\d+$/.test(netCode) ? netCode : netCode !== undefined ? `#${netCode}` : '';
     const drill = num(child(p, 'drill'), 1) ?? (atom(child(p, 'drill'), 1) === 'oval' ? num(child(p, 'drill'), 2) : undefined);
-    const pad: DrawPad = { x, y, w, h, angle: num(pat, 3) ?? fa, shape, layers: lay, net, ref, num: atom(p, 1) ?? '' };
+    const pad: DrawPad = { x, y, w, h, angle: num(pat, 3) ?? 0, shape, layers: lay, net, ref, num: atom(p, 1) ?? '' };
     if (shape === 'roundrect') pad.rr = num(child(p, 'roundrect_rratio')) ?? 0.25;
     if (drill !== undefined && type !== 'smd' && type !== 'connect') pad.drill = drill;
     pads.push(pad);

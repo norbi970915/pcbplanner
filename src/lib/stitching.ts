@@ -11,8 +11,10 @@ export const wavelengthMm = (fHz: number, er: number) => (C0 / (fHz * Math.sqrt(
 export function cavityModes(aMm: number, bMm: number, er: number, fMax: number, limit = 12): { m: number; n: number; f: number }[] {
   const k = C0 / (2 * Math.sqrt(er));
   const out: { m: number; n: number; f: number }[] = [];
-  const mMax = Math.ceil((fMax / k) * aMm * 1e-3) + 1;
-  const nMax = Math.ceil((fMax / k) * bMm * 1e-3) + 1;
+  // only the lowest `limit` modes are kept, and (1,0)…(limit,0) are already `limit` modes below any mode with
+  // m > limit (likewise for n): the loops stop there, so a huge plane does not enumerate billions of modes
+  const mMax = Math.min(limit, Math.ceil((fMax / k) * aMm * 1e-3) + 1);
+  const nMax = Math.min(limit, Math.ceil((fMax / k) * bMm * 1e-3) + 1);
   for (let m = 0; m <= mMax; m++)
     for (let n = 0; n <= nMax; n++) {
       if (m === 0 && n === 0) continue;

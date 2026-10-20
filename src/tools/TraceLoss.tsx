@@ -20,6 +20,11 @@ import { useKicadProject } from '../state/kicadProjectStore';
 import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
 
+/** The roughness values a foil type sets. */
+const foilValues = (f: (typeof FOILS)[number]) => ({ rq: +f.rq.toFixed(3), hr: +hurayRadius(f.rz).toFixed(4), sr: +HURAY_SR.toFixed(3) });
+/** The foil type whose values these are, or 'custom': entering a foil's own values again gives its name back. */
+const foilOf = (v: { rq: number; hr: number; sr: number }) => FOILS.find((f) => { const x = foilValues(f); return x.rq === v.rq && x.hr === v.hr && x.sr === v.sr; })?.id ?? 'custom';
+
 const IN_PER_M = 39.3700787;
 
 export default function TraceLoss() {
@@ -168,19 +173,19 @@ export default function TraceLoss() {
             value={p.foil}
             onChange={(v) => {
               const f = FOILS.find((x) => x.id === v);
-              set(f ? { foil: v, rq: +f.rq.toFixed(3), hr: +hurayRadius(f.rz).toFixed(4), sr: +HURAY_SR.toFixed(3) } : { foil: v });
+              set(f ? { foil: v, ...foilValues(f) } : { foil: v });
             }}
             options={[{ value: 'custom', label: 'Custom values' }, ...FOILS.map((f) => ({ value: f.id, label: f.name }))]}
             width={176}
           />
         )}
         {(p.rough === 'hammerstad' || p.rough === 'groiss') && (
-          <NumField label="RMS roughness" symbol="Rq" value={p.rq} onChange={(v) => set({ rq: v, foil: 'custom' })} unit="µm" allowZero />
+          <NumField label="RMS roughness" symbol="Rq" value={p.rq} onChange={(v) => set({ rq: v, foil: foilOf({ rq: v, hr: p.hr, sr: p.sr }) })} unit="µm" allowZero />
         )}
         {p.rough === 'huray' && (
           <>
-            <NumField label="Sphere radius" symbol="a" value={p.hr} onChange={(v) => set({ hr: v, foil: 'custom' })} unit="µm" hint="Cannonball model: a ≈ 0.06·Rz." />
-            <NumField label="Surface ratio" symbol="SR" value={p.sr} onChange={(v) => set({ sr: v, foil: 'custom' })} allowZero hint="N·4πa² / A_flat. Cannonball model: 14 spheres on a 36a² tile = 4.89." />
+            <NumField label="Sphere radius" symbol="a" value={p.hr} onChange={(v) => set({ hr: v, foil: foilOf({ rq: p.rq, hr: v, sr: p.sr }) })} unit="µm" hint="Cannonball model: a ≈ 0.06·Rz." />
+            <NumField label="Surface ratio" symbol="SR" value={p.sr} onChange={(v) => set({ sr: v, foil: foilOf({ rq: p.rq, hr: p.hr, sr: v }) })} allowZero hint="N·4πa² / A_flat. Cannonball model: 14 spheres on a 36a² tile = 4.89." />
           </>
         )}
         {p.rough !== 'smooth' && p.foil !== 'custom' && <p className="text-faint">{FOILS.find((f) => f.id === p.foil)?.note} Treated sides differ; oxide or micro-etch changes the roughness.</p>}

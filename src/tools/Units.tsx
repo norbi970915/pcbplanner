@@ -17,7 +17,7 @@ export default function Units() {
   return (
     <ToolPage title="Unit Converter" description="Quick conversions for PCB work: mm, mil, inch, µm and copper weight; temperature; dBm, watts and volts; frequency, period and free-space wavelength." properties={<p className="p-2 text-faint">The converters are in the document area.</p>} status="Unit converter" onReset={reset}>
       <div className="grid gap-3 md:grid-cols-2">
-        <Panel title="Length and copper weight">
+        <Panel title="Length and copper weight" allowInvalid>
           <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Value" value={len} onChange={(v) => set({ len: v })} allowZero unit="" />
             <SelectField label="Unit" value={lenU} onChange={(v) => set({ lenU: v })} options={LENGTHS.map((u) => ({ value: u, label: u === 'oz' ? 'oz/ft² (copper)' : LEN_UNITS[u].label }))} />
@@ -33,7 +33,7 @@ export default function Units() {
             </tbody>
           </table>
         </Panel>
-        <Panel title="Temperature">
+        <Panel title="Temperature" allowInvalid>
           <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Celsius" value={tc} onChange={(v) => set({ tc: v })} unit="°C" allowNegative />
           </div>
@@ -58,7 +58,7 @@ export default function Units() {
             </tbody>
           </table>
         </Panel>
-        <Panel title="Power">
+        <Panel title="Power" allowInvalid>
           <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Power" value={dbm} onChange={(v) => set({ dbm: v })} unit="dBm" allowNegative />
             <NumField label="Load" value={r} onChange={(v) => set({ r: v })} unit="Ω" />
@@ -84,7 +84,7 @@ export default function Units() {
             </tbody>
           </table>
         </Panel>
-        <Panel title="Frequency">
+        <Panel title="Frequency" allowInvalid>
           <div className="space-y-[3px] border-b border-line p-2">
             <NumField label="Frequency" value={f} onChange={(v) => set({ f: v })} unit="MHz" />
           </div>

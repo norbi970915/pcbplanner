@@ -7,6 +7,7 @@ import { AnalysisMethod } from '../components/kicad/AnalysisMethod';
 import { KicadBoardPanel } from '../components/kicad/KicadBoardPanel';
 import { KicadPowerPanel } from '../components/kicad/KicadPowerPanel';
 import { KicadThermalPanel } from '../components/kicad/KicadThermalPanel';
+import { KicadClearancePanel } from '../components/kicad/KicadClearancePanel';
 import { AnalysisProperties, BoardSummary, ImpedanceByLayerPanel, NoStackupNote, RoutingPanel } from '../components/kicad/KicadAnalysis';
 import { analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
 import { useKicadFileLoader } from '../components/kicad/KicadFileLoader';
@@ -204,7 +205,7 @@ export default function KicadProject() {
   return (
     <ToolPage
       title="KiCad Project"
-      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The Power tab checks the current capacity of the tracks and vias of a power net and solves its DC voltage drop, and the Thermal tab the temperature of the board from the power of its parts, both drawn as heat maps on the board. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
+      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The Power tab checks the current capacity of the tracks and vias of a power net and solves its DC voltage drop, and the Thermal tab the temperature of the board from the power of its parts, both drawn as heat maps on the board, and the Clearance tab checks high-voltage nets against IPC-2221. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}
       onReset={reset}
@@ -230,6 +231,7 @@ export default function KicadProject() {
               ['board', 'Board'],
               ['power', 'Power'],
               ['thermal', 'Thermal'],
+              ['clearance', 'Clearance'],
             ] as const
           ).map(([v, label]) => (
             <button
@@ -250,7 +252,8 @@ export default function KicadProject() {
       {data && p.view === 'board' && !calc && <Notes items={['The board view needs the stackup of the board: load a board saved with KiCad 6 or later.']} />}
       {data && p.view === 'power' && <KicadPowerPanel data={data} p={p} set={set} />}
       {data && p.view === 'thermal' && <KicadThermalPanel data={data} p={p} set={set} />}
-      {data && p.view !== 'board' && p.view !== 'power' && p.view !== 'thermal' && (
+      {data && p.view === 'clearance' && <KicadClearancePanel data={data} p={p} set={set} />}
+      {data && !['board', 'power', 'thermal', 'clearance'].includes(p.view) && (
         <>
           <Panel title="Project" allowInvalid>
             <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
@@ -318,6 +321,16 @@ const POWER_SOURCES: readonly DataSource[] = [
     title: 'Texas Instruments SPRA953D, "Semiconductor and IC Package Thermal Metrics", 2024',
     url: 'https://www.ti.com/lit/an/spra953d/spra953d.pdf',
     note: '§5: ψJB, and eq. 9, T_J = T_PCB + ψJB × Power, the junction estimate of the Thermal tab.',
+  },
+  {
+    title: 'smpspowersupply.com: IPC-2221B PCB trace spacing / clearance by voltage (L. Rozenblat)',
+    url: 'https://www.smpspowersupply.com/ipc2221pcbclearance.html',
+    note: 'Columns B1, B2 and B4 of IPC-2221B Table 6-1, the spacings of the Clearance tab, with the per-volt formula above 500 V and worked rows to 5000 V (the standard itself is sold by IPC).',
+  },
+  {
+    title: 'PCBSync: IPC-2221 explained (Table 6-1, IPC-2221B)',
+    url: 'https://pcbsync.com/ipc-2221/',
+    note: 'A second reproduction of columns B1, B2 and B4; all nine bands agree with the first.',
   },
   {
     title: 'NBS Handbook 100, Copper Wire Tables (1966)',
@@ -429,6 +442,20 @@ export function Method() {
         well-spreading plate against <i>P</i> / (2<i>hA</i>), a heated copper strip against the exact fin solution, and a hot pad in a copper pour against the heat-spreading tool (within
         7 %). Not modelled: heat leaving the top of a package straight to the air (so the parts come out a little hot), enclosures, heatsinks and neighbouring boards, air that warms as
         it passes, and time (the result is the steady state). Read the temperatures to about ±20–30 %; the differences between two layouts of the same board are more reliable.
+      </p>
+      <h2>Clearance view</h2>
+      <p>
+        The Clearance tab checks the nets you give a voltage (the peak voltage to the circuit's 0 V; nets you leave out are taken as 0 V) against the copper of every other net on the
+        same layer. Each piece of copper is measured exactly: a track as its centre line and half its width (an arc as chords that stay within 1 µm of it), a via or a round pad as its
+        centre and radius, any other pad and every zone fill by the edges of its outline. The closest gap between two nets is set against the spacing IPC-2221 Table 6-1 gives for the
+        peak voltage between them: column B1 on inner layers, and on the outer layers B2 for a bare board or B4 with a permanent polymer coating, as you choose. Between 15 V and 500 V
+        the table steps in bands; above 500 V it adds a fixed amount per volt (B1 0.0025 mm, B2 0.005 mm, B4 0.00305 mm). Each place that is too close is listed and marked on the
+        board with a line across the gap. The zones are measured as KiCad last filled them, so fill the zones before you load the board.
+      </p>
+      <p>
+        Not checked: spacing between layers through the laminate, creepage along the surface around slots and parts, the coated-assembly columns A5 to A7 and boards used above
+        3050 m (the Conductor Spacing and Creepage tools cover those), and safety standards that ask for more than IPC-2221, such as IEC 62368-1 for mains equipment. The Table 6-1
+        values are those of the Conductor Spacing tool, checked for B1, B2 and B4 against two free reproductions of the table.
       </p>
       <h2>Net classes and pairs</h2>
       <p>

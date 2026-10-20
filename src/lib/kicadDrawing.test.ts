@@ -37,6 +37,17 @@ describe('pads and footprints', () => {
     expect(hole.x).toBeCloseTo(22, 9); // (0, 2) turned by 90°
   });
 
+  it('a pad written without an angle is at 0°, not at the footprint angle (KiCad leaves 0 out)', () => {
+    // a QFN turned by 90°: the pins of one side end up horizontal on the board and are written without an angle
+    const fp = `(footprint "QFN" (layer "B.Cu") (at 66.3 103.1 90)
+      (property "Reference" "U6" (at 0 0 -90) (layer "B.SilkS"))
+      (pad "46" smd roundrect (at 1.398 3.351) (size 0.7 0.2) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.25) (net 1 "GND"))
+      (pad "59" thru_hole circle (at -0.152 -1.322 90) (size 0.45 0.45) (drill 0.1) (layers "*.Cu") (net 1 "GND")))`;
+    const [pin, ep] = readBoardDrawing(board(fp)).pads;
+    expect(pin.angle).toBe(0); // its 0.7 mm runs along x, across the row of pins
+    expect(ep.angle).toBe(90);
+  });
+
   it('KiCad 10 writes the net name on the item; codes are resolved through the net list otherwise', () => {
     const k10 = readBoardDrawing(
       board(`(footprint "TP" (layer "B.Cu") (at 5 5) (property "Reference" "TP1") (pad "1" smd circle (at 0 0) (size 1 1) (layers "B.Cu") (net "/SIG")))
