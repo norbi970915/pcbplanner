@@ -29,6 +29,9 @@ export interface BoardHeat {
   ny: number;
   values: Float32Array;
   max: number;
+  min?: number; // bottom of the colour scale (0 when left out)
+  /** A smooth field (temperature): drawn blended between cells and a little transparent over the copper. */
+  smooth?: boolean;
 }
 
 export interface BoardViewApi {
@@ -95,11 +98,12 @@ function heatImage(h: BoardHeat): HTMLCanvasElement | null {
   for (let i = 0; i < h.values.length; i++) {
     const v = h.values[i];
     if (!Number.isFinite(v)) continue;
-    const [r, g, b] = heatRgb(h.max > 0 ? v / h.max : 0);
+    const lo = h.min ?? 0;
+    const [r, g, b] = heatRgb(h.max > lo ? (v - lo) / (h.max - lo) : 0);
     img.data[4 * i] = r;
     img.data[4 * i + 1] = g;
     img.data[4 * i + 2] = b;
-    img.data[4 * i + 3] = 235;
+    img.data[4 * i + 3] = h.smooth ? 205 : 235;
   }
   ctx.putImageData(img, 0, 0);
   return c;
@@ -286,7 +290,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
     // the heat map over the copper, then the coloured tracks and vias over it
     if (heat && heatCanvas && visible[heat.layer]) {
       ctx.globalAlpha = 1;
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = !!heat.smooth;
       ctx.drawImage(heatCanvas, heat.x0 - heat.res / 2, heat.y0 - heat.res / 2, heat.nx * heat.res, heat.ny * heat.res);
     }
     if (colored.length) {

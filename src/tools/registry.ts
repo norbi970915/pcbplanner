@@ -223,7 +223,7 @@ export const TOOLS: ToolDef[] = [
     seoTitle: 'KiCad Impedance Calculator and Routing Check',
     nav: 'KiCad project',
     group: 'Stackup',
-    summary: 'Reads a .kicad_pcb file or project folder in the browser: 50 Ω and 90/100 Ω widths and loss per layer, net classes and pairs, a routing check of every routed pair, and the track current and DC voltage drop of power nets on the board, shared with the calculators.',
+    summary: 'Reads a .kicad_pcb file or project folder in the browser: 50 Ω and 90/100 Ω widths and loss per layer, net classes and pairs, a routing check of every routed pair, the track current and DC voltage drop of power nets, and a temperature map of the board, shared with the calculators.',
     component: lazyPage(() => import('./KicadProject')),
   },
   {

@@ -20,7 +20,8 @@ class EdgeIndex {
   private band: number;
   private nb: number;
 
-  constructor(polys: ArrayLike<number>[], y0: number, y1: number, band: number) {
+  /** `oneShape`: the polygons are the loops of one shape (an outline with holes), even-odd over all of them. */
+  constructor(polys: ArrayLike<number>[], y0: number, y1: number, band: number, oneShape = false) {
     this.y0 = y0;
     this.band = band;
     this.nb = Math.max(1, Math.ceil((y1 - y0) / band) + 1);
@@ -33,7 +34,7 @@ class EdgeIndex {
         this.ay.push(xy[2 * i + 1]);
         this.bx.push(xy[2 * j]);
         this.by.push(xy[2 * j + 1]);
-        this.poly.push(p);
+        this.poly.push(oneShape ? 0 : p);
       }
     });
     const bandOf = (y: number) => Math.min(this.nb - 1, Math.max(0, Math.floor((y - y0) / band)));
@@ -69,6 +70,18 @@ class EdgeIndex {
 }
 
 const SUB = 4; // scanlines per cell row
+
+/**
+ * The part of each cell of a grid (cell (c, r) centred on (x0 + c·res, y0 + r·res)) that polygons cover
+ * (x0 y0 x1 y1 … in mm), overlapping polygons clamped at 1; `oneShape` takes them as the loops of one shape.
+ */
+export function coverage(polys: ArrayLike<number>[], nx: number, ny: number, x0: number, y0: number, res: number, oneShape = false): Float32Array {
+  const cov = new Float32Array(nx * ny);
+  if (!polys.length) return cov;
+  const idx = new EdgeIndex(polys, y0 - res, y0 + ny * res, res, oneShape);
+  cover(idx, cov, nx, ny, x0, y0, res);
+  return cov;
+}
 
 /** Add to each cell of a grid (cell (c, r) centred on (x0 + c·res, y0 + r·res)) the part the polygons cover. */
 function cover(idx: EdgeIndex, cov: Float32Array, nx: number, ny: number, x0: number, y0: number, res: number) {

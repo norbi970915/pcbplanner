@@ -6,6 +6,7 @@ import { Notes, Panel, Section } from '../components/ui';
 import { AnalysisMethod } from '../components/kicad/AnalysisMethod';
 import { KicadBoardPanel } from '../components/kicad/KicadBoardPanel';
 import { KicadPowerPanel } from '../components/kicad/KicadPowerPanel';
+import { KicadThermalPanel } from '../components/kicad/KicadThermalPanel';
 import { AnalysisProperties, BoardSummary, ImpedanceByLayerPanel, NoStackupNote, RoutingPanel } from '../components/kicad/KicadAnalysis';
 import { analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
 import { useKicadFileLoader } from '../components/kicad/KicadFileLoader';
@@ -203,7 +204,7 @@ export default function KicadProject() {
   return (
     <ToolPage
       title="KiCad Project"
-      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The Power tab checks the current capacity of the tracks and vias of a power net and solves its DC voltage drop, drawn as heat maps on the board. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
+      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The Power tab checks the current capacity of the tracks and vias of a power net and solves its DC voltage drop, and the Thermal tab the temperature of the board from the power of its parts, both drawn as heat maps on the board. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}
       onReset={reset}
@@ -228,6 +229,7 @@ export default function KicadProject() {
               ['overview', 'Overview'],
               ['board', 'Board'],
               ['power', 'Power'],
+              ['thermal', 'Thermal'],
             ] as const
           ).map(([v, label]) => (
             <button
@@ -247,7 +249,8 @@ export default function KicadProject() {
       )}
       {data && p.view === 'board' && !calc && <Notes items={['The board view needs the stackup of the board: load a board saved with KiCad 6 or later.']} />}
       {data && p.view === 'power' && <KicadPowerPanel data={data} p={p} set={set} />}
-      {data && p.view !== 'board' && p.view !== 'power' && (
+      {data && p.view === 'thermal' && <KicadThermalPanel data={data} p={p} set={set} />}
+      {data && p.view !== 'board' && p.view !== 'power' && p.view !== 'thermal' && (
         <>
           <Panel title="Project" allowInvalid>
             <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
@@ -285,6 +288,36 @@ const POWER_SOURCES: readonly DataSource[] = [
     title: 'D. G. Brooks with J. Adam, "Trace Currents and Temperatures Revisited", UltraCAD Design, April 2015',
     url: 'https://www.mathscinotes.com/wp-content/uploads/2016/06/pcbtempr.pdf',
     note: 'IPC-2152 against the IPC-2221 charts: about 25 % lower currents for external traces, and internal traces that cool almost as well as external ones or better (introduction).',
+  },
+  {
+    title: 'onsemi AND9596/D, "A Quick PCB Thermal Calculation for Power Electronic Devices with Exposed Pad Packages", Rev. 1, 2017',
+    url: 'https://www.onsemi.com/pub/Collateral/AND9596-D.PDF',
+    note: 'Pp. 1–2: an empirical heat transfer coefficient, convection and radiation together, of 15, 30 and 45 W/m²K for air at 0, 1.0 and 2.5 m/s; Table 1: FR-4 0.35 W/m·K. The still-air check of the Thermal tab and the default through-plane conductivity.',
+  },
+  {
+    title: 'J. E. Graebner, "Thermal Conductivity of Printed Wiring Boards", Electronics Cooling, October 1995',
+    url: 'https://www.electronics-cooling.com/1995/10/thermal-conductivity-of-printed-wiring-boards/',
+    note: 'Copper in boards 385 ± 15 W/m·K; a bare FR-4 board 0.81 W/m·K in-plane (sample PC5). The copper and in-plane laminate values of the Thermal tab.',
+  },
+  {
+    title: 'Isola 370HR laminate and prepreg data sheet',
+    url: 'https://www.isola-group.com/wp-content/uploads/data-sheets/370hr-laminate-prepreg.pdf',
+    note: 'P. 2: thermal conductivity 0.4 W/m·K (ASTM E1952), an example of a laminate datasheet value for the through-plane field.',
+  },
+  {
+    title: 'J. H. Lienhard IV, J. H. Lienhard V, A Heat Transfer Textbook, 6th ed., Phlogiston Press (free edition)',
+    url: 'https://ahtt.mit.edu/wp-content/uploads/2024/04/AHTTv600.pdf',
+    note: 'Eqs. 2.29–2.31: linearised radiation, about 6 W/m²K near room temperature; §8.3–8.4: Churchill–Chu for vertical plates, eqs. 8.37a–b (Raithby–Hollands) and 8.38 (Fujii–Imura) for horizontal plates, the comparison in the Thermal view; Table 10.1: emissivities.',
+  },
+  {
+    title: 'A. Gorev et al., "Emissivity of printed circuit boards", IOP Conf. Ser.: Mater. Sci. Eng. 734 (2020) 012027 (open access)',
+    url: 'https://iopscience.iop.org/article/10.1088/1757-899X/734/1/012027/pdf',
+    note: 'Table 1: measured emissivity of solder-masked boards 0.88 (red) to 0.97 (black), polished copper 0.08; the default ε = 0.9.',
+  },
+  {
+    title: 'Texas Instruments SPRA953D, "Semiconductor and IC Package Thermal Metrics", 2024',
+    url: 'https://www.ti.com/lit/an/spra953d/spra953d.pdf',
+    note: '§5: ψJB, and eq. 9, T_J = T_PCB + ψJB × Power, the junction estimate of the Thermal tab.',
   },
   {
     title: 'NBS Handbook 100, Copper Wire Tables (1966)',
@@ -360,6 +393,42 @@ export function Method() {
         return is solved the same way, with each load's current flowing from its pads on the return net back to the source's: the load sees the supply drop and the return drop added,
         and the table gives both and their total. A load with no pad on the return net returns its current some other way (through another part), so its total is left out; a source
         with no pad on the return net cannot be solved for the return. The map shows either net's copper.
+      </p>
+      <h2>Thermal view</h2>
+      <p>
+        The Thermal tab solves the steady temperature of the whole board from the power of the parts you enter. The board inside its outline is cut into square cells, the same on every
+        copper layer; a cell of a layer stands for its copper and half the laminate on each side of it. Neighbouring cells of a layer are joined by <i>k</i>
+        <sub>Cu</sub>·<i>t</i>·<i>c</i> + <i>k</i>
+        <sub>xy</sub>·<i>d</i>, where <i>c</i> is the part of the cells that is copper (the zones, tracks, pads and via pads of every net), <i>t</i> the copper thickness and <i>d</i> the laminate the
+        cell stands for; a cell is joined to the same cell of the next layer through the laminate, <i>k</i>
+        <sub>z</sub>·<i>A</i>/<i>h</i>, and through every via and plated hole there, <i>k</i>
+        <sub>Cu</sub>·<i>a</i>/<i>h</i> for its 25 µm copper ring. The copper of a board conducts 385 W/m·K (Graebner measured 385 ± 15 in boards; pure annealed copper is about 400); the
+        laminate defaults to 0.8 W/m·K along the board and 0.35 through it, and both can be changed. A part's power enters the board through its pads on its own side.
+      </p>
+      <p>
+        The two faces give the heat to the air by convection and radiation. In still air the convection comes from the natural-convection correlations of the heat-spreading tool (hot
+        upper face 0.54·Ra<sup>1/4</sup>, lower face 0.52·Ra<sup>1/5</sup> with <i>L</i> = area/perimeter; Churchill–Chu for an upright board). The free textbook of Lienhard gives other
+        correlations of the same kind: Raithby and Hollands for the upper face (with its correction for thick boundary layers, 7 % below the value here for a 31 cm² board) and Fujii
+        and Imura for the lower face, stated for larger plates (Ra ≥ 10⁶) than most boards. With them that board's faces would lose about 10 % less heat, and its rise would be about
+        10 % higher: a measure of how well the convection of a small board is known. For moving air you enter the convection coefficient. Radiation is εσ(<i>T</i>
+        <sub>s</sub>² + <i>T</i>
+        <sub>a</sub>²)(<i>T</i>
+        <sub>s</sub> + <i>T</i>
+        <sub>a</sub>), about 6 W/m²K near room temperature, as much as still-air convection. Both depend on the temperature; since all the heat leaves through the faces, their mean
+        rise is <i>P</i> / ((<i>h</i>
+        <sub>top</sub> + <i>h</i>
+        <sub>bottom</sub> + 2<i>h</i>
+        <sub>r</sub>)·<i>A</i>), and the coefficients are iterated on it before the board is solved once. For a 31 cm² board 34 °C above ambient this gives about 14 W/m²K a face with
+        radiation, against the empirical 15 W/m²K for still air in onsemi's AND9596.
+      </p>
+      <p>
+        The result is the temperature on every layer (the map's colours span the coolest to the hottest point of the board), the hottest point, and the board temperature under each
+        part (the highest of its pad cells). With the part's ψJB from its datasheet, the junction is <i>T</i>
+        <sub>J</sub> = <i>T</i>
+        <sub>PCB</sub> + ψ<sub>JB</sub>·<i>P</i>, as TI's SPRA953 defines it; θJB is a different, cold-plate measurement and does not belong in that formula. The tests check a
+        well-spreading plate against <i>P</i> / (2<i>hA</i>), a heated copper strip against the exact fin solution, and a hot pad in a copper pour against the heat-spreading tool (within
+        7 %). Not modelled: heat leaving the top of a package straight to the air (so the parts come out a little hot), enclosures, heatsinks and neighbouring boards, air that warms as
+        it passes, and time (the result is the steady state). Read the temperatures to about ±20–30 %; the differences between two layouts of the same board are more reliable.
       </p>
       <h2>Net classes and pairs</h2>
       <p>

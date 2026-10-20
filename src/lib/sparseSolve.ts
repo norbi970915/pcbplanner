@@ -314,3 +314,30 @@ export function solveSpd(m: Csr, b: Float64Array, tol = 1e-9, maxIt = 500): { x:
   timing.solve = performance.now() - t0 - timing.setup;
   return { x, iterations: it, residual: res };
 }
+
+/** The matrix of a network of conductances: g between nodes a and b, plus `ground` from each node to the reference. */
+export function laplacian(n: number, ea: ArrayLike<number>, eb: ArrayLike<number>, eg: ArrayLike<number>, ground: Float64Array): Csr {
+  const deg = new Int32Array(n + 1);
+  for (let e = 0; e < ea.length; e++) {
+    deg[ea[e] + 1]++;
+    deg[eb[e] + 1]++;
+  }
+  for (let i = 0; i < n; i++) deg[i + 1] += deg[i];
+  const start = deg;
+  const col = new Int32Array(start[n]);
+  const val = new Float64Array(start[n]);
+  const diag = Float64Array.from(ground);
+  const pos = start.slice(0, n);
+  for (let e = 0; e < ea.length; e++) {
+    const a = ea[e];
+    const b = eb[e];
+    const g = eg[e];
+    diag[a] += g;
+    diag[b] += g;
+    col[pos[a]] = b;
+    val[pos[a]++] = -g;
+    col[pos[b]] = a;
+    val[pos[b]++] = -g;
+  }
+  return { n, start, col, val, diag };
+}

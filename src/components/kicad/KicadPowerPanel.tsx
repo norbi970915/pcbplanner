@@ -38,7 +38,7 @@ const riseColor = (dT: number, limit: number) => (dT > limit ? '#f85149' : dT > 
 const riseTone = (dT: number, limit: number) => (dT > limit ? 'text-[var(--err-line)]' : dT > limit / 2 ? 'text-[var(--accent-ink)]' : 'text-ok');
 const num = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 
-function settingsFor(data: KicadProjectData, copper: string[], dT: number, ambient: number): PowerSettings {
+export function settingsFor(data: KicadProjectData, copper: string[], dT: number, ambient: number): PowerSettings {
   const thickness: Record<string, number> = {};
   for (const l of copper) thickness[l] = copperThickness(data, l) ?? 0.035;
   const faces = copperFaces(data.board.stackup);
