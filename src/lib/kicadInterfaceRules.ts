@@ -179,8 +179,9 @@ export function pairCheckResult(plan: PairCheckPlan, zs: Record<string, ZAnswer>
     }
     const zr = zs[l.layer];
     const lr = losses[l.layer];
-    const refs = byLayer.get(l.layer)!.refs.filter((r) => plan.filled.includes(r));
-    solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!plan.target && !lr && !zr.err, refs } : { pending: true };
+    const planes = byLayer.get(l.layer)!.refs;
+    const refs = planes.filter((r) => plan.filled.includes(r));
+    solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!plan.target && !lr && !zr.err, refs, planes } : { pending: true, planes };
   }
   return checkItem(plan.item, plan.target, solves, L, unit);
 }

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { NumField, Panel, Section, SelectField } from '../ui';
 import { INTERFACES } from '../../data/interfaces';
 import { toCsv, toText } from '../../lib/kicadImpedance';
-import { COUPLING, PLAIN_TARGETS, targetById, type Fmt, type ItemResult, type KicadProject, type RouteGroup, type RoutingSummary } from '../../lib/kicadRouting';
+import { COUPLING, itemReasons, PLAIN_TARGETS, targetById, type Fmt, type ItemResult, type KicadProject, type RouteGroup, type RoutingSummary, type SubCheck } from '../../lib/kicadRouting';
 import { routingRows, statusLabel, type CheckedItem } from '../../lib/kicadRoutingSolve';
 
 type St = ItemResult['overall'];
@@ -23,6 +23,12 @@ function Mark({ s, text, says = false }: { s: St; text?: string; says?: boolean 
 }
 
 const leaf = (n: string) => n.slice(n.lastIndexOf('/') + 1);
+
+/** The worst status of an item's layout checks of these kinds, or undefined when it has none. */
+const worstCheck = (res: ItemResult, keys: SubCheck['key'][]): St | undefined => {
+  const s = (res.checks ?? []).filter((c) => keys.includes(c.key)).map((c) => c.status);
+  return s.length ? (s.includes('fail') ? 'fail' : s.includes('warn') ? 'warn' : 'ok') : undefined;
+};
 
 /** Properties section: the target of every pair group and checked net class. */
 export function RoutingTargets({
@@ -214,11 +220,8 @@ export function RoutingCheckPanel({
           const { item, res, target } = c;
           const ls = res.layers;
           const span = Math.max(1, ls.length);
-          const why = [
-            ...res.layers.filter((l) => l.status === 'fail' || l.status === 'warn').map((l) => l.reason),
-            ...[res.skew, res.length, res.loss].filter((x) => x && (x.status === 'fail' || x.status === 'warn')).map((x) => x!.reason),
-            ...res.notes,
-          ];
+          const why = itemReasons(res);
+          const viaSt = worstCheck(res, ['stub', 'return', 'vias']);
           const title = item.kind === 'pair' ? leaf(item.name).replace(/[_.]$/, '') || item.name : leaf(item.name);
           const itemCell = (
             <td rowSpan={span} className="min-w-[150px] align-top">
@@ -244,8 +247,9 @@ export function RoutingCheckPanel({
               </td>
               <td rowSpan={span} className="v whitespace-nowrap align-top">
                 {L(res.len)} {res.length && <Mark s={res.length.status} />}
+                {!res.length && worstCheck(res, ['lane']) && <Mark s={worstCheck(res, ['lane'])!} />}
                 <span className="block text-faint">
-                  {res.vias} {res.vias === 1 ? 'via' : 'vias'}
+                  {res.vias} {res.vias === 1 ? 'via' : 'vias'} {viaSt && <Mark s={viaSt} />}
                 </span>
                 {res.loss && (
                   <span className="block">
@@ -323,7 +327,8 @@ export function RoutingCheckPanel({
       <p className="px-2.5 pb-2 text-faint">
         Width and gap are the length-weighted values on each layer; sections more than {COUPLING.gapFactor} × the dominant gap apart count as uncoupled. Skew is the difference of the routed lengths, without
         via barrels and package lengths. Where the skew limit is a vendor layout guideline rather than the specification's, a pair over it is a warning, and a fail only beyond the
-        specification's own budget. Loss at the interface's Nyquist frequency.
+        specification's own budget. Via stubs, return vias, via count, lane-to-lane matching and spacing are checked against the vendor guidelines each reason names, as warnings. Loss at the
+        interface's Nyquist frequency.
       </p>
     </Panel>
   );

@@ -7,7 +7,9 @@ import { INTERFACES } from '../data/interfaces';
 import { analyseRequest, lossRequest, type ImpedanceSettings, type LayerPlan } from './kicadImpedance';
 import {
   buildGroups,
+  addLaneChecks,
   checkItem,
+  itemReasons,
   itemLayers,
   netClassResolver,
   pairCoupled,
@@ -156,11 +158,16 @@ export function useRoutingCheck(o: {
           const zr = zs[zKey(l.layer, w, s)];
           const lr = losses[lKey(l.layer, w, s, f)];
           const refs = plan.refs.filter((r) => routing?.filled?.includes(r));
-          solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!target && !lr && !zr.err, refs } : { pending: true };
+          solves[l.layer] = zr ? { z: zr.z, eeff: zr.eeff, err: zr.err, dbPerIn: lr?.db, lossPending: !!target && !lr && !zr.err, refs, planes: plan.refs } : { pending: true, planes: plan.refs };
         }
         out.push({ group: g, item, target, res: checkItem(item, target, solves, L, unit) });
       }
     }
+    addLaneChecks(
+      out.map((c) => ({ groupKey: c.group.key, item: c.item, target: c.target, res: c.res })),
+      L,
+      unit,
+    );
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, JSON.stringify(chosen), zs, losses, plans, settings.fGHz, L, unit, enabled]);
@@ -177,7 +184,7 @@ export function routingRows(items: CheckedItem[], L: Fmt, unit: string): string[
   const rows = [head];
   for (const c of items) {
     const { item, res, target } = c;
-    const reasons = [...res.layers.filter((l) => l.status === 'fail' || l.status === 'warn').map((l) => l.reason), ...[res.skew, res.length, res.loss].filter((x) => x && (x.status === 'fail' || x.status === 'warn')).map((x) => x!.reason), ...res.notes].join(' | ');
+    const reasons = itemReasons(res).join(' | ');
     const layers = res.layers.length ? res.layers : [undefined];
     for (const l of layers) {
       rows.push([

@@ -8,7 +8,7 @@ import type { InterfaceSpec } from '../../data/interfaces';
 import { freqLabel } from '../../lib/interfaceRules';
 import type { PairCheckPlan } from '../../lib/kicadInterfaceRules';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
-import type { ItemResult } from '../../lib/kicadRouting';
+import { itemReasons, type ItemResult } from '../../lib/kicadRouting';
 import { statusLabel } from '../../lib/kicadRoutingSolve';
 import type { KicadProjectStatus } from '../../state/kicadProjectStore';
 
@@ -94,11 +94,7 @@ export function YourRoutingPanel({
   const u = L(1).split(' ').slice(1).join(' ');
   const nb = '\u00a0'; // no break inside a W / S figure
   const geo = (w: number, s?: number, wN?: number) => `${wN !== undefined ? `${num(w)}+${num(wN)}` : num(w)}${s !== undefined ? `${nb}/${nb}${num(s)}` : ''}${nb}${u}`;
-  const why = [
-    ...res.layers.filter((l) => l.status === 'fail' || l.status === 'warn').map((l) => l.reason),
-    ...[res.skew, res.length, res.loss].filter((x) => x && (x.status === 'fail' || x.status === 'warn')).map((x) => x!.reason),
-    ...res.notes,
-  ];
+  const why = itemReasons(res);
   const skewSpec = spec.intraPairMm !== undefined ? `${Number((spec.intraPairMm / 0.0254).toPrecision(3))} mil` : spec.intraPairPs !== undefined ? `${spec.intraPairPs} ps` : undefined;
 
   return (

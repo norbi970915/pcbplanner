@@ -12,7 +12,9 @@
 // balanced-parenthesis scanner finds them, and only (general), (layers), (setup), Edge.Cuts graphics
 // and the header and outline of each zone are parsed into small trees. Tracks and vias are read with
 // regexes; their geometry goes to the routing check (kicadRouting.ts).
-import { analyseRouting, trackLength, type RawTrack, type RawVia, type RoutingSummary } from './kicadRouting';
+import { analyseRouting, isGroundName, trackLength, type RawTrack, type RawVia, type RoutingSummary } from './kicadRouting';
+import { addSpacing } from './kicadSpacing';
+import { addVias } from './kicadVias';
 import { addVoids, type FillPoly } from './kicadVoids';
 import { sweepArea } from './polygonArea';
 import { MASK_DF, type CopperRole, type Layer, type Stackup } from './stackups';
@@ -404,12 +406,31 @@ function readTrack(text: string, start: number, end: number, arc: boolean): RawT
   return Number.isFinite(t.x1 + t.y1 + t.x2 + t.y2 + (t.mx ?? 0) + (t.my ?? 0)) && Number.isFinite(t.w) ? t : null;
 }
 
-/** Position, layers and net of a top-level (via …). */
+const RE_SIZE = /\(size\s+([\d.eE+-]+)/;
+const RE_DRILL = /\(drill\s+([\d.eE+-]+)/;
+// (via blind …) and (via micro …), or a (type …) inside the via
+const RE_VIA_KIND = /^\(via\s+(blind|buried|micro)\b|\(type\s+"?(blind|buried|micro)\b/;
+
+// a back-drill or post-machining list inside a via, with up to one level of nested lists
+const RE_MACHINING = /\((?:backdrill|back_drill|post_machining|front_post_machining|back_post_machining)\b[^()]*(?:\([^()]*\)[^()]*)*\)/g;
+
+/** Position, layers, net, size, drill, kind (through, blind, micro) and back-drilling of a top-level (via …). */
 function readVia(text: string, start: number, end: number): RawVia | null {
-  const s = text.slice(start, end);
+  const raw = text.slice(start, end);
+  // a back-drill or post-machining list has its own size and layers: read the via's own outside it
+  const s = raw.replace(RE_MACHINING, '');
   const at = RE_AT.exec(s);
   if (!at) return null;
-  return { net: netKey(RE_NET.exec(s)), x: Number(at[1]), y: Number(at[2]), layers: layerList(RE_LAYERS.exec(s)?.[1]) };
+  const v: RawVia = { net: netKey(RE_NET.exec(s)), x: Number(at[1]), y: Number(at[2]), layers: layerList(RE_LAYERS.exec(s)?.[1]) };
+  const size = Number(RE_SIZE.exec(s)?.[1]);
+  const drill = Number(RE_DRILL.exec(s)?.[1]);
+  if (Number.isFinite(size) && size > 0) v.size = size;
+  if (Number.isFinite(drill) && drill > 0) v.drill = drill;
+  const k = RE_VIA_KIND.exec(s);
+  const kind = k ? (k[1] ?? k[2]) : undefined;
+  v.kind = kind === 'micro' ? 'micro' : kind ? 'blind' : 'through';
+  if (s !== raw) v.backdrill = true;
+  return v;
 }
 
 /** Stackup items from the (stackup …) list of (setup …). */
@@ -617,6 +638,8 @@ export function parseKicadBoard(text: string): KicadBoard {
     c.zoneArea = board.area > 0 ? Math.min(top, board.area) : top;
   }
 
+  const st = stackupNode ? readStackup(stackupNode) : null;
+
   // routing: net codes to names, KiCad 5 user layer names to canonical names, copper layers only
   const netOf = (k: string) => (k.startsWith('#') ? (netNames.get(k) ?? '') : k);
   const cuTracks: RawTrack[] = [];
@@ -632,6 +655,11 @@ export function parseKicadBoard(text: string): KicadBoard {
     v.layers = v.layers.map((l) => alias.get(l) ?? l);
   }
   const routing = analyseRouting(cuTracks, rawVias, [...netNames.values()].filter(Boolean));
+  // nets a return via may belong to: those with zones over a tenth of the board on some layer, and ground nets
+  const planeNets = new Set<string>([...netNames.values()].filter((n) => n && isGroundName(n)));
+  for (const m of perLayer.values()) for (const [net, area] of m) if (board.area > 0 && area >= 0.1 * board.area && net !== '(no net)') planeNets.add(net);
+  addVias(routing, cuTracks, rawVias, copper.map((c) => c.name), st && st.items.length ? st.items : null, planeNets);
+  addSpacing(routing, cuTracks, planeNets);
   addVoids(
     routing,
     cuTracks,
@@ -639,7 +667,6 @@ export function parseKicadBoard(text: string): KicadBoard {
     board.bbox,
   );
 
-  const st = stackupNode ? readStackup(stackupNode) : null;
   const ms = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
   return {
     version,

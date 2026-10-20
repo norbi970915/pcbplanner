@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PLANE_RULE } from '../../lib/kicadImport';
-import { COUPLING, VOID } from '../../lib/kicadRouting';
+import { COUPLING, SPACING, VOID } from '../../lib/kicadRouting';
 
 /** `limits`: further list items for the Limits section. */
 export function AnalysisMethod({ limits }: { limits?: ReactNode }) {
@@ -96,13 +96,43 @@ export function AnalysisMethod({ limits }: { limits?: ReactNode }) {
         saved, so refill the zones (B in the PCB editor) before saving the board; layers without fills are not checked.
       </p>
       <p>
+        <b>Layout guidelines.</b> Where the interface's sources give a number, a pair is also checked for via stubs, return vias, via count, lane-to-lane matching and spacing. Each number was read in a
+        free vendor document, which the reason names (TI SLLA414 for USB 3.x, HDMI, DisplayPort, PCIe Gen 3/4 and SATA; TI SLAAE45 and SNLA426 for PCIe; TI SPRAAR7J for USB 2.0 and SATA; TI SPRACP4A and
+        DS90UB936-Q1 for MIPI D-PHY; TI SNLA387 for 1000BASE-T; the TI TMDS1204 and TDP0604 data sheets and the TI HDMI Design Guide for HDMI), and the Interface Rules page lists them per interface. They are
+        recommendations, not limits of the specifications, so a pair outside one is a warning, never a fail; the one exception is lane-to-lane skew beyond what the HDMI specification allows.
+      </p>
+      <ul>
+        <li>
+          <b>Via stubs.</b> At each via the layers the signal uses are the ones where one of its tracks ends on the via. The stub is the rest of the barrel: from the far face of the outermost used copper to the
+          outer face of the via's last copper layer, summed from the stackup's thicknesses. Removing unused pads does not shorten it. Back-drilled vias, blind and micro vias (by their own layers) and vias the
+          net reaches from one layer only (through a pad or a zone) are not given a stub that is not there.
+        </li>
+        <li>
+          <b>Return vias.</b> Where a pair moves to a layer that shares no reference plane with the one it leaves, the nearest via of a ground or plane net must be within the interface's distance of each
+          signal via (centre to centre). A change between two layers that share a plane, such as a microstrip and the stripline below it, needs none.
+        </li>
+        <li>
+          <b>Via count.</b> The vias on each trace against the interface's most vias per trace, and whether both traces have the same number.
+        </li>
+        <li>
+          <b>Lane-to-lane.</b> Pairs of one link are found by name: the pair name without the lane at its end (D0, D1, CLK, CK, C, TX0, TXC, LANE2), so HDMI_D0, HDMI_D1, HDMI_D2 and HDMI_CLK are one link. Each lane
+          is compared with the shortest lane of its link, in length and through the layer delay in ps. HDMI is checked against 1 in on a source board and fails beyond 0.2 of a character time; MIPI D-PHY
+          against 40 ps. PCIe lane skew comes from a specification that is not freely available and is not checked.
+        </li>
+        <li>
+          <b>Spacing.</b> Both traces are sampled every {SPACING.step * 1000} µm and the nearest track of another net on the same layer is found, edge to edge. The pair's own partner and ground and plane nets
+          (guard traces and pours) do not count, and samples within {SPACING.breakout} mm of a pad or via are breakout and are left out. Another pair is held to the pair spacing (5W, or 30 mil for 1000BASE-T),
+          any other signal to the signal spacing (30 mil). A trace closer than that over {SPACING.warn} mm or more is a warning, with the nearest neighbour and where it is.
+        </li>
+      </ul>
+      <p>
         <b>Targets and results.</b> Each net class, split by the interface its names suggest, is matched to a target: an interface from the <Link to="/interface-rules">Interface Rules</Link> data, or a plain
         impedance. The suggestion comes from the class and net names (USB, HDMI, PCIe, SATA, MDI/ETH, MIPI/CSI/DSI, …); an impedance written in the class name, such as <code>85Ohm_PCIE</code>, is the designer's
         target: the interface is suggested when that impedance lies inside its range and within 10 % of its nominal impedance, otherwise the class's impedance is suggested as a plain target. Change any of them under Routing targets; the choice is kept in the page address. An interface target uses its impedance range from the
         specification or vendor guide; a plain or custom target allows ±10 %. Skew is checked against the interface's intra-pair limit (a time limit through the layer delay), length against its maximum length and
         loss against its loss budget (over 80 % of the budget is a warning), where the data has them. Where the skew limit is a vendor's layout guideline rather than the specification's (HDMI, USB, 1000BASE-T,
         SGMII), a pair over it is a warning, and a fail only beyond the skew the specification itself allows. ✓ passes, ⚠ needs a look (no reference plane, a gap in it, long uncoupled sections, a tight loss
-        budget, skew over a guideline), ✗ fails. When
+        budget, skew or a via, lane or spacing figure outside a guideline), ✗ fails. When
         the impedance of one net differs by more than 10 % between layers, or one layer passes and another fails, the layer change is flagged: a width that is right on an outer layer is often wrong on an inner
         one.
       </p>

@@ -30,7 +30,30 @@ export interface RawVia {
   x: number;
   y: number;
   layers: string[];
+  size?: number; // pad diameter, mm
+  drill?: number;
+  kind?: 'through' | 'blind' | 'micro';
+  backdrill?: boolean; // KiCad 10 back-drilling or post-machining on the via
 }
+
+/** A via of a signal net (kicadVias.ts). */
+export interface ViaUse {
+  x: number;
+  y: number;
+  span: [string, string]; // first and last copper layer of the via
+  used: string[]; // copper layers where the net's tracks end on the via, in stackup order
+  kind?: 'blind' | 'micro';
+  backdrill?: boolean;
+  stub?: number; // longest unused barrel, mm; absent when back-drilled, reached from one layer only, or without a stackup
+  ret?: number; // centre distance to the nearest via of a plane net, mm
+  retNet?: string;
+}
+
+/** Last part of a hierarchical net name. */
+export const netLeaf = (n: string) => n.slice(n.lastIndexOf('/') + 1) || n;
+
+/** A ground net by its name. */
+export const isGroundName = (net: string) => /gnd|ground|vss|earth/i.test(netLeaf(net)) || /^0v$/i.test(netLeaf(net));
 
 /* ------------------------------------------------------------------ summary sent to the page */
 
@@ -42,6 +65,12 @@ export interface NetLayerStat {
   wMax: number;
   /** Stretches over no copper on another layer's zone fills (kicadVoids.ts), only where one reaches VOID.report. */
   voids?: VoidStat[];
+  /**
+   * Spacing to other nets' tracks on this layer (kicadSpacing.ts, differential-pair nets only): the sampled
+   * length (mm) in SPACING.bin steps of edge-to-edge spacing, for neighbours of another pair and for other
+   * signals, and the nearest neighbour.
+   */
+  space?: { pair: number[]; other: number[]; near: { d: number; net: string; x: number; y: number } };
 }
 
 /** The longest and the total stretch of a net's routing on one layer that runs over no copper on `layer`, mm. */
@@ -59,6 +88,8 @@ export interface NetStat {
   len: number; // mm, segments plus arcs
   vias: number;
   layers: NetLayerStat[]; // most length first
+  /** Each via of the net with its layers, stub and nearest return via (signal nets only). */
+  viaUse?: ViaUse[];
 }
 
 export interface PairLayerStat {
@@ -98,6 +129,20 @@ export const VOID = {
   /** Raster resolution of the zone fills (mm), and the most pixels a layer may take. */
   res: 0.05,
   maxPixels: 16e6,
+};
+
+/** Spacing measurement (kicadSpacing.ts, stated in the Method section). */
+export const SPACING = {
+  /** Sample step along a trace, mm. */
+  step: 0.1,
+  /** Histogram resolution and range of the edge-to-edge spacing, mm. */
+  bin: 0.01,
+  bins: 200,
+  max: 2,
+  /** Samples within this distance of a pad or via (a free end of the net's routing) are breakout and not checked, mm. */
+  breakout: 2.5,
+  /** A pair closer than its limit over at least this length (mm, per trace) is a warning. */
+  warn: 2,
 };
 
 /** Coupling rules (stated in the Method section). */
@@ -840,6 +885,7 @@ export interface LayerSolve {
   err?: string;
   noRef?: boolean; // the layer has no reference plane in the stackup
   refs?: string[]; // reference planes of the layer whose zone fills are in the file
+  planes?: string[]; // all reference planes of the layer (for the return-via check)
   pending?: boolean; // impedance not solved yet
   lossPending?: boolean; // loss not solved yet
 }
@@ -871,11 +917,171 @@ export interface ItemResult {
   skew?: { mm: number; ps?: number; limitMm?: number; status: Status | 'pending'; reason: string };
   length?: { status: Status; reason: string };
   loss?: { db: number; status: Status | 'pending'; reason: string };
+  /** The interface's layout guidelines: via stubs, return vias, via count, spacing (warnings, never fails). */
+  checks?: SubCheck[];
   overall: Status | 'pending';
   notes: string[];
 }
 
+export interface SubCheck {
+  key: 'stub' | 'return' | 'vias' | 'space' | 'lane';
+  status: Status;
+  reason: string;
+}
+
 export type Fmt = (mm: number) => string;
+
+/** Why an item is not a plain pass: the reasons of its warnings and failures, then its notes. */
+export function itemReasons(res: ItemResult): string[] {
+  return [
+    ...res.layers.filter((l) => l.status === 'fail' || l.status === 'warn').map((l) => l.reason),
+    ...[res.skew, res.length, res.loss, ...(res.checks ?? [])].filter((x) => x && (x.status === 'fail' || x.status === 'warn')).map((x) => x!.reason),
+    ...res.notes,
+  ];
+}
+
+/** Short name of a source, as cited in a reason ("TI SLLA414A"). */
+const srcName = (spec: InterfaceSpec, src: number) => (spec.sources[src]?.title ?? '').split(' —')[0].split(' (')[0];
+
+/**
+ * The link a pair belongs to, by its name: the pair's base name without the lane at its end (D0, D1, CLK,
+ * CK, C, TX0, TXC, LANE2 …), so HDMI_D0 and HDMI_CLK, or DPHY0.D1 and DPHY0.C, share a link.
+ */
+export const laneLink = (base: string) => base.replace(/[_.]+$/, '').replace(/(?:TX|D|DATA|LANE|ML|CH)?(?:\d+|CLK|CK|C)$/i, '');
+
+/**
+ * Lane-to-lane matching inside each link of an interface that has a lane-skew guideline: every lane is
+ * compared with the shortest lane of its link. Over the guideline is a warning; beyond the skew the
+ * specification allows, a fail. `items` are the checked pairs with the key of their routing group.
+ */
+export function addLaneChecks(items: { groupKey: string; item: RouteItem; target: Target | null; res: ItemResult }[], L: Fmt, unit = 'mm') {
+  const links = new Map<string, typeof items>();
+  for (const c of items) {
+    const spec = c.target ? INTERFACES.find((s) => s.id === c.target!.id) : undefined;
+    if (!spec?.layout || (!spec.layout.laneSkewMm && !spec.layout.laneSkewPs) || c.item.kind !== 'pair') continue;
+    const k = `${c.groupKey}\u0000${laneLink(c.item.name)}`;
+    links.set(k, [...(links.get(k) ?? []), c]);
+  }
+  for (const lanes of links.values()) {
+    if (lanes.length < 2) continue;
+    const spec = INTERFACES.find((s) => s.id === lanes[0].target!.id)!;
+    const g = spec.layout!;
+    // delay per mm from the pairs' own skew (the solver's εeff of the layer that carries most of each pair)
+    const pms = lanes.map((c) => (c.res.skew?.ps !== undefined && c.res.skew.mm > 0 ? c.res.skew.ps / c.res.skew.mm : undefined)).filter((v): v is number => v !== undefined);
+    const pm = pms.length ? pms.reduce((a, b) => a + b, 0) / pms.length : undefined;
+    const shortest = lanes.reduce((a, b) => (b.res.len < a.res.len ? b : a));
+    const name = (c: (typeof lanes)[number]) => netLeaf(c.item.name).replace(/[_.]+$/, '');
+    for (const c of lanes) {
+      const d = c.res.len - shortest.res.len;
+      const ps = pm !== undefined ? d * pm : undefined;
+      const psText = ps !== undefined ? ` (${ps.toFixed(ps < 10 ? 1 : 0)} ps)` : '';
+      const overMm = g.laneSkewMm && d > g.laneSkewMm.value + 1e-9;
+      const overPs = g.laneSkewPs && ps !== undefined && ps > g.laneSkewPs.value + 1e-9;
+      const overBudget = g.laneSkewBudgetPs && ps !== undefined && ps > g.laneSkewBudgetPs.value + 1e-9;
+      const lim = g.laneSkewMm ? `${L(g.laneSkewMm.value)} ${unit}${cite(spec, g.laneSkewMm.src)}` : `${g.laneSkewPs!.value} ps${cite(spec, g.laneSkewPs!.src)}`;
+      const budget = g.laneSkewBudgetPs ? `; ${spec.name} allows ${g.laneSkewBudgetPs.value} ps${cite(spec, g.laneSkewBudgetPs.src)}` : '';
+      const status: Status = overBudget ? 'fail' : overMm || overPs ? 'warn' : 'ok';
+      const reason =
+        c === shortest
+          ? `lane-to-lane: the shortest of ${lanes.length} lanes (${lanes.map(name).join(', ')}), guideline ${lim}`
+          : `lane-to-lane: ${L(d)} ${unit}${psText} longer than ${name(shortest)}, the shortest lane; guideline ${lim}${budget}${g.laneSkewPs && ps === undefined ? '; the time limit needs the delay of a solved layer' : ''}`;
+      c.res.checks = [...(c.res.checks ?? []).filter((x) => x.key !== 'lane'), { key: 'lane', status, reason }];
+      if (c.target) c.res.overall = worst([...c.res.layers.map((l) => l.status), c.res.skew?.status, c.res.length?.status, c.res.loss?.status, ...c.res.checks.map((x) => x.status)]);
+    }
+  }
+}
+
+const cite = (spec: InterfaceSpec, src: number) => ` (${srcName(spec, src)})`;
+
+/** The via checks of a pair against the interface's layout guidelines. */
+function viaChecks(item: RouteItem, spec: InterfaceSpec, solves: Record<string, LayerSolve>, L: Fmt, unit: string): SubCheck[] {
+  const g = spec.layout;
+  if (!g || item.kind !== 'pair') return [];
+  const nets = [item.p, item.n].filter((n): n is NetStat => !!n);
+  const vias = nets.flatMap((n) => (n.viaUse ?? []).map((v) => ({ ...v, net: n.name })));
+  const out: SubCheck[] = [];
+  const at = (v: { x: number; y: number }) => `x ${Number(v.x.toFixed(2))}, y ${Number(v.y.toFixed(2))} mm`;
+  const cite = (src: number) => ` (${srcName(spec, src)})`;
+
+  if (g.viaStubMm && vias.length) {
+    const lim = g.viaStubMm.value;
+    const measured = vias.filter((v) => v.stub !== undefined);
+    const over = measured.filter((v) => v.stub! > lim + 1e-9).sort((a, b) => b.stub! - a.stub!);
+    const unmeasured = vias.length - measured.length;
+    const tail = unmeasured ? `; ${unmeasured} ${unmeasured === 1 ? 'via was' : 'vias were'} not measured (back-drilled, or reached from one layer of tracks only)` : '';
+    if (over.length) {
+      const w = over[0];
+      out.push({
+        key: 'stub',
+        status: 'warn',
+        reason: `via stubs: ${over.length} of ${vias.length} vias over ${L(lim)} ${unit}${cite(g.viaStubMm.src)}, the longest ${L(w.stub!)} ${unit} at ${at(w)} (signal on ${w.used.join(' and ')}, via ${w.span.join(' to ')}); back-drill them or use blind vias${tail}`,
+      });
+    } else if (measured.length) out.push({ key: 'stub', status: 'ok', reason: `via stubs: all ${measured.length} measured vias within ${L(lim)} ${unit}${tail}` });
+  }
+
+  if (g.returnViaMm) {
+    const lim = g.returnViaMm.value;
+    const planes = (l: string) => solves[l]?.planes;
+    // a layer change that leaves every reference plane behind needs a return via near it
+    const changes = vias.filter((v) => {
+      if (v.used.length < 2) return false;
+      const a = planes(v.used[0]);
+      const b = planes(v.used[v.used.length - 1]);
+      return !!a?.length && !!b?.length && !a.some((p) => b.includes(p));
+    });
+    const far = changes.filter((v) => v.ret === undefined || v.ret > lim + 1e-9).sort((p, q) => (q.ret ?? Infinity) - (p.ret ?? Infinity));
+    if (far.length) {
+      const w = far[0];
+      out.push({
+        key: 'return',
+        status: 'warn',
+        reason: `return vias: ${far.length} of ${changes.length} vias that change the reference plane have no ground via within ${L(lim)} ${unit}${cite(g.returnViaMm.src)}; at ${at(w)} (${w.used[0]} to ${w.used[w.used.length - 1]}) the nearest is ${w.ret === undefined ? 'not found' : `${L(w.ret)} ${unit} away (${netLeaf(w.retNet ?? '')})`}`,
+      });
+    } else if (changes.length) out.push({ key: 'return', status: 'ok', reason: `return vias: a ground via within ${L(lim)} ${unit} of all ${changes.length} vias that change the reference plane` });
+  }
+
+  // spacing to other signals and other pairs on the same layer, outside breakout
+  const tOther = g.spaceMm?.value;
+  const space = item.pair!.layers
+    .map((pl) => {
+      const w = Math.max(...nets.map((n) => n.layers.find((l) => l.layer === pl.layer)?.w ?? 0));
+      const tPair = g.pairSpaceMm?.value ?? (g.pairSpaceW ? g.pairSpaceW.value * w : tOther);
+      let close = 0;
+      let near: { d: number; net: string; x: number; y: number } | undefined;
+      // length in the bins wholly below the limit (a bin that straddles it is not counted)
+      const sum = (h: number[], t: number | undefined) => (t === undefined ? 0 : h.reduce((a, v, i) => a + ((i + 1) * SPACING.bin <= t + 1e-9 ? v : 0), 0));
+      for (const n of nets) {
+        const s = n.layers.find((l) => l.layer === pl.layer)?.space;
+        if (!s) continue;
+        close += sum(s.pair, tPair) + sum(s.other, tOther);
+        if (!near || s.near.d < near.d) near = s.near;
+      }
+      return { layer: pl.layer, tPair, close, near };
+    })
+    .filter((x) => x.tPair !== undefined || tOther !== undefined);
+  if (space.length) {
+    const bad = space.filter((x) => x.close / 2 >= SPACING.warn).sort((a, b) => b.close - a.close);
+    const limits = [tOther !== undefined ? `${L(tOther)} ${unit} to other signals${cite(g.spaceMm!.src)}` : '', g.pairSpaceMm ? `${L(g.pairSpaceMm.value)} ${unit} to other pairs${cite(g.pairSpaceMm.src)}` : g.pairSpaceW ? `${g.pairSpaceW.value}W to other pairs${cite(g.pairSpaceW.src)}` : '']
+      .filter(Boolean)
+      .join(' and ');
+    if (bad.length) {
+      const b = bad[0];
+      out.push({
+        key: 'space',
+        status: 'warn',
+        reason: `spacing: ${bad.map((x) => `${L(x.close / 2)} ${unit} on ${x.layer}`).join(', ')} closer than ${limits}, outside ${SPACING.breakout} mm of pads and vias; nearest ${L(b.near!.d)} ${unit} to ${netLeaf(b.near!.net)} at x ${b.near!.x}, y ${b.near!.y} mm`,
+      });
+    } else out.push({ key: 'space', status: 'ok', reason: `spacing: ${limits} kept outside ${SPACING.breakout} mm of pads and vias` });
+  }
+
+  const counts = nets.map((n) => n.vias);
+  const viaWarn: string[] = [];
+  if (g.viasPerTrace && Math.max(...counts) > g.viasPerTrace.value) viaWarn.push(`${nets.map((n) => `${netLeaf(n.name)} ${n.vias}`).join(', ')}, more than ${g.viasPerTrace.value} per trace${cite(g.viasPerTrace.src)}`);
+  if (g.equalVias && nets.length === 2 && counts[0] !== counts[1]) viaWarn.push(`the two traces have ${counts[0]} and ${counts[1]} vias, not the same number${cite(g.equalVias.src)}`);
+  if (viaWarn.length) out.push({ key: 'vias', status: 'warn', reason: `via count: ${viaWarn.join('; ')}` });
+  else if (g.viasPerTrace || g.equalVias) out.push({ key: 'vias', status: 'ok', reason: `via count: ${counts.join(' and ')}` });
+  return out;
+}
 
 const worst = (s: (Status | 'pending' | undefined)[]): Status | 'pending' => {
   if (s.includes('fail')) return 'fail';
@@ -1049,6 +1255,11 @@ export function checkItem(item: RouteItem, target: Target | null, solves: Record
     } else res.loss = { db, status: 'info', reason: `loss ${db.toFixed(2)} dB${missing ? ' (layers that could not be solved are not counted)' : ''}` };
   }
 
-  res.overall = target ? worst([...layers.map((l) => l.status), res.skew?.status, res.length?.status, res.loss?.status]) : layers.some((l) => l.status === 'pending') ? 'pending' : 'info';
+  if (spec) {
+    const checks = viaChecks(item, spec, solves, L, unit);
+    if (checks.length) res.checks = checks;
+  }
+
+  res.overall = target ? worst([...layers.map((l) => l.status), res.skew?.status, res.length?.status, res.loss?.status, ...(res.checks ?? []).map((c) => c.status)]) : layers.some((l) => l.status === 'pending') ? 'pending' : 'info';
   return res;
 }

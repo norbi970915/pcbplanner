@@ -8,10 +8,11 @@
 // Areas are exact for polygons (arcs are split into chords of at most 5°), from the sweep in polygonArea.ts.
 import { isCopperName, listEnd, parseSexpr, scanTopLevel, type SNode } from './kicadImport';
 import { EPS0 } from './pdn';
+import { isGroundName, netLeaf } from './kicadRouting';
 import { intersectionArea, shoelace, sweepArea, type Box, type Pt } from './polygonArea';
 import type { Stackup } from './stackups';
 
-export { intersectionArea, shoelace, sweepArea, type Box, type Pt };
+export { intersectionArea, isGroundName, netLeaf, shoelace, sweepArea, type Box, type Pt };
 
 /** A zone outline: the first ring is the outline, any further rings are cut-outs (KiCad's ZONE::AddPolygon). */
 export interface ZoneGeom {
@@ -257,10 +258,8 @@ export interface ZoneNet {
 }
 
 /** Leaf of a hierarchical net name. */
-export const netLeaf = (n: string) => n.slice(n.lastIndexOf('/') + 1) || n;
 
 /** A net name that reads as ground: GND, AGND, GND_PWR, GROUND, VSS, EARTH, 0V. */
-export const isGroundName = (net: string) => /gnd|ground|vss|earth/i.test(netLeaf(net)) || /^0v$/i.test(netLeaf(net));
 
 /** Every net with zones, with its zone area per copper layer, largest first. `copper` is the layer order. */
 export function zoneNets(g: BoardGeometry, copper: string[]): ZoneNet[] {
