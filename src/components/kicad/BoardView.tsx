@@ -31,7 +31,8 @@ interface Props {
   highlight?: Set<string>;
   markers: BoardMarker[];
   onPick?: (p: { marker?: BoardMarker; net?: string }) => void;
-  height?: number;
+  /** Height in px, or 'fill' to take the height of the container (full screen). */
+  height?: number | 'fill';
   /** Area to show (board mm); when it changes the view zooms to it, after its own sizing. */
   focus?: [number, number, number, number] | null;
 }
@@ -177,7 +178,7 @@ function extent(d: BoardDrawing): [number, number, number, number] {
 export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ drawing, visible, highlight, markers, onPick, height = 560, focus }, ref) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: 800, h: height });
+  const [size, setSize] = useState({ w: 800, h: height === 'fill' ? 560 : height });
   const cam = useRef<Camera>({ x: 0, y: 0, scale: 5 });
   const raf = useRef(0);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -312,14 +313,24 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
 
   useImperativeHandle(ref, () => ({ fit, zoomTo, image: () => canvas.current }), [fit, zoomTo]);
 
-  // size: follow the container width
+  // size: follow the container width (and its height in 'fill' mode)
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setSize({ w: Math.max(200, el.clientWidth), h: height }));
+    const ro = new ResizeObserver(() => setSize({ w: Math.max(200, el.clientWidth), h: height === 'fill' ? Math.max(200, el.clientHeight) : height }));
     ro.observe(el);
     return () => ro.disconnect();
   }, [height]);
+  // a resize keeps the centre of a view the user has moved where it was
+  const lastSize = useRef(size);
+  useEffect(() => {
+    const prev = lastSize.current;
+    lastSize.current = size;
+    if (!placed.current || (prev.w === size.w && prev.h === size.h)) return;
+    const c = cam.current;
+    cam.current = { ...c, x: c.x + (prev.w - size.w) / 2 / c.scale, y: c.y + (prev.h - size.h) / 2 / c.scale };
+    schedule();
+  }, [size, schedule]);
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
@@ -390,7 +401,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   };
 
   return (
-    <div ref={wrap} className="relative w-full select-none" style={{ height }}>
+    <div ref={wrap} className="relative w-full select-none" style={{ height: height === 'fill' ? '100%' : height }}>
       <canvas
         ref={canvas}
         style={{ width: size.w, height: size.h, touchAction: 'none', cursor: 'grab' }}

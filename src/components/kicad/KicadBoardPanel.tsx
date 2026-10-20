@@ -36,6 +36,31 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
   const [net, setNet] = useState('');
   const [note, setNote] = useState('');
   const view = useRef<BoardViewApi>(null);
+  // full screen: the browser's own where it is offered for elements, else a window-filling overlay (iPhone Safari)
+  const box = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState<'' | 'api' | 'overlay'>('');
+  useEffect(() => {
+    const change = () => setFull((f) => (document.fullscreenElement && document.fullscreenElement === box.current ? 'api' : f === 'api' ? '' : f));
+    document.addEventListener('fullscreenchange', change);
+    return () => document.removeEventListener('fullscreenchange', change);
+  }, []);
+  useEffect(() => {
+    if (full !== 'overlay') return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setFull('');
+    window.addEventListener('keydown', esc);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', esc);
+      document.body.style.overflow = overflow;
+    };
+  }, [full]);
+  const toggleFull = () => {
+    if (full === 'api') void document.exitFullscreen?.();
+    else if (full === 'overlay') setFull('');
+    else if (box.current?.requestFullscreen && document.fullscreenEnabled) box.current.requestFullscreen().catch(() => setFull('overlay'));
+    else setFull('overlay');
+  };
 
   useEffect(() => {
     let live = true;
@@ -98,13 +123,19 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
         <button type="button" className="btn" onClick={() => view.current?.fit()}>
           Fit board
         </button>
+        <button type="button" className="btn" aria-pressed={!!full} onClick={toggleFull}>
+          {full ? 'Exit full screen' : 'Full screen'}
+        </button>
       </span>
     </div>
   );
 
   return (
     <Panel title="Board">
+      <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
       {layerToggle}
+      <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
+      <div className={full ? 'min-h-0 flex-1' : undefined}>
       <BoardView
         ref={view}
         drawing={d}
@@ -112,7 +143,7 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
         highlight={highlight}
         markers={markers}
         focus={focus}
-        height={typeof window !== 'undefined' && window.innerWidth < 640 ? 400 : 560}
+        height={full ? 'fill' : typeof window !== 'undefined' && window.innerWidth < 640 ? 400 : 560}
         onPick={(p) => {
           if (p.marker) {
             onSelect(p.marker.item);
@@ -125,7 +156,14 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
           }
         }}
       />
-      <div className="grid gap-3 border-t border-line px-2.5 py-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      </div>
+      <div
+        className={
+          full
+            ? 'flex max-h-[38vh] flex-col gap-3 overflow-y-auto border-t border-line px-2.5 py-2 lg:max-h-none lg:w-[380px] lg:border-l lg:border-t-0'
+            : 'grid gap-3 border-t border-line px-2.5 py-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]'
+        }
+      >
         <div>
           <p className="mb-1 font-semibold">
             Findings:{' '}
@@ -135,7 +173,7 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
                 ? 'checking the routing…'
                 : 'none'}
           </p>
-          <ul className="max-h-[260px] overflow-y-auto">
+          <ul className={full ? 'lg:max-h-[45vh] lg:overflow-y-auto' : 'max-h-[260px] overflow-y-auto'}>
             {problems.map((c) => {
               const k = itemKey(c);
               return (
@@ -180,6 +218,8 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
             </p>
           )}
         </div>
+      </div>
+      </div>
       </div>
     </Panel>
   );
