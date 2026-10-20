@@ -42,6 +42,11 @@ export interface InterfaceSpec {
   intraPairBudgetPs?: number;
   laneSkewPs?: number;
   laneSkewMm?: number;
+  /**
+   * Vendor layout guidelines the routing check measures on a routed board, each with the index of the source
+   * it was read in. They are recommendations, so a pair outside one is a warning, never a fail.
+   */
+  layout?: LayoutGuides;
   /** Names for the two skew limits where “intra-pair” and “lane-to-lane” do not fit. */
   skewLabels?: { intra?: string; lane?: string };
   /** Board share of the channel insertion loss at the Nyquist frequency, dB. */
@@ -54,6 +59,36 @@ export interface InterfaceSpec {
   maxLossPerInGHz?: number;
   rules: SpecRule[];
   sources: DataSource[];
+}
+
+/** A number from a source: `src` indexes the interface's sources. */
+export interface Guide {
+  value: number;
+  src: number;
+}
+
+export interface LayoutGuides {
+  /** Longest via stub, mm (the unused barrel beyond the outermost layer the signal uses). */
+  viaStubMm?: Guide;
+  /** Ground stitching via within this distance of each signal via (centre to centre, mm) where the pair moves to a layer with no common reference plane. */
+  returnViaMm?: Guide;
+  /** Most vias on each trace of a pair. */
+  viasPerTrace?: Guide;
+  /** Both traces of a pair have the same number of vias. */
+  equalVias?: { src: number };
+  /** Edge-to-edge spacing to any other signal on the same layer, mm. */
+  spaceMm?: Guide;
+  /** Edge-to-edge spacing to another pair, mm. */
+  pairSpaceMm?: Guide;
+  /** Spacing to another pair in trace widths (the 5W rule). */
+  pairSpaceW?: Guide;
+  /** Spacing to another pair in heights of the trace above its reference plane. */
+  pairSpaceH?: Guide;
+  /** Length difference between the lanes of one link (a layout guideline, mm or ps) … */
+  laneSkewMm?: Guide;
+  laneSkewPs?: Guide;
+  /** … and the lane-to-lane skew the specification allows, ps: beyond it a lane fails. */
+  laneSkewBudgetPs?: Guide;
 }
 
 const MIL = 0.0254;
@@ -105,6 +140,11 @@ const TI_SLAAE45: DataSource = {
   title: 'TI SLAAE45 — Layout Guidelines for PCIe Gen 4 (September 2021)',
   url: 'https://www.ti.com/lit/pdf/slaae45',
   note: 'Table 2-1: Nyquist frequency per generation, 100 Ω ±5 % for Gen 1/2 and 85 Ω ±5 % for Gen 3/4, 5 mil intra-pair, no inter-pair requirement, AC coupling 75–220 nF, at most two vias per high-speed trace, via stubs under 15 mil.',
+};
+const TI_SLLA414_GENERAL: DataSource = {
+  title: 'TI SLLA414A — High-Speed Layout Guidelines for Signal Conditioners and USB Hubs (rev. January 2026)',
+  url: 'https://www.ti.com/lit/an/slla414/slla414.pdf',
+  note: 'General rules for USB, HDMI, DisplayPort, PCIe and SATA (§3–§4): stitching vias within 200 mil of the signal vias where the ground reference changes, 5W between pairs, 30 mil to other signals, via stubs under 15 mil, equal via counts on both traces.',
 };
 const SAMTEC_PCIE: DataSource = {
   title: 'Samtec — Successful PCIe Interconnect Guidelines at 8, 16 and 32 GT/s (April 2021)',
@@ -181,6 +221,14 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 8,
     nyquistGHz: 4,
     encoding: '128b/130b, 125 ps unit interval',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 3 },
+      returnViaMm: { value: 200 * MIL, src: 4 },
+      viasPerTrace: { value: 2, src: 3 },
+      equalVias: { src: 3 },
+      spaceMm: { value: 30 * MIL, src: 4 },
+      pairSpaceW: { value: 5, src: 4 },
+    },
     z: { kind: 'diff', target: 85, min: 70, max: 100, note: 'The CEM requires 70–100 Ω at 8 GT/s; 85 Ω is what vendors build add-in cards to, so that any root complex works.' },
     intraPairMm: 5 * MIL,
     laneSkewPs: 350,
@@ -203,13 +251,14 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'length', label: 'Trace delay', req: 'At most 750 ps from the edge finger, roughly 5.3 in of microstrip or 4.3 in of stripline. The whole channel reaches about 20 in on ordinary FR-4.', normative: true, src: 0 },
       { key: 'cap', label: 'AC coupling', req: 'Mandatory on the transmit pair. Vendors use 75–220 nF; the value changed from the Gen 1/2 range at 8 GT/s.', detail: 'Use the smallest body you can (0201), void the reference plane under the pads two layers deep, and place both capacitors of a pair identically.', normative: true, src: 0 },
       { key: 'via', label: 'Vias and stubs', req: 'Two vias per trace, equal counts and spacing on both traces, stubs under 15 mil or back-drilled.', detail: 'Stubs up to about 80 mil are tolerable at 8 GT/s; they are not at 16 GT/s.', src: 3 },
-      { key: 'ref', label: 'Reference plane and stitching', req: 'Ground reference throughout, stitching vias within 50 mil of each signal via, and no reference to a power plane.', src: 1 },
-      { key: 'space', label: 'Spacing', req: 'At least four times the trace-to-plane height between pairs, and five times it to a plane edge.', src: 1 },
+      { key: 'ref', label: 'Reference plane', req: 'Ground reference throughout and no reference to a power plane.', src: 1 },
+      { key: 'ref', label: 'Stitching vias', req: 'Where the ground reference changes, stitching vias within 200 mil of the signal vias.', detail: 'TI’s PCIe Gen 5 guide tightens this to 50 mil.', src: 4 },
+      { key: 'space', label: 'Spacing', req: '5W between pairs and 30 mil to other signals.', detail: 'TI’s PCIe Gen 5 guide asks for four times the trace-to-plane height between pairs and five times it to a plane edge.', src: 4 },
       { key: 'clock', label: 'Reference clock', req: '100 MHz ±300 ppm HCSL, routed as 100 Ω differential — not 85 Ω like the data pairs.', src: 1 },
       { key: 'other', label: 'Edge fingers', req: 'Remove ground and power planes under the edge fingers.', normative: true, src: 0 },
       { key: 'other', label: 'Fibre weave', req: 'Skew from the glass weave shows up above about 2 GHz. Route at 10–35° to the weave, or rotate the panel image, on any board at 8 GT/s or faster.', src: 1 },
     ],
-    sources: [PCIE_CEM3, TI_SNLA426, SAMTEC_PCIE, TI_SLAAE45],
+    sources: [PCIE_CEM3, TI_SNLA426, SAMTEC_PCIE, TI_SLAAE45, TI_SLLA414_GENERAL],
   },
   {
     id: 'pcie-gen4',
@@ -219,6 +268,14 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 16,
     nyquistGHz: 8,
     encoding: '128b/130b, 62.5 ps unit interval',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 0 },
+      returnViaMm: { value: 200 * MIL, src: 4 },
+      viasPerTrace: { value: 2, src: 0 },
+      equalVias: { src: 0 },
+      spaceMm: { value: 30 * MIL, src: 4 },
+      pairSpaceW: { value: 5, src: 4 },
+    },
     z: { kind: 'diff', target: 85, min: 76.5, max: 93.5, note: '85 Ω ±10 % is the vendor rule for Gen 4; the CEM revision that covers 16 GT/s is not public.' },
     intraPairMm: 5 * MIL,
     lossBudgetDb: 8,
@@ -232,11 +289,12 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'other', label: 'Material', req: 'Standard FR-4 loses about 1.3 dB/in at 8 GHz; mid-loss laminates about 0.4–0.6 dB/in, and very low loss about 0.2–0.35 dB/in.', detail: 'Insertion loss also rises by roughly a tenth over temperature and humidity, which the budget has to carry.', src: 1 },
       { key: 'cap', label: 'AC coupling', req: 'Mandatory on the transmit pair, 75–220 nF, 0201 preferred, with the plane voided under the pads.', detail: 'Never rotate one capacitor of a pair relative to the other, and keep the stub into the pad symmetrical: 20 mil of stub already reflects at these frequencies.', src: 1 },
       { key: 'via', label: 'Vias and stubs', req: 'Two vias per trace; stubs of 50 mil and more need attention, and back-drilling below 15 mil is the usual answer. Remove unused via pads.', src: 2 },
-      { key: 'ref', label: 'Reference plane and stitching', req: 'Ground reference throughout, stitching vias within 50 mil of each transition, stitching capacitors of 1 µF or less where a split is unavoidable.', src: 1 },
-      { key: 'space', label: 'Spacing', req: 'At least four times the trace-to-plane height between pairs, five times it to a plane edge, and bends of at least 135°.', src: 1 },
+      { key: 'ref', label: 'Reference plane', req: 'Ground reference throughout, stitching capacitors of 1 µF or less where a split is unavoidable.', src: 1 },
+      { key: 'ref', label: 'Stitching vias', req: 'Where the ground reference changes, stitching vias within 200 mil of the signal vias.', detail: 'TI’s PCIe Gen 5 guide tightens this to 50 mil.', src: 4 },
+      { key: 'space', label: 'Spacing', req: '5W between pairs and 30 mil to other signals.', detail: 'TI’s PCIe Gen 5 guide asks for four times the trace-to-plane height between pairs, five times it to a plane edge, and bends of at least 135°.', src: 4 },
       { key: 'other', label: 'Fibre weave', req: 'Route at an angle to the weave or use a spread-glass laminate; weave skew of several picoseconds is normal at 8 GHz.', src: 1 },
     ],
-    sources: [TI_SLAAE45, TI_SNLA426, SAMTEC_PCIE, PCIE_CEM3],
+    sources: [TI_SLAAE45, TI_SNLA426, SAMTEC_PCIE, PCIE_CEM3, TI_SLLA414_GENERAL],
   },
   {
     id: 'pcie-gen5',
@@ -246,6 +304,11 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 32,
     nyquistGHz: 16,
     encoding: '128b/130b, 31.25 ps unit interval',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 1 },
+      returnViaMm: { value: 50 * MIL, src: 1 },
+      pairSpaceH: { value: 4, src: 1 },
+    },
     z: { kind: 'diff', target: 85, min: 76.5, max: 93.5 },
     intraPairMm: 5 * MIL,
     lossBudgetDb: 9.5,
@@ -258,7 +321,7 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'other', label: 'Bandwidth', req: 'A 12 ps edge needs about 29 GHz of bandwidth, so every discontinuity has to be modelled, not estimated.', src: 1 },
       { key: 'other', label: 'Material', req: 'Very low loss laminate: about 0.34 dB/in at 16 GHz for Megtron 6 class, against 1.3 dB/in for FR-4.', src: 1 },
       { key: 'via', label: 'Vias and stubs', req: 'Expect to simulate every via. Back-drill anything over 15 mil of stub; follow the 10/20/40 mil drill, pad and anti-pad rule and remove unused pads.', detail: 'A short stub is not automatically better: it reflects less but couples more into its neighbours.', src: 1 },
-      { key: 'ref', label: 'Reference plane and stitching', req: 'Ground reference throughout, as many ground stitches around the anti-pad as fit, staggered rather than aligned vias.', src: 1 },
+      { key: 'ref', label: 'Reference plane and stitching', req: 'Ground reference throughout; where the ground reference changes, stitching vias within 50 mil of each signal via, as many around the anti-pad as fit, staggered rather than aligned.', src: 1 },
       { key: 'cap', label: 'AC coupling', req: 'Mandatory on the transmit pair, 75–220 nF (220 nF is the usual choice), 0201 body, plane voided under the pads two layers deep.', src: 1 },
       { key: 'clock', label: 'Reference clock', req: '100 MHz HCSL at 100 Ω differential, ±100 ppm, with random jitter under about 150–200 fs rms.', src: 1 },
       { key: 'space', label: 'Spacing', req: 'Four to five times the trace-to-plane height between pairs and between interfaces; keep surface transitions under half an inch.', src: 2 },
@@ -275,6 +338,9 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 0.25,
     nyquistGHz: 0.0625,
     encoding: 'PAM-5, 125 MBd per pair, four pairs',
+    layout: {
+      pairSpaceMm: { value: 30 * MIL, src: 0 },
+    },
     z: { kind: 'diff', target: 100, min: 90, max: 110 },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairMm: 20 * MIL,
@@ -429,6 +495,10 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 0.48,
     nyquistGHz: 0.24,
     encoding: 'NRZI with bit stuffing (the clock is carried in the data)',
+    layout: {
+      viasPerTrace: { value: 4, src: 1 },
+      spaceMm: { value: 30 * MIL, src: 1 },
+    },
     z: { kind: 'diff', target: 90, min: 76.5, max: 103.5 },
     z2: { kind: 'se', target: 45, label: '45 Ω from each line to ground' },
     intraPairMm: 50 * MIL,
@@ -441,7 +511,7 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'cap', label: 'AC coupling', req: 'None: High Speed is DC-coupled and series capacitors are not allowed.', detail: 'An edge-rate capacitor is permitted, but the total capacitance at the driver must stay under 75 pF and balanced within 10 %.', normative: true, src: 0 },
       { key: 'term', label: 'Termination', req: 'On-die, 45 Ω from each line to ground at both ends. External series resistors, where used, sit within 200 mil of the controller.', normative: true, src: 0 },
       { key: 'other', label: 'Pull-up', req: 'A High-Speed-capable device pulls D+ up through 1.5 kΩ ±5 % to 3.3 V; a downstream port pulls both lines down through 15 kΩ.', normative: true, src: 0 },
-      { key: 'via', label: 'Vias and stubs', req: 'At most four vias on the pair, no stub longer than 200 mil, and no test points.', src: 1 },
+      { key: 'via', label: 'Vias and stubs', req: 'At most four vias on each trace, no stubs (branches) on the pair, and no test points.', src: 1 },
       { key: 'space', label: 'Spacing', req: 'At least 30 mil to any other signal and 50 mil to a clock or other periodic signal.', src: 1 },
       { key: 'ref', label: 'Reference plane', req: 'Keep the pair over solid ground, never across a split or a void, and at least three dielectric heights from a plane edge.', src: 2 },
       {
@@ -475,6 +545,13 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 5,
     nyquistGHz: 2.5,
     encoding: '8b/10b, with mandatory spread-spectrum clocking (30–33 kHz, 0 to −5000 ppm)',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 1 },
+      returnViaMm: { value: 200 * MIL, src: 1 },
+      equalVias: { src: 1 },
+      spaceMm: { value: 30 * MIL, src: 1 },
+      pairSpaceW: { value: 5, src: 1 },
+    },
     z: { kind: 'diff', target: 90, min: 81, max: 99, note: 'Vendors route SuperSpeed to 90 Ω ±10 %; TI allows ±15 %.' },
     intraPairMm: 5 * MIL,
     intraPairGuideline: true,
@@ -538,6 +615,13 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 10,
     nyquistGHz: 5,
     encoding: '128b/132b, with mandatory spread-spectrum clocking',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 1 },
+      returnViaMm: { value: 200 * MIL, src: 1 },
+      equalVias: { src: 1 },
+      spaceMm: { value: 30 * MIL, src: 1 },
+      pairSpaceW: { value: 5, src: 1 },
+    },
     z: { kind: 'diff', target: 90, min: 81, max: 99 },
     intraPairMm: 5 * MIL,
     intraPairGuideline: true,
@@ -551,7 +635,7 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'loss', label: 'Insertion loss', req: 'Informative budget 8.5 dB for the host or device, 23 dB end to end, at the 5 GHz Nyquist frequency.', normative: true, src: 0 },
       { key: 'cap', label: 'AC coupling', req: 'Mandatory on every transmitter, 75–265 nF (297–363 nF if a receiver is coupled as well), in an 0402 package or smaller, next to the connector.', normative: true, src: 0 },
       { key: 'term', label: 'Termination', req: 'On-die, 72–120 Ω differential; nothing external on the pair.', normative: true, src: 0 },
-      { key: 'via', label: 'Vias and stubs', req: 'Under 15 mil of stub or back-drill; two via pairs at most; equal via count on both traces.', detail: 'At 5 GHz the stub, not the barrel, is what costs you the eye.', src: 1 },
+      { key: 'via', label: 'Vias and stubs', req: 'Under 15 mil of stub or back-drill; equal via count on both traces.', detail: 'At 5 GHz the stub, not the barrel, is what costs you the eye.', src: 1 },
       { key: 'ref', label: 'Reference plane', req: 'One solid ground reference end to end, with stitching vias within 200 mil of every layer change.', src: 1 },
       { key: 'space', label: 'Spacing', req: '5W between pairs, 30 mil to other signals, 50 mil to clocks.', src: 1 },
       { key: 'other', label: 'Connector launch', req: 'Void the plane under the receptacle and under the coupling capacitors, at least two layers deep.', src: 3 },
@@ -589,6 +673,15 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 3.4,
     nyquistGHz: 1.7,
     encoding: 'TMDS, 8b/10b, clock forwarded on its own pair',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 0 },
+      returnViaMm: { value: 200 * MIL, src: 0 },
+      equalVias: { src: 0 },
+      spaceMm: { value: 30 * MIL, src: 0 },
+      pairSpaceW: { value: 5, src: 0 },
+      laneSkewMm: { value: 1 * IN, src: 1 },
+      laneSkewBudgetPs: { value: 588, src: 2 },
+    },
     z: { kind: 'diff', target: 100, min: 85, max: 115, note: '100 Ω ±15 % differential; TI allows 75–110 Ω between a GPU and a redriver on a source board.' },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairMm: 5 * MIL,
@@ -605,7 +698,8 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'cap', label: 'AC coupling', req: 'None: TMDS is DC-coupled, because the sink biases the pair through its 50 Ω pull-ups.', detail: 'A redriver in AC-coupled transmit mode needs 85–253 nF and a 499 Ω pull-down to ground on every output between the capacitor and the receptacle, or the common mode is out of spec.', src: 1 },
       { key: 'term', label: 'Termination', req: 'On-die: 50 Ω to the 3.3 V termination supply at the sink, driven by a 10 mA current sink, so nothing external belongs on the pair.', src: 3 },
       { key: 'space', label: 'Spacing', req: '5W between pairs, and 8W to 10W around the clock pair; at least 30 mil to any other signal, 50 mil to a periodic one.', src: 1 },
-      { key: 'via', label: 'Vias', req: 'At most two vias from the source to a redriver and one from a redriver to the receptacle, equal counts on both traces, stubs under 15 mil.', src: 1 },
+      { key: 'via', label: 'Vias', req: 'At most two vias from the source to a redriver and one from the redriver to the receptacle.', src: 1 },
+      { key: 'via', label: 'Via count and stubs', req: 'The same number of vias on both traces, stubs under 15 mil (back-drill longer ones) and no unconnected via pads.', src: 0 },
       { key: 'ref', label: 'Reference plane', req: 'Solid ground under the whole run, no plane splits, stitching vias within 200 mil of any layer change.', src: 0 },
       {
         key: 'other',
@@ -648,6 +742,15 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 6,
     nyquistGHz: 3,
     encoding: 'TMDS, 8b/10b, clock at 1/40 of the data rate above 3.4 Gb/s',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 0 },
+      returnViaMm: { value: 200 * MIL, src: 0 },
+      equalVias: { src: 0 },
+      spaceMm: { value: 30 * MIL, src: 0 },
+      pairSpaceW: { value: 5, src: 0 },
+      laneSkewMm: { value: 1 * IN, src: 1 },
+      laneSkewBudgetPs: { value: 333, src: 2 },
+    },
     z: { kind: 'diff', target: 100, min: 85, max: 115 },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairMm: 5 * MIL,
@@ -664,7 +767,9 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'cap', label: 'AC coupling', req: 'None on a plain HDMI link. A redriver used in AC-coupled mode needs 85–253 nF within 0.3 in of the device, plus the 499 Ω pull-downs.', src: 1 },
       { key: 'term', label: 'Termination', req: 'On-die 50 Ω to the termination supply; nothing external.', src: 3 },
       { key: 'space', label: 'Spacing', req: '5W between pairs, 8W–10W around the clock pair, 30 mil to other signals, 50 mil to periodic ones.', src: 1 },
-      { key: 'via', label: 'Vias', req: 'One or two vias per segment, matched on both traces, stubs under 15 mil, no unconnected via pads.', src: 0 },
+      { key: 'via', label: 'Vias', req: 'At most two vias between the source and a redriver and one between the redriver and the connector.', src: 1 },
+      { key: 'via', label: 'Via count and stubs', req: 'The same number of vias on both traces, stubs under 15 mil (back-drill longer ones) and no unconnected via pads.', src: 0 },
+      { key: 'ref', label: 'Reference plane', req: 'Solid ground under the whole run; where the ground reference changes, stitching vias within 200 mil of the signal vias.', src: 0 },
       { key: 'other', label: 'Connector pads', req: 'Keep copper out from under and between the connector pads, or the launch falls below 75 Ω.', src: 2 },
       { key: 'other', label: 'Test points', req: 'None on a high-speed pair, and no stubs of any kind.', src: 0 },
     ],
@@ -677,7 +782,7 @@ export const INTERFACES: InterfaceSpec[] = [
       {
         title: 'TI TDP0604 data sheet SLLSFJ8A (Table 9-2) and TMDS1204 SLLSF57A',
         url: 'https://www.ti.com/lit/ds/symlink/tdp0604.pdf',
-        note: '6 Gb/s HDMI 2.0 budgets: 1–16 in source to device and 0.75–2 in device to receptacle, 0.1–0.2 dB/in/GHz, 5 mil intra-pair and 1 in channel-to-channel on a source board, −24 dB crosstalk, coupling capacitors of 85–253 nF.',
+        note: '6 Gb/s HDMI 2.0 budgets: 1–16 in source to device and 0.75–2 in device to receptacle, 0.1–0.2 dB/in/GHz, 1 in channel-to-channel on a source board, two vias before and one after the redriver, −24 dB crosstalk, coupling capacitors of 85–253 nF; 5 mil intra-pair from the TMDS1204 data sheet (Table 8-2).',
       },
       {
         title: 'TI HDMI Design Guide (June 2007)',
@@ -699,6 +804,13 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 5.4,
     nyquistGHz: 2.7,
     encoding: '8b/10b, 1.62 / 2.7 / 5.4 Gb/s link rates',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 0 },
+      returnViaMm: { value: 200 * MIL, src: 0 },
+      equalVias: { src: 0 },
+      spaceMm: { value: 30 * MIL, src: 0 },
+      pairSpaceW: { value: 5, src: 0 },
+    },
     z: { kind: 'diff', target: 100, min: 90, max: 110, note: 'TI asks for ±10 %, NXP for ±20 %; some platforms deliberately target 85 Ω instead, to cut loss and match the connector.' },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairPs: 20,
@@ -709,7 +821,7 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'cap', label: 'AC coupling', req: 'Required on the main link: 75–200 nF, 100 nF typical, same value and package on both lines of a pair, 0402 preferred and 0603 the largest allowed.', normative: true, src: 1 },
       { key: 'term', label: 'Termination', req: 'On-die, 100 Ω differential at both ends; the link is doubly terminated and AC-coupled.', src: 1 },
       { key: 'loss', label: 'Trace loss', req: 'Around 0.35–0.5 dB per inch on FR-4, plus about 0.25 dB for each via pair, so vias — not trace length — often set the reach.', src: 1 },
-      { key: 'via', label: 'Vias', req: 'Two or fewer per trace, pad 25 mil or less and finished hole 14 mil or less, placed as a symmetric pair, with one to three ground stitching vias per pair.', src: 1 },
+      { key: 'via', label: 'Vias', req: 'As few as possible; where a pair changes layer its two vias sit as a symmetric pair in the same place, with a pad of 25 mil or less, a finished hole of 14 mil or less and one to three ground stitching vias per pair.', src: 1 },
       { key: 'ref', label: 'Reference plane', req: 'Never straddle a plane split; keep the same ground reference through the whole run.', src: 1 },
       { key: 'space', label: 'Spacing', req: 'At least four times the dielectric height to other pairs, 30 mil to noisy or faster-edged signals, and bends of 135° or more.', src: 1 },
       { key: 'other', label: 'Length matching', req: 'Correct a mismatch in the segment where it happens, and keep serpentine jogs at least three trace widths long.', src: 1 },
@@ -741,6 +853,13 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 8.1,
     nyquistGHz: 4.05,
     encoding: '8b/10b (128b/132b only arrives with DisplayPort 2.0 UHBR)',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 0 },
+      returnViaMm: { value: 200 * MIL, src: 0 },
+      equalVias: { src: 0 },
+      spaceMm: { value: 30 * MIL, src: 0 },
+      pairSpaceW: { value: 5, src: 0 },
+    },
     z: { kind: 'diff', target: 100, min: 90, max: 110 },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground' },
     intraPairPs: 20,
@@ -752,7 +871,7 @@ export const INTERFACES: InterfaceSpec[] = [
       { key: 'term', label: 'Termination', req: 'On-die 100 Ω at both ends; some receivers can be reprogrammed to 80 Ω to match a lower board impedance.', src: 0 },
       { key: 'loss', label: 'Trace loss', req: 'At 4.05 GHz plain FR-4 costs roughly 0.7 dB per inch, so a long run needs a better laminate or a redriver.', src: 1 },
       { key: 'other', label: 'Fibre weave', req: 'Route long runs at an angle to the glass weave, or use a spread-glass laminate: weave skew is a real effect at 4 GHz.', src: 1 },
-      { key: 'via', label: 'Vias', req: 'Two or fewer per trace, symmetric pairs, stubs under 15 mil or back-drilled, anti-pads of about 30 mil on every layer with no unconnected pads.', src: 0 },
+      { key: 'via', label: 'Vias', req: 'The same number of vias on both traces, stubs under 15 mil or back-drilled, anti-pads of about 30 mil on every layer with no unconnected pads.', src: 0 },
       { key: 'ref', label: 'Reference plane', req: 'One ground reference from end to end, stitching vias within 200 mil of a layer change, stitching capacitors of 1 µF or less if a split must be crossed.', src: 0 },
       { key: 'space', label: 'Spacing', req: '5W between pairs, 30 mil keep-out to other signals, 50 mil to clocks, bends of at least 135°, package escape within 0.25 in.', src: 0 },
     ],
@@ -877,6 +996,12 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 2.5,
     nyquistGHz: 1.25,
     encoding: 'Double data rate: the clock lane runs at half the data rate, with a single-ended 1.2 V low-power mode on the same wires',
+    layout: {
+      viasPerTrace: { value: 2, src: 0 },
+      equalVias: { src: 0 },
+      pairSpaceW: { value: 5, src: 1 },
+      laneSkewPs: { value: 40, src: 0 },
+    },
     z: { kind: 'diff', target: 100, min: 85, max: 115, note: 'TI allows ±15 %, Efinix and Renesas ±10 % to ±20 %. The single-ended value matters just as much, because low-power mode drives each wire on its own.' },
     z2: { kind: 'se', target: 50, label: '50 Ω from each line to ground (low-power mode)' },
     intraPairPs: 8,
@@ -934,6 +1059,11 @@ export const INTERFACES: InterfaceSpec[] = [
     rateGbps: 6,
     nyquistGHz: 3,
     encoding: '8b/10b NRZ, with mandatory down-spread spread-spectrum clocking at 30–33 kHz',
+    layout: {
+      viaStubMm: { value: 15 * MIL, src: 1 },
+      returnViaMm: { value: 200 * MIL, src: 1 },
+      spaceMm: { value: 30 * MIL, src: 1 },
+    },
     z: { kind: 'diff', target: 100, min: 85, max: 115, note: 'The receiver pair must be 85–115 Ω; the cable is held to ±10 % and the mated connector to ±15 %.' },
     intraPairPs: 20,
     maxLenMm: 3050 * MIL,
