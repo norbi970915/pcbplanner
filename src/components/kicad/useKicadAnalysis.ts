@@ -12,7 +12,7 @@ import { fmt, fromMm } from '../../lib/units';
 import { useSettings } from '../../state/settings';
 
 /** Inputs of the analysis, kept in the page address (useUrlState). */
-export const KICAD_ANALYSIS_DEFAULTS = { t50: true, t90: true, t100: true, t85: false, grule: 'fixed', gap: 0.127, f: 4, mask: true, foil: 'ed', rt: '', view: 'overview', item: '' };
+export const KICAD_ANALYSIS_DEFAULTS = { t50: true, t90: true, t100: true, t85: false, grule: 'fixed', gap: 0.127, f: 4, mask: true, foil: 'ed', rt: '', view: 'overview', item: '', pnet: '', pmode: 'quick', pi: 1, pdt: 10, pamb: 25, psrc: '', ploads: '', pv: 0, pmap: 'drop', player: '' };
 export type KicadAnalysisInputs = typeof KICAD_ANALYSIS_DEFAULTS;
 export type SetKicadInputs = (patch: Partial<KicadAnalysisInputs>) => void;
 

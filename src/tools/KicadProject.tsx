@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { StackPreview } from '../components/StackPreview';
+import { Sources } from '../components/Sources';
 import { ToolPage } from '../components/ToolPage';
 import { Notes, Panel, Section } from '../components/ui';
 import { AnalysisMethod } from '../components/kicad/AnalysisMethod';
 import { KicadBoardPanel } from '../components/kicad/KicadBoardPanel';
+import { KicadPowerPanel } from '../components/kicad/KicadPowerPanel';
 import { AnalysisProperties, BoardSummary, ImpedanceByLayerPanel, NoStackupNote, RoutingPanel } from '../components/kicad/KicadAnalysis';
 import { analysisStatus, KICAD_ANALYSIS_DEFAULTS, useKicadAnalysis } from '../components/kicad/useKicadAnalysis';
 import { useKicadFileLoader } from '../components/kicad/KicadFileLoader';
@@ -11,6 +13,7 @@ import { stackupItemThickness, versionDate } from '../lib/kicadImport';
 import { netClasses, pairSummary, pairs, type KicadProjectData } from '../lib/kicadProjectQueries';
 import { KICAD_DB_NAME } from '../state/kicadProjectStore';
 import { useUrlState } from '../state/useUrlState';
+import type { DataSource } from '../data/source';
 
 /**
  * The tools that read the active project and what each takes from it. `ready`: the tool has its From KiCad
@@ -200,7 +203,7 @@ export default function KicadProject() {
   return (
     <ToolPage
       title="KiCad Project"
-      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
+      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The Power tab checks the current capacity of the tracks and vias of a power net and solves its DC voltage drop, drawn as heat maps on the board. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}
       onReset={reset}
@@ -224,6 +227,7 @@ export default function KicadProject() {
             [
               ['overview', 'Overview'],
               ['board', 'Board'],
+              ['power', 'Power'],
             ] as const
           ).map(([v, label]) => (
             <button
@@ -242,7 +246,8 @@ export default function KicadProject() {
         <KicadBoardPanel data={data} checked={a.routingCheck.checked} solving={a.routingCheck.progress.done < a.routingCheck.progress.total} selected={p.item} onSelect={(item) => set({ item })} />
       )}
       {data && p.view === 'board' && !calc && <Notes items={['The board view needs the stackup of the board: load a board saved with KiCad 6 or later.']} />}
-      {data && p.view !== 'board' && (
+      {data && p.view === 'power' && <KicadPowerPanel data={data} p={p} set={set} />}
+      {data && p.view !== 'board' && p.view !== 'power' && (
         <>
           <Panel title="Project" allowInvalid>
             <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
@@ -269,6 +274,24 @@ export default function KicadProject() {
     </ToolPage>
   );
 }
+
+const POWER_SOURCES: readonly DataSource[] = [
+  {
+    title: 'CircuitCalculator.com, PCB Trace Width Calculator',
+    url: 'https://circuitcalculator.com/wordpress/2006/01/31/pcb-trace-width-calculator/',
+    note: 'The IPC-2221 curve fit of the Power tab: I = k·ΔT^0.44·A^0.725 with k = 0.048 (external) and 0.024 (internal), A in square mils, fitted to the IPC-2221 (IPC-D-275) charts.',
+  },
+  {
+    title: 'D. G. Brooks with J. Adam, "Trace Currents and Temperatures Revisited", UltraCAD Design, April 2015',
+    url: 'https://www.mathscinotes.com/wp-content/uploads/2016/06/pcbtempr.pdf',
+    note: 'IPC-2152 against the IPC-2221 charts: about 25 % lower currents for external traces, and internal traces that cool almost as well as external ones or better (introduction).',
+  },
+  {
+    title: 'NBS Handbook 100, Copper Wire Tables (1966)',
+    url: 'https://nvlpubs.nist.gov/nistpubs/Legacy/hb/nbshandbook100.pdf',
+    note: 'International Annealed Copper Standard: 1/58 Ω·mm²/m at 20 °C and a temperature coefficient of 0.00393 per °C, the resistivity of the DC drop.',
+  },
+];
 
 export function Method() {
   return (
@@ -303,6 +326,35 @@ export function Method() {
         closest spacing to another signal. Choose a pair or net in the list, a marker on the board, or the board link in the routing check to highlight its copper and zoom to it;
         a click on a track highlights its net. Problems that belong to the whole route, such as impedance, skew or length, highlight the pair without a marker.
       </p>
+      <h2>Power view</h2>
+      <p>
+        The Power tab checks one net at a time, power nets first in the list. <b>Track current</b> is the quick, worst-case check: every track and via of the net is taken to carry the whole net
+        current, and its temperature rise is the IPC-2221 curve fit <i>I</i> = <i>k</i> · Δ<i>T</i>
+        <sup>0.44</sup> · <i>A</i>
+        <sup>0.725</sup> (<i>A</i> in square mils, <i>k</i> = 0.048 on the outer layers and 0.024 on the inner ones), the formula of the Trace Width tool, with the copper thickness of each layer from
+        the stackup. A via barrel is treated as the Via tool treats it: a ring of 25 µm plating around the drill, with the outer-layer constant. Tracks within half the allowed rise are green,
+        up to it amber, above it red. The page also gives the IPC-2221 width for the current. The old charts are not exact either way: the IPC-2152 measurements allow about 25 %
+        less current than the IPC-2221 curve on outer layers, while inner traces cool almost as well as outer ones or better, so the inner-layer constant (half the outer one) is
+        conservative. For a track close to its limit, check it in the Trace Width tool with the IPC-2152 fit.
+      </p>
+      <p>
+        <b>DC drop</b> solves the copper of the net as a resistor network. Choose the source part (the regulator or connector that feeds the net; the part with the most pad area on the net
+        is offered first) and the parts that draw current, with their currents. On every layer with a zone of the net, the zone fills and pads are cut into square cells; neighbouring cells
+        are joined by the sheet conductance <i>t</i>/ρ times the part of the cells that is copper, so a neck or a thermal spoke narrower than a cell keeps its own resistance. Within 0.8 mm of
+        every pad of the source and the loads the cells are split to about 0.03 mm, so the thermal spokes and gaps the whole current goes through are resolved. Every track is a resistor
+        ρ·<i>L</i>/(<i>W</i>·<i>t</i>) between its ends (a track that ends inside a via's ring, overlaps another track's end, or ends on the middle of another track is joined there, as KiCad
+        joins copper by overlap); a via or a plated hole is a barrel resistor between neighbouring copper layers, over the height between the layers from the stackup. A pad is one node on
+        each of its layers, and a track or via joins a zone over its own width, not at one point. The source pads are held at the reference, each load draws its current spread over its
+        pads, and the network is solved by conjugate gradients with an aggregation multigrid preconditioner. ρ is annealed copper's 1/58 Ω·mm²/m at 20 °C with a temperature coefficient of
+        0.393 %/°C, taken at the ambient plus the allowed rise, the hottest the copper may get.
+      </p>
+      <p>
+        The result is the drop at every load (the mean over its pads), the copper loss, the real current and IPC-2221 rise of every track and via, and a heat map on a chosen layer of the
+        drop or of the sheet current density in amperes per millimetre of width (its colours span 99 % of the copper; the few hottest cells by the vias and pads are shown at the top colour).
+        A load the copper does not connect to the source is named and draws no current. The drop between two places changes by a few per cent with the grid, mostly through how a via
+        meets a plane, so read the result to that accuracy. What is not modelled: the return current in the ground net (solve the ground net with the same parts for its share), the
+        resistance inside the parts and their pins, solder, plating on the outer layers, temperature that varies over the board, and AC effects (decoupling, inductance).
+      </p>
       <h2>Net classes and pairs</h2>
       <p>
         The net class table lists the classes of the project file with their track width and differential-pair width and gap, and the number of routed nets (nets with tracks) and pairs for which
@@ -316,6 +368,7 @@ export function Method() {
           </>
         }
       />
+      <Sources items={POWER_SOURCES} />
     </>
   );
 }

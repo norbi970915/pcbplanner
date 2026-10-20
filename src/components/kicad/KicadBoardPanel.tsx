@@ -10,6 +10,7 @@ import type { KicadProjectData } from '../../lib/kicadProjectQueries';
 import { itemReasons, netLeaf } from '../../lib/kicadRouting';
 import { statusLabel, type CheckedItem } from '../../lib/kicadRoutingSolve';
 import { BoardView, layerColor, type BoardMarker, type BoardViewApi } from './BoardView';
+import { useFullScreen } from './useFullScreen';
 
 export const itemKey = (c: CheckedItem) => `${c.group.key}|${c.item.name}`;
 const itemNets = (c: CheckedItem) => (c.item.pair ? [c.item.pair.p, c.item.pair.n] : c.item.net ? [c.item.net.name] : []);
@@ -36,31 +37,7 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
   const [net, setNet] = useState('');
   const [note, setNote] = useState('');
   const view = useRef<BoardViewApi>(null);
-  // full screen: the browser's own where it is offered for elements, else a window-filling overlay (iPhone Safari)
-  const box = useRef<HTMLDivElement>(null);
-  const [full, setFull] = useState<'' | 'api' | 'overlay'>('');
-  useEffect(() => {
-    const change = () => setFull((f) => (document.fullscreenElement && document.fullscreenElement === box.current ? 'api' : f === 'api' ? '' : f));
-    document.addEventListener('fullscreenchange', change);
-    return () => document.removeEventListener('fullscreenchange', change);
-  }, []);
-  useEffect(() => {
-    if (full !== 'overlay') return;
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setFull('');
-    window.addEventListener('keydown', esc);
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', esc);
-      document.body.style.overflow = overflow;
-    };
-  }, [full]);
-  const toggleFull = () => {
-    if (full === 'api') void document.exitFullscreen?.();
-    else if (full === 'overlay') setFull('');
-    else if (box.current?.requestFullscreen && document.fullscreenEnabled) box.current.requestFullscreen().catch(() => setFull('overlay'));
-    else setFull('overlay');
-  };
+  const { box, full, toggle: toggleFull } = useFullScreen();
 
   useEffect(() => {
     let live = true;

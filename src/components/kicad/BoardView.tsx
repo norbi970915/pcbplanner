@@ -4,7 +4,7 @@
 // canvas's does). Drag or arrow keys pan, the wheel, pinch or +/− zoom, F fits; a click on a marker
 // picks it, a click on copper picks its net.
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from 'react';
-import type { BoardDrawing, DrawPad } from '../../lib/kicadDrawing';
+import { padPolygon, type BoardDrawing } from '../../lib/kicadDrawing';
 import { arcOf } from '../../lib/kicadRouting';
 
 export interface BoardMarker {
@@ -17,6 +17,18 @@ export interface BoardMarker {
   note: string;
   item: string; // routing item key
   selected?: boolean;
+}
+
+/** A colour map over one copper layer (cell (c, r) centred on (x0 + c·res, y0 + r·res); NaN is clear). */
+export interface BoardHeat {
+  layer: string;
+  x0: number;
+  y0: number;
+  res: number;
+  nx: number;
+  ny: number;
+  values: Float32Array;
+  max: number;
 }
 
 export interface BoardViewApi {
@@ -35,6 +47,11 @@ interface Props {
   height?: number | 'fill';
   /** Area to show (board mm); when it changes the view zooms to it, after its own sizing. */
   focus?: [number, number, number, number] | null;
+  /** Colour per track (index in drawing.tracks), drawn over the copper. */
+  trackColors?: Map<number, string>;
+  /** Colour per via (index in drawing.vias). */
+  viaColors?: Map<number, string>;
+  heat?: BoardHeat | null;
 }
 
 type Camera = { x: number; y: number; scale: number }; // screen = (board − (x, y)) × scale
@@ -48,41 +65,46 @@ export function layerColor(layer: string): string {
   return inner[(n - 1) % inner.length];
 }
 
-/** Outline of a pad in board coordinates. */
-function padOutline(p: DrawPad): [number, number][] {
-  const pts: [number, number][] = [];
-  const hw = p.w / 2;
-  const hh = p.h / 2;
-  const push = (u: number, v: number) => {
-    // pad frame to board: the inverse of the rotation by the pad angle (KiCad: CCW on screen, y down)
-    const a = (p.angle * Math.PI) / 180;
-    pts.push([p.x + u * Math.cos(a) + v * Math.sin(a), p.y - u * Math.sin(a) + v * Math.cos(a)]);
-  };
-  const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
-    const n = 8;
-    for (let i = 0; i <= n; i++) {
-      const t = a0 + ((a1 - a0) * i) / n;
-      push(cx + r * Math.cos(t), cy + r * Math.sin(t));
-    }
-  };
-  if (p.shape === 'circle') {
-    arc(0, 0, hw, 0, 2 * Math.PI);
-    return pts;
-  }
-  const r = p.shape === 'oval' ? Math.min(hw, hh) : p.shape === 'roundrect' ? Math.min(hw, hh) * 2 * (p.rr ?? 0.25) : 0;
-  if (r <= 0) {
-    push(-hw, -hh);
-    push(hw, -hh);
-    push(hw, hh);
-    push(-hw, hh);
-    return pts;
-  }
-  arc(hw - r, hh - r, r, 0, Math.PI / 2);
-  arc(-hw + r, hh - r, r, Math.PI / 2, Math.PI);
-  arc(-hw + r, -hh + r, r, Math.PI, 1.5 * Math.PI);
-  arc(hw - r, -hh + r, r, 1.5 * Math.PI, 2 * Math.PI);
-  return pts;
+const HEAT_STOPS: [number, number, number][] = [
+  [44, 62, 145],
+  [31, 161, 135],
+  [166, 217, 106],
+  [253, 174, 97],
+  [215, 25, 28],
+];
+/** Colour of a value on a heat map, t from 0 (low) to 1 (high). */
+export function heatRgb(t: number): [number, number, number] {
+  const x = Math.min(1, Math.max(0, t)) * (HEAT_STOPS.length - 1);
+  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(x));
+  const u = x - i;
+  const a = HEAT_STOPS[i];
+  const b = HEAT_STOPS[i + 1];
+  return [Math.round(a[0] + (b[0] - a[0]) * u), Math.round(a[1] + (b[1] - a[1]) * u), Math.round(a[2] + (b[2] - a[2]) * u)];
 }
+export const heatColor = (t: number) => `rgb(${heatRgb(t).join(',')})`;
+export const HEAT_GRADIENT = `linear-gradient(to right, ${HEAT_STOPS.map((c) => `rgb(${c.join(',')})`).join(', ')})`;
+
+function heatImage(h: BoardHeat): HTMLCanvasElement | null {
+  if (typeof document === 'undefined' || !h.nx || !h.ny) return null;
+  const c = document.createElement('canvas');
+  c.width = h.nx;
+  c.height = h.ny;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+  const img = ctx.createImageData(h.nx, h.ny);
+  for (let i = 0; i < h.values.length; i++) {
+    const v = h.values[i];
+    if (!Number.isFinite(v)) continue;
+    const [r, g, b] = heatRgb(h.max > 0 ? v / h.max : 0);
+    img.data[4 * i] = r;
+    img.data[4 * i + 1] = g;
+    img.data[4 * i + 2] = b;
+    img.data[4 * i + 3] = 235;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
 
 interface LayerPaths {
   fills: Path2D;
@@ -130,7 +152,7 @@ function buildPaths(d: BoardDrawing, nets?: Set<string>) {
   }
   for (const p of d.pads) {
     if (!want(p.net)) continue;
-    const o = padOutline(p);
+    const o = padPolygon(p);
     for (const l of p.layers) addPoly(get(l).pads, o);
   }
   const vias = new Path2D();
@@ -175,7 +197,7 @@ function extent(d: BoardDrawing): [number, number, number, number] {
   return Number.isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 100, 100];
 }
 
-export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ drawing, visible, highlight, markers, onPick, height = 560, focus }, ref) {
+export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ drawing, visible, highlight, markers, onPick, height = 560, focus, trackColors, viaColors, heat }, ref) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: height === 'fill' ? 560 : height });
@@ -195,6 +217,20 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   }, [drawing]);
   // bottom layer first, so the top layer is drawn last
   const order = useMemo(() => [...drawing.copper].reverse(), [drawing]);
+  const heatCanvas = useMemo(() => (heat ? heatImage(heat) : null), [heat]);
+  // coloured tracks grouped by layer, colour and width
+  const colored = useMemo(() => {
+    const m = new Map<string, { layer: string; color: string; w: number; path: Path2D }>();
+    for (const [i, color] of trackColors ?? []) {
+      const t = drawing.tracks[i];
+      if (!t) continue;
+      const k = `${t.layer}|${color}|${t.w}`;
+      let g = m.get(k);
+      if (!g) m.set(k, (g = { layer: t.layer, color, w: t.w, path: new Path2D() }));
+      addTrack(g.path, t);
+    }
+    return [...m.values()];
+  }, [trackColors, drawing]);
 
   const draw = useCallback(() => {
     const el = canvas.current;
@@ -233,7 +269,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       ctx.fillStyle = '#101418';
       ctx.fill(set.holes);
     };
-    paint(all, hl ? 0.28 : 1);
+    paint(all, hl || heatCanvas ? 0.28 : 1);
     if (hl) {
       paint(hl, 1);
       // outline the highlighted copper so it stands out on any layer colour
@@ -245,6 +281,37 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
         const lp = hl.layers.get(l);
         if (!lp) continue;
         ctx.stroke(lp.pads);
+      }
+    }
+    // the heat map over the copper, then the coloured tracks and vias over it
+    if (heat && heatCanvas && visible[heat.layer]) {
+      ctx.globalAlpha = 1;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(heatCanvas, heat.x0 - heat.res / 2, heat.y0 - heat.res / 2, heat.nx * heat.res, heat.ny * heat.res);
+    }
+    if (colored.length) {
+      ctx.globalAlpha = 1;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const l of order) {
+        if (!visible[l]) continue;
+        for (const g of colored) {
+          if (g.layer !== l) continue;
+          ctx.strokeStyle = g.color;
+          ctx.lineWidth = Math.max(g.w, 2 / scale);
+          ctx.stroke(g.path);
+        }
+      }
+    }
+    if (viaColors?.size) {
+      ctx.globalAlpha = 1;
+      for (const [i, col] of viaColors) {
+        const v = drawing.vias[i];
+        if (!v) continue;
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, Math.max((v.size ?? 0.6) / 2, 3 / scale), 0, 2 * Math.PI);
+        ctx.fillStyle = col;
+        ctx.fill();
       }
     }
     ctx.globalAlpha = 1;
@@ -287,7 +354,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-  }, [all, hl, outline, order, visible, markers, size]);
+  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing]);
 
   const schedule = useCallback(() => {
     cancelAnimationFrame(raf.current);

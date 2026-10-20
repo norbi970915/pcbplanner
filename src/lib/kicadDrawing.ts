@@ -193,3 +193,39 @@ export function readBoardDrawing(text: string): BoardDrawing {
   for (const p of pads) p.net = netOf(p.net);
   return { copper, outline: outlineLoops(edgeItems), tracks, vias, fills, pads, parts, read };
 }
+
+/** Outline of a pad in board coordinates. */
+export function padPolygon(p: DrawPad): [number, number][] {
+  const pts: [number, number][] = [];
+  const hw = p.w / 2;
+  const hh = p.h / 2;
+  const push = (u: number, v: number) => {
+    // pad frame to board: the inverse of the rotation by the pad angle (KiCad: CCW on screen, y down)
+    const a = (p.angle * Math.PI) / 180;
+    pts.push([p.x + u * Math.cos(a) + v * Math.sin(a), p.y - u * Math.sin(a) + v * Math.cos(a)]);
+  };
+  const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
+    const n = 8;
+    for (let i = 0; i <= n; i++) {
+      const t = a0 + ((a1 - a0) * i) / n;
+      push(cx + r * Math.cos(t), cy + r * Math.sin(t));
+    }
+  };
+  if (p.shape === 'circle') {
+    arc(0, 0, hw, 0, 2 * Math.PI);
+    return pts;
+  }
+  const r = p.shape === 'oval' ? Math.min(hw, hh) : p.shape === 'roundrect' ? Math.min(hw, hh) * 2 * (p.rr ?? 0.25) : 0;
+  if (r <= 0) {
+    push(-hw, -hh);
+    push(hw, -hh);
+    push(hw, hh);
+    push(-hw, hh);
+    return pts;
+  }
+  arc(hw - r, hh - r, r, 0, Math.PI / 2);
+  arc(-hw + r, hh - r, r, Math.PI / 2, Math.PI);
+  arc(-hw + r, -hh + r, r, Math.PI, 1.5 * Math.PI);
+  arc(hw - r, -hh + r, r, 1.5 * Math.PI, 2 * Math.PI);
+  return pts;
+}
