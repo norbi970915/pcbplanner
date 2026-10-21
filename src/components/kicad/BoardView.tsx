@@ -55,6 +55,8 @@ interface Props {
   /** Colour per via (index in drawing.vias). */
   viaColors?: Map<number, string>;
   heat?: BoardHeat | null;
+  /** Parts the view is about (heat sources, a DC source and its loads): always named, their bodies drawn brighter. */
+  tagged?: string[];
 }
 
 type Camera = { x: number; y: number; scale: number }; // screen = (board − (x, y)) × scale
@@ -200,7 +202,7 @@ function extent(d: BoardDrawing): [number, number, number, number] {
   return Number.isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 100, 100];
 }
 
-export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ drawing, visible, highlight, markers, onPick, height = 560, focus, trackColors, viaColors, heat }, ref) {
+export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ drawing, visible, highlight, markers, onPick, height = 560, focus, trackColors, viaColors, heat, tagged }, ref) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: height === 'fill' ? 560 : height });
@@ -238,7 +240,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       if (!b) padBox.set(p.ref, [p.x - r, p.y - r, p.x + r, p.y + r]);
       else padBox.set(p.ref, [Math.min(b[0], p.x - r), Math.min(b[1], p.y - r), Math.max(b[2], p.x + r), Math.max(b[3], p.y + r)]);
     }
-    const labels: { ref: string; back: boolean; x: number; y: number; w: number; h: number }[] = [];
+    const labels: { ref: string; back: boolean; x: number; y: number; w: number; h: number; top: number; box: [number, number, number, number]; body: boolean }[] = [];
     for (const part of drawing.parts) {
       const path = part.back ? bottom : top;
       let box: [number, number, number, number] | undefined;
@@ -250,12 +252,28 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
         });
         if (g.closed) path.closePath();
       }
+      const body = !!box;
       box ??= padBox.get(part.ref);
-      if (box) labels.push({ ref: part.ref, back: part.back, x: (box[0] + box[2]) / 2, y: (box[1] + box[3]) / 2, w: box[2] - box[0], h: box[3] - box[1] });
+      if (box) labels.push({ ref: part.ref, back: part.back, x: (box[0] + box[2]) / 2, y: (box[1] + box[3]) / 2, w: box[2] - box[0], h: box[3] - box[1], top: box[1], box, body });
     }
     labels.sort((a, b) => b.w * b.h - a.w * a.h);
     return { top, bottom, labels };
   }, [drawing]);
+  // the tagged parts: their bodies again (or the box of their pads), drawn brighter
+  const taggedKey = tagged?.join('\n') ?? '';
+  const tags = useMemo(() => {
+    const refs = new Set(taggedKey ? taggedKey.split('\n') : []);
+    const path = new Path2D();
+    for (const part of drawing.parts) {
+      if (!refs.has(part.ref)) continue;
+      for (const g of part.body ?? []) {
+        g.pts.forEach(([x, y], i) => (i ? path.lineTo(x, y) : path.moveTo(x, y)));
+        if (g.closed) path.closePath();
+      }
+    }
+    for (const l of bodies.labels) if (refs.has(l.ref) && !l.body) path.rect(l.box[0], l.box[1], l.w, l.h);
+    return { refs, path };
+  }, [taggedKey, drawing, bodies]);
   // coloured tracks grouped by layer, colour and width
   const colored = useMemo(() => {
     const m = new Map<string, { layer: string; color: string; w: number; path: Path2D }>();
@@ -364,6 +382,12 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       ctx.strokeStyle = '#d0d7de';
       ctx.stroke(bodies.top);
     }
+    if (tags.refs.size) {
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 1.8 / scale;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke(tags.path);
+    }
     ctx.globalAlpha = 1;
     ctx.strokeStyle = '#d6d36a';
     ctx.lineWidth = 1.2 / scale;
@@ -376,18 +400,22 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    // the larger parts first; a label that would overlap one already drawn is left out
+    // the tagged parts first and always (when there are a few; many still give way to each other), a part too
+    // small for its name inside named above it; then the larger parts first, a label overlapping one drawn left out
     const drawn: [number, number, number, number][] = [];
-    for (const l of bodies.labels) {
-      if (!sideOn(l.back)) continue;
-      const fsz = Math.min(14, (l.h * scale) / 2, (l.w * scale * 0.9) / (0.6 * l.ref.length));
+    const ordered = tags.refs.size ? [...bodies.labels.filter((l) => tags.refs.has(l.ref)), ...bodies.labels.filter((l) => !tags.refs.has(l.ref))] : bodies.labels;
+    for (const l of ordered) {
+      const tag = tags.refs.has(l.ref);
+      if (!tag && !sideOn(l.back)) continue;
+      const fit = Math.min(14, (l.h * scale) / 2, (l.w * scale * 0.9) / (0.6 * l.ref.length));
+      const fsz = tag ? Math.max(11, fit) : fit;
       if (fsz < 8) continue;
       const lx = sx(l.x);
-      const ly = sy(l.y);
+      const ly = tag && fit < 11 ? sy(l.top) - fsz / 2 - 3 : sy(l.y);
       if (lx < -50 || ly < -20 || lx > size.w + 50 || ly > size.h + 20) continue;
       const hw = (0.6 * fsz * l.ref.length) / 2 + 2;
       const hh = fsz / 2 + 1;
-      if (drawn.some((r) => lx - hw < r[2] && lx + hw > r[0] && ly - hh < r[3] && ly + hh > r[1])) continue;
+      if ((!tag || tags.refs.size > 12) && drawn.some((r) => lx - hw < r[2] && lx + hw > r[0] && ly - hh < r[3] && ly + hh > r[1])) continue;
       drawn.push([lx - hw, ly - hh, lx + hw, ly + hh]);
       ctx.font = `600 ${fsz.toFixed(1)}px system-ui, sans-serif`;
       ctx.lineWidth = 3;
@@ -428,7 +456,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing, bodies]);
+  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing, bodies, tags]);
 
   const schedule = useCallback(() => {
     cancelAnimationFrame(raf.current);

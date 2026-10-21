@@ -583,6 +583,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
                 trackColors={trackColors}
                 viaColors={viaColors}
                 heat={heat}
+                tagged={p.pmode === 'dc' ? [source, ...loads.map((l) => l.ref)].filter(Boolean) : undefined}
                 height={full ? 'fill' : typeof window !== 'undefined' && window.innerWidth < 640 ? 400 : 560}
               />
             </div>

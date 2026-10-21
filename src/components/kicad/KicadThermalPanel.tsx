@@ -373,6 +373,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
                 markers={[]}
                 focus={focus}
                 heat={heat}
+                tagged={sources.map((x) => x.ref)}
                 height={full ? 'fill' : typeof window !== 'undefined' && window.innerWidth < 640 ? 400 : 560}
               />
             </div>

@@ -76,6 +76,11 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
   const now = res?.key === key ? res : null;
   const result = now?.result;
 
+  // the parts with a pad on a high-voltage net, named on the board
+  const hvParts = useMemo(() => {
+    const hv = new Set(volts.map((x) => x.net));
+    return [...new Set((d?.pads ?? []).filter((pd) => pd.ref && hv.has(pd.net)).map((pd) => pd.ref))];
+  }, [d, volts]);
   const markers = useMemo((): BoardMarker[] => (result?.violations ?? []).map((v) => ({ id: findingKey(v), x: v.x1, y: v.y1, x2: v.x2, y2: v.y2, status: 'fail', note: `${mm(v.gap)} mm, needs ${mm(v.required)} mm`, item: findingKey(v), selected: findingKey(v) === selected })), [result, selected]);
   const highlight = useMemo(() => new Set(volts.map((x) => x.net)), [volts]);
 
@@ -293,6 +298,7 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
               highlight={highlight}
               markers={markers}
               focus={focus}
+              tagged={hvParts}
               onPick={(pk) => {
                 const v = pk.marker && result?.violations.find((x) => findingKey(x) === pk.marker!.item);
                 if (v) show(v);
