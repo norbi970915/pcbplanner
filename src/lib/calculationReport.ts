@@ -3,6 +3,8 @@ export interface ReportInput { section: string; label: string; value: string }
 export interface ReportSnapshot {
   title: string; description: string; created: string; url: string; inputs: ReportInput[];
   results: string; comparison: string; method: string; blocked: string | null; usesLocalData: boolean;
+  preparing?: boolean;
+  resultsHeading?: string;
 }
 export interface ReportOptions { diagrams: boolean; comparison: boolean; method: boolean; title: string; notes: string }
 export const escapeHtml = (text: string) => text.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!));
@@ -10,6 +12,7 @@ const cleanText = (node: Element | null) => node?.textContent?.replace(/\s+/g, '
 function inputLabel(node: Element | null): string {
   if (!node) return '';
   const label = node.cloneNode(true) as Element;
+  label.querySelectorAll('input, select, textarea, button').forEach(control => control.remove());
   label.querySelectorAll('span').forEach(symbol => { symbol.textContent = ' (' + cleanText(symbol) + ')'; });
   return cleanText(label);
 }
@@ -43,7 +46,7 @@ export function collectReportInputs(roots: (HTMLElement | null)[]): ReportInput[
       if (seen.has(control) || control.closest('[data-report-ignore]') || control.closest('.design-comparison') || (control instanceof HTMLInputElement && ['hidden', 'file', 'button', 'submit'].includes(control.type))) continue;
       if (control.closest('[hidden]') && !control.closest('.properties-section')) continue;
       seen.add(control);
-      const label = control.getAttribute('aria-label') ?? cleanText(control.labels?.[0] ?? null);
+      const label = control.getAttribute('aria-label') ?? inputLabel(control.labels?.[0] ?? null);
       add(control, label || control.name || 'Input', controlValue(control));
     }
   }
@@ -52,6 +55,7 @@ export function collectReportInputs(roots: (HTMLElement | null)[]): ReportInput[
 export function reportBlockReason(results: HTMLElement, inputs: HTMLElement | null, status: HTMLElement | null): string | null {
   if (results.matches('[data-inputs-invalid="true"]') || results.querySelector('[data-inputs-invalid="true"], [aria-invalid="true"]') || inputs?.querySelector('[aria-invalid="true"]')) return 'Correct the highlighted inputs before creating a report.';
   if (results.querySelector('[data-result-busy="true"], [aria-busy="true"]') || /solving|calculating|loading|running/i.test(cleanText(status))) return 'Wait for the calculation to finish, then create the report.';
+  if (results.querySelector('[data-result-stale="true"]')) return 'The inputs changed. Solve again before creating a report.';
   const error = results.querySelector('[role="alert"]');
   if (error && cleanText(error)) return 'Resolve the calculation error before creating a report: ' + cleanText(error);
   return null;
@@ -83,11 +87,15 @@ export function snapshotMarkup(root: HTMLElement): string {
     if (copy instanceof HTMLAnchorElement) {
       try { const url = new URL(original.getAttribute('href') ?? '', window.location.href); if (['http:', 'https:'].includes(url.protocol)) copy.href = url.href; else copy.removeAttribute('href'); } catch { copy.removeAttribute('href'); }
     }
+    if (original instanceof HTMLInputElement && original.type === 'file') { copy.remove(); return; }
+    if (original instanceof HTMLButtonElement && (original.closest('td, th') || original.hasAttribute('data-report-value'))) {
+      const value = document.createElement('span'); value.textContent = cleanText(original); copy.replaceWith(value);
+    }
     if (original instanceof HTMLInputElement || original instanceof HTMLSelectElement || original instanceof HTMLTextAreaElement) {
       const value = document.createElement('span'); value.textContent = controlValue(original); copy.replaceWith(value);
     }
   });
-  clone.querySelectorAll('script, iframe, object, embed, button, .field-help-trigger, .comparison-actions, .comparison-trigger, .comparison-footnote, .diagram-editing, .diagram-focus-line, .diagram-focus-region, .sr-only, [hidden]').forEach(element => element.remove());
+  clone.querySelectorAll('script, iframe, object, embed, button, .field-help-trigger, .comparison-actions, .comparison-trigger, .comparison-footnote, .diagram-editing, .diagram-focus-line, .diagram-focus-region, .sr-only, [hidden], [data-report-ignore]').forEach(element => element.remove());
   clone.querySelectorAll('[data-active]').forEach(element => element.removeAttribute('data-active'));
   clone.querySelectorAll('details').forEach(element => element.setAttribute('open', ''));
   clone.removeAttribute('hidden');
@@ -155,7 +163,7 @@ export function buildReportHtml(snapshot: ReportSnapshot, options: ReportOptions
     '<header><div class="brand">PCBPlanner / Calculation report</div><h1>' + escapeHtml(options.title || snapshot.title) + '</h1><p>' + escapeHtml(snapshot.description) + '</p><p class="meta">Snapshot created ' + escapeHtml(snapshot.created) + '</p></header>' +
     (options.notes.trim() ? '<section class="notes">' + escapeHtml(options.notes) + '</section>' : '') +
     (inputs ? '<h2>Inputs and configuration</h2><table><thead><tr><th>Input</th><th>Value</th></tr></thead><tbody>' + inputs + '</tbody></table>' : '<p>Configuration and design data are shown with the results below.</p>') +
-    '<h2>Current calculation</h2>' + omitDiagrams(snapshot.results) +
+    '<h2>' + escapeHtml(snapshot.resultsHeading ?? 'Current calculation') + '</h2>' + omitDiagrams(snapshot.results) +
     (options.comparison && snapshot.comparison ? '<h2>Design comparison: saved A and current B</h2>' + omitDiagrams(snapshot.comparison) + '<p class="footnote">Changes are B minus A in the units shown. pp means percentage points; a dash means unavailable or a different model.</p>' : '') +
     (options.method && snapshot.method ? '<h2>Method, assumptions and references</h2><section class="method">' + omitDiagrams(snapshot.method) + '</section>' : '') +
     '<footer><p><strong>Calculation link</strong><br><a href="' + escapeHtml(snapshot.url) + '">' + escapeHtml(snapshot.url) + '</a></p>' +

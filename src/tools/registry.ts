@@ -218,12 +218,12 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/kicad-project',
-    metaDescription: 'Free KiCad board checker in the browser: impedance per layer, routing check, DC voltage drop and current density, a PCB temperature map, HV clearance.',
+    metaDescription: 'KiCad PCB checker: stackup and impedance, routing checks, supply and return voltage drop, board temperature and same-layer clearance. Files stay local.',
     title: 'KiCad Project',
     seoTitle: 'KiCad PCB Checker: Impedance, Voltage Drop, Thermal',
     nav: 'KiCad project',
     group: 'Stackup',
-    summary: 'Reads a .kicad_pcb file or project folder in the browser: 50 Ω and 90/100 Ω widths and loss per layer, net classes and pairs, a routing check of every routed pair, the track current and DC voltage drop of power nets, and a temperature map of the board, shared with the calculators.',
+    summary: 'Inspect a .kicad_pcb or project folder: stackup and impedance, routing checks, power-net current and DC voltage drop, board temperature maps and same-layer clearance. Files stay in the browser; other calculators can import the project geometry.',
     component: lazyPage(() => import('./KicadProject')),
   },
   {

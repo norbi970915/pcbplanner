@@ -401,6 +401,15 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
+    // Board annotations use their physical text size; hide text that is too small to read.
+    for (const label of drawing.labels ?? []) {
+      if (!sideOn(label.back) || label.size * scale < 5.5) continue;
+      ctx.save(); ctx.translate(sx(label.x), sy(label.y)); ctx.rotate(-label.angle * Math.PI / 180);
+      ctx.font = `500 ${Math.max(9, Math.min(28, label.size * scale)).toFixed(1)}px system-ui, sans-serif`;
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(16,20,24,0.9)'; ctx.fillStyle = label.back ? '#b4c6e0' : '#f0f3f6';
+      for (const [i, line] of label.text.split('\n').entries()) { ctx.strokeText(line, 0, i * label.size * scale * 1.4); ctx.fillText(line, 0, i * label.size * scale * 1.4); }
+      ctx.restore();
+    }
     // the tagged parts first and always (when there are a few; many still give way to each other), a part too
     // small for its name inside named above it; then the larger parts first, a label overlapping one drawn left out
     const drawn: [number, number, number, number][] = [];

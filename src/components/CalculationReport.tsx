@@ -23,7 +23,7 @@ export function CalculationReport({ snapshot, onClose }: { snapshot: ReportSnaps
     <Dialog.Portal><Dialog.Overlay className="workspace-dialog-overlay" /><Dialog.Content className="calculation-report-dialog" onCloseAutoFocus={event => event.preventDefault()}>
       <div className="report-dialog-heading"><div><Dialog.Title>Calculation report</Dialog.Title><Dialog.Description>A snapshot of this design. Print it or choose Save as PDF in the print dialog.</Dialog.Description></div>
         <Dialog.Close asChild><Button variant="ghost" size="icon" aria-label="Close report"><X size={18} /></Button></Dialog.Close></div>
-      {snapshot.blocked ? <div className="report-blocked" role="alert"><strong>Report not ready</strong><p>{snapshot.blocked}</p><Button variant="outline" size="sm" onClick={onClose}>Back to calculation</Button></div> : <>
+      {snapshot.blocked ? <div className="report-blocked" role={snapshot.preparing ? 'status' : 'alert'}><strong>{snapshot.preparing ? 'Preparing project report' : 'Report not ready'}</strong><p>{snapshot.blocked}</p><Button variant="outline" size="sm" onClick={onClose}>{snapshot.preparing ? 'Cancel' : 'Back to calculation'}</Button></div> : <>
         <div className="report-options">
           <label>Report title<input className="fld" value={options.title} maxLength={160} onChange={event => change({ title: event.target.value })} /></label>
           <label>Design notes <span className="text-faint">(optional)</span><textarea className="fld" value={options.notes} maxLength={3000} rows={2} placeholder="Board revision, design target, review notes..." onChange={event => change({ notes: event.target.value })} /></label>

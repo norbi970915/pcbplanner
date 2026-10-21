@@ -13,6 +13,7 @@ import type { KicadProjectData } from '../../lib/kicadProjectQueries';
 import { netLeaf } from '../../lib/kicadRouting';
 import { BoardView, layerColor, type BoardMarker, type BoardViewApi } from './BoardView';
 import { useFullScreen } from './useFullScreen';
+import { KicadPanelSettings } from './KicadPanelSettings';
 import type { KicadAnalysisInputs, SetKicadInputs } from './useKicadAnalysis';
 
 const mm = (v: number) => (Number.isFinite(v) ? v.toFixed(v < 1 ? 3 : 2) : '–');
@@ -24,7 +25,7 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
   const [selected, setSelected] = useState('');
-  const [res, setRes] = useState<{ key: string; result?: ClearanceResult; error?: string } | null>(null);
+  const [res, setRes] = useState<{ board: object; key: string; result?: ClearanceResult; error?: string } | null>(null);
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -61,10 +62,10 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
     if (!d || !volts.length) return;
     let live = true;
     const t = setTimeout(() => {
-      setRes({ key });
+      setRes({ board: data.board, key });
       checkClearanceInWorker({ d: { copper: d.copper, tracks: d.tracks, vias: d.vias, pads: d.pads, fills: d.fills }, volts, outer }).then(
-        (result) => live && setRes({ key, result }),
-        (e: unknown) => live && setRes({ key, error: e instanceof Error ? e.message : String(e) }),
+        (result) => live && setRes({ board: data.board, key, result }),
+        (e: unknown) => live && setRes({ board: data.board, key, error: e instanceof Error ? e.message : String(e) }),
       );
     }, 300);
     return () => {
@@ -73,7 +74,7 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d, key]);
-  const now = res?.key === key ? res : null;
+  const now = res?.board === data.board && res.key === key ? res : null;
   const result = now?.result;
 
   // the parts with a pad on a high-voltage net, named on the board
@@ -84,7 +85,7 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
   const markers = useMemo((): BoardMarker[] => (result?.violations ?? []).map((v) => ({ id: findingKey(v), x: v.x1, y: v.y1, x2: v.x2, y2: v.y2, status: 'fail', note: `${mm(v.gap)} mm, needs ${mm(v.required)} mm`, item: findingKey(v), selected: findingKey(v) === selected })), [result, selected]);
   const highlight = useMemo(() => new Set(volts.map((x) => x.net)), [volts]);
 
-  if (!drawing || drawing.board !== data.board) return <Panel title="Clearance"><p className="p-3" role="status">Drawing the board…</p></Panel>;
+  if (!drawing || drawing.board !== data.board) return <Panel title="Clearance"><p className="p-3" role="status" data-result-busy="true">Drawing the board…</p></Panel>;
   if (drawing.error || !d) return <Panel title="Clearance"><p className="p-3">{drawing.error}</p></Panel>;
 
   const setVolts = (next: { net: string; v: number }[]) => set({ hvnets: encodeVolts(next) });
@@ -125,9 +126,9 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
     <div className="border-t border-line px-2.5 py-2">
       <p className="mb-1 font-semibold">High-voltage nets</p>
       {volts.length === 0 && <p className="mb-1 text-muted">Add the nets that carry a high voltage, with their peak voltage to the 0 V of the circuit (for 230 V AC mains, 325 V). Nets you do not add are taken as 0 V.</p>}
-      <ul className="grid max-h-[176px] gap-x-4 gap-y-1 overflow-y-auto sm:grid-cols-2">
+      <ul className="grid max-h-[176px] gap-x-4 gap-y-1 overflow-y-auto" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,360px),1fr))' }}>
         {volts.map((x, k) => (
-          <li key={`${x.net}-${k}`} className="flex items-center gap-1.5">
+          <li key={`${x.net}-${k}`} className="flex flex-wrap items-center gap-1.5">
             <select className="fld min-w-0 max-w-[220px]" aria-label={`High-voltage net ${k + 1}`} value={x.net} onChange={(e) => setVolts(volts.map((y, j) => (j === k ? { ...y, net: e.target.value } : y)))}>
               {nets
                 .filter((n) => n === x.net || !used.has(n))
@@ -226,6 +227,7 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
                 <li key={findingKey(v)}>
                   <button
                     type="button"
+                    data-report-value
                     className={`w-full rounded px-1.5 py-0.5 text-left hover:bg-[var(--hover)] ${findingKey(v) === selected ? 'bg-[var(--hover)] font-semibold' : ''}`}
                     aria-pressed={findingKey(v) === selected}
                     onClick={() => show(v)}
@@ -283,12 +285,14 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
 
   return (
     <Panel title="Clearance" allowInvalid>
+      <div data-result-busy={volts.length > 0 && !now?.result && !now?.error || undefined} />
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
-        <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
+        <KicadPanelSettings title="Clearance setup" full={!!full}>
           {controls}
           {netsEditor}
-        </div>
+        </KicadPanelSettings>
         {toolbar}
+        {!full && <div className="border-t border-line px-2.5 py-2" data-testid="clearance-summary">{summary}</div>}
         <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
           <div className={full ? 'min-h-0 flex-1' : undefined}>
             <BoardView
@@ -307,7 +311,7 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
               height={full ? 'fill' : typeof window !== 'undefined' && window.innerWidth < 640 ? 400 : 560}
             />
           </div>
-          <div className={full ? 'max-h-[38vh] overflow-y-auto border-t border-line px-2.5 py-2 lg:max-h-none lg:w-[420px] lg:border-l lg:border-t-0' : 'border-t border-line px-2.5 py-2'}>{summary}</div>
+          {full && <div className="max-h-[38vh] overflow-y-auto border-t border-line px-2.5 py-2 lg:max-h-none lg:w-[420px] lg:border-l lg:border-t-0">{summary}</div>}
         </div>
       </div>
     </Panel>

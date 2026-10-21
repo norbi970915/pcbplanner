@@ -50,7 +50,7 @@ export function exampleBoard(): string {
   const pcb = toKicad(signalOnly)[0].content;
   let n = 0;
   const uuid = () => `00000000-0000-4000-8000-${(++n).toString(16).padStart(12, '0')}`;
-  const nets = ['GND', '+3V3', '/PCIE_TX0_P', '/PCIE_TX0_N', '/CLK', '/SDA', '/USB_D+', '/USB_D-', '/HDMI_D0+', '/HDMI_D0-', '+5V'];
+  const nets = ['GND', '+3V3', '/PCIE_TX0_P', '/PCIE_TX0_N', '/CLK', '/SDA', '/USB_D+', '/USB_D-', '/HDMI_D0+', '/HDMI_D0-', '+5V', '+48V'];
   const netNo = (name: string) => nets.indexOf(name) + 1;
   // the zones carry KiCad's own fill (kicadExampleFills.ts, from scripts/refill-example.mjs), found by uuid
   const zone = (net: string, layer: string, pts: P[], id = uuid(), fill = EXAMPLE_FILLS[id]) => `\t(zone
@@ -107,8 +107,8 @@ export function exampleBoard(): string {
 \t\t(uuid "${uuid()}")
 \t\t(at ${at[0]} ${at[1]})
 \t\t(property "Reference" "${ref}"
-\t\t\t(at 0 -3 0)
-\t\t\t(layer "F.SilkS")
+\t\t\t(at 0 0 0)
+\t\t\t(layer "F.Fab")
 \t\t\t(uuid "${uuid()}")
 \t\t\t(effects
 \t\t\t\t(font
@@ -145,13 +145,13 @@ ${pads
       { num: '1', net: '+5V', at: [0, -1.27], size: [1.7, 1.7], shape: 'rect', drill: 1 },
       { num: '2', net: 'GND', at: [0, 1.27], size: [1.7, 1.7], drill: 1 },
     ]),
-    footprint('Package_TO_SOT_SMD:SOT-223-3_TabPin2', 'U1', 'AMS1117-3.3', [140, 155], [6.5, 3.5], [
+    footprint('Package_TO_SOT_SMD:SOT-223-3_TabPin2', 'U1', '3.3V regulator (demo)', [140, 155], [6.5, 3.5], [
       { num: '1', net: 'GND', at: [-2.3, 3.15], size: [1.2, 2] },
       { num: '2', net: '+3V3', at: [0, 3.15], size: [1.2, 2] },
       { num: '3', net: '+5V', at: [2.3, 3.15], size: [1.2, 2] },
-      { num: '4', net: '+3V3', at: [0, -3.15], size: [3.3, 2] },
+      { num: '2', net: '+3V3', at: [0, -3.15], size: [3.3, 2] },
     ]),
-    footprint('Package_DFN_QFN:QFN-16-1EP_4x4mm_P0.65mm', 'U2', 'MCU', [165, 155], [4, 4], [
+    footprint('PCBPlanner:Demo_Load_ExposedPad', 'U2', '3.3V load (demo)', [165, 155], [4, 4], [
       { num: '1', net: '+3V3', at: [-2, -0.5], size: [0.8, 0.3], shape: 'roundrect' },
       { num: '2', net: 'GND', at: [-2, 0.5], size: [0.8, 0.3], shape: 'roundrect' },
       { num: '3', net: '+3V3', at: [2, -0.5], size: [0.8, 0.3], shape: 'roundrect' },
@@ -235,9 +235,64 @@ ${pads
     seg('B.Cu', '/SDA', 0.2, [110, 150], [160, 150]),
     ...power,
   ];
+  // Keep routing coupons intact so the contrast between a pass, a warning and a failure is repeatable.
+  // The power circuit has real plane connections, bulk/decoupling pads and a separate clearance coupon.
+  const text = (value: string, at: P, size = 0.9) => `\t(gr_text "${value}" (at ${at[0]} ${at[1]}) (layer "F.SilkS") (uuid "${uuid()}") (effects (font (size ${size} ${size}) (thickness 0.13))))`;
+  const testPads = (ref: string, at: P, netP: string, netN: string, offset: P, size: P) => footprint('PCBPlanner:Routing_Coupon_Pads', ref, 'Routing coupon', at, [1.6, 1.6], [
+    { num: '1', net: netP, at: [0, 0], size }, { num: '2', net: netN, at: offset, size },
+  ]);
+  items.push(
+    text('PCB PLANNER / 6-LAYER LAB', [140, 102.5], 1.3),
+    text('USB / LAYER CHANGE', [151, 105]),
+    text('PCIe / MATCHED PAIR', [151, 115]),
+    text('HDMI / BEND SKEW', [145, 121]),
+    text('CLOCK / ROUTING COUPONS', [145, 142.5]),
+    text('48 V / CLEARANCE', [112, 105.5], 0.8),
+    text('0.35 mm GAP', [111, 119.5], 0.8),
+    text('INTENTIONAL FINDINGS', [112, 132], 0.8),
+    text('TEACHING BOARD', [112, 136], 0.8),
+    text('NOT FOR FABRICATION', [112, 139], 0.8),
+    text('5 V IN', [129, 148.8], 0.8),
+    text('3.3 V REGULATOR', [141, 148.8], 0.8),
+    text('3.3 V LOAD', [165, 148.8], 0.8),
+    testPads('J2', [130, 118], '/PCIE_TX0_P', '/PCIE_TX0_N', [0, 0.283], [0.22, 0.12]),
+    testPads('J3', [175, 118], '/PCIE_TX0_P', '/PCIE_TX0_N', [0, 0.283], [0.22, 0.12]),
+    testPads('J4', usbF[0], '/USB_D+', '/USB_D-', [usbFN[0][0] - usbF[0][0], usbFN[0][1] - usbF[0][1]], [0.2, 0.1]),
+    testPads('J5', [130, 124], '/HDMI_D0+', '/HDMI_D0-', [0, -c], [0.18, 0.08]),
+    testPads('J6', [161, 138], '/HDMI_D0+', '/HDMI_D0-', [c, 0], [0.08, 0.18]),
+    footprint('Capacitor_SMD:C_0603_1608Metric', 'C2', 'Input bulk (demo)', [132, 152], [1.6, 0.8], [
+      { num: '1', net: '+5V', at: [-0.8, 0], size: [0.8, 0.9] }, { num: '2', net: 'GND', at: [0.8, 0], size: [0.8, 0.9] },
+    ]),
+    viaAt('+5V', [131.2, 153.73]), seg('F.Cu', '+5V', 0.5, [131.2, 153.73], [131.2, 152]),
+    viaAt('GND', [132.8, 151]), seg('F.Cu', 'GND', 0.5, [132.8, 152], [132.8, 151]),
+    footprint('Capacitor_SMD:C_0603_1608Metric', 'C3', 'Output bulk (demo)', [146, 153.7], [0.8, 1.6], [
+      { num: '1', net: '+3V3', at: [0, -0.8], size: [0.9, 0.8] }, { num: '2', net: 'GND', at: [0, 0.8], size: [0.9, 0.8] },
+    ]),
+    seg('F.Cu', '+3V3', 0.5, [146, 151.85], [146, 152.9]),
+    viaAt('GND', [146, 155.5]), seg('F.Cu', 'GND', 0.5, [146, 154.5], [146, 155.5]),
+    viaAt('+3V3', [140, 151.85]), viaAt('+3V3', [140, 159.2]), viaAt('+3V3', [162, 153.2]),
+    // Give the regulator a direct ground connection to both planes for realistic heat spreading.
+    viaAt('GND', [137.7, 158.15]),
+    footprint('Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical', 'J8', '48V clearance coupon', [108, 113], [2.54, 5.08], [
+      { num: '1', net: '+48V', at: [0, -1.27], size: [1.7, 1.7], drill: 1, shape: 'rect' }, { num: '2', net: 'GND', at: [0, 1.27], size: [1.7, 1.7], drill: 1 },
+    ]),
+    ...path('F.Cu', '+48V', 0.5, [[108, 111.73], [119, 111.73], [119, 124.05]]),
+    footprint('Resistor_SMD:R_0805_2012Metric', 'R1', '10k (clearance coupon)', [119, 125], [1.2, 2], [
+      { num: '1', net: '+48V', at: [0, -0.95], size: [1.2, 0.8] }, { num: '2', net: 'GND', at: [0, 0.95], size: [1.2, 0.8] },
+    ]),
+    seg('F.Cu', 'GND', 0.5, [119.85, 115], [119.85, 122]), viaAt('GND', [119.85, 115]),
+    // Join the single-ended coupons across layers, instead of leaving disconnected pieces per net.
+    seg('In2.Cu', '/CLK', 0.121, [170, 145], [170, 150]), viaAt('/CLK', [170, 150]), viaAt('/CLK', [110, 145]),
+    ...path('In2.Cu', '/SDA', 0.2, [[170, 140], [172, 142], [172, 150]]),
+    ...path('B.Cu', '/SDA', 0.2, [[160, 150], [161, 149], [172, 149], [172, 150]]), viaAt('/SDA', [172, 150]), viaAt('/SDA', [110, 140]), viaAt('/SDA', [110, 150]),
+    footprint('PCBPlanner:TestPad', 'TP1', 'CLK', [130, 150], [1.2, 1.2], [{ num: '1', net: '/CLK', at: [0, 0], size: [0.6, 0.6], shape: 'circle' }]),
+    footprint('PCBPlanner:TestPad', 'TP2', 'SDA', [110, 140], [1.2, 1.2], [{ num: '1', net: '/SDA', at: [0, 0], size: [0.6, 0.6], shape: 'circle' }]),
+    footprint('PCBPlanner:TestPad', 'TP3', 'SDA', [110, 150], [1.2, 1.2], [{ num: '1', net: '/SDA', at: [0, 0], size: [0.6, 0.6], shape: 'circle' }]),
+    footprint('PCBPlanner:TestPad', 'TP4', 'CLK', [110, 145], [1.2, 1.2], [{ num: '1', net: '/CLK', at: [0, 0], size: [0.6, 0.6], shape: 'circle' }]),
+  );
   return pcb
     .replace('(title "PCBPlanner example 6-layer stackup")', '(title "PCBPlanner example 6-layer board")')
-    .replace('(comment 1 "Exported from pcbplanner.com")', '(comment 1 "Example for the KiCad stackup impedance calculator on pcbplanner.com")')
+    .replace('(comment 1 "Exported from pcbplanner.com")', '(comment 1 "Teaching board: routing coupons, power and thermal circuit, 48V clearance coupon. Not for fabrication.")')
     .replace('\t(net 0 "")\n', `\t(net 0 "")\n${nets.map((name, i) => `\t(net ${i + 1} "${name}")\n`).join('')}${items.join('\n')}\n`);
 }
 

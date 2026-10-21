@@ -120,9 +120,9 @@ describe('the example project', () => {
     const r = parallelRun(ix, 'In2.Cu', '/CLK', '/SDA')!;
     expect(r.coupled).toBe(0);
     expect(r.maxGap).toBe(1); // 5 × 0.2 mm
-    expect(r.lenA).toBeCloseTo(60, 9);
+    expect(r.lenA).toBeCloseTo(65, 9); // 60 mm horizontal coupon plus its 5 mm connection to the via
     // with a wider limit, the 60 mm run at 4.8395 mm shows
-    expect(measureParallel(ix.get('In2.Cu')!.get('/CLK')!, ix.get('In2.Cu')!.get('/SDA')!, { maxGap: 6 })).toMatchObject({ gap: 4.84, coupled: 60 });
+    expect(measureParallel(ix.get('In2.Cu')!.get('/CLK')!, ix.get('In2.Cu')!.get('/SDA')!, { maxGap: 6 })).toMatchObject({ gap: 4.84, coupled: 65 });
   });
 
   it('nearest neighbours of a pair net are its partner only (the pairs are more than 5 mm apart)', () => {

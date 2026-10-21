@@ -12,8 +12,9 @@ import { decodeSources, encodeSources, type Air, type ThermalResult } from '../.
 import { solveThermalInWorker } from '../../lib/kicadThermalClient';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
 import { BoardView, HEAT_GRADIENT, type BoardHeat, type BoardViewApi } from './BoardView';
-import { settingsFor } from './KicadPowerPanel';
+import { settingsFor } from '../../lib/kicadPowerSettings';
 import { useFullScreen } from './useFullScreen';
+import { KicadPanelSettings } from './KicadPanelSettings';
 import type { KicadAnalysisInputs, SetKicadInputs } from './useKicadAnalysis';
 
 const num = (v: number, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
@@ -22,7 +23,7 @@ const PLATING_MM = 0.025;
 export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p: KicadAnalysisInputs; set: SetKicadInputs }) {
   const [drawing, setDrawing] = useState<{ board: object; d?: BoardDrawing; error?: string } | null>(null);
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
-  const [sol, setSol] = useState<{ key: string; result?: ThermalResult; error?: string; solving?: boolean } | null>(null);
+  const [sol, setSol] = useState<{ board: object; key: string; ambient: number; result?: ThermalResult; error?: string; solving?: boolean } | null>(null);
   const [run, setRun] = useState(0); // pressing Solve counts up; a solve runs only then
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
@@ -69,7 +70,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
     if (!run || !d || !settings || (!sources.some((s) => s.watts > 0) && !withLoss)) return;
     let live = true;
     const t = setTimeout(() => {
-      setSol((prev) => ({ key, result: prev?.result, solving: true }));
+      setSol((prev) => ({ board: data.board, key, ambient: p.tamb, result: prev?.board === data.board ? prev.result : undefined, solving: true }));
       solveThermalInWorker({
         d: { copper: d.copper, outline: d.outline, tracks: d.tracks, vias: d.vias, fills: d.fills, pads: d.pads, parts: d.parts },
         thickness: settings.thickness,
@@ -84,8 +85,8 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         kZ: p.tkz,
         platingMm: PLATING_MM,
       }).then(
-        (result) => live && setSol({ key, result }),
-        (e: unknown) => live && setSol({ key, error: e instanceof Error ? e.message : String(e) }),
+        (result) => live && setSol({ board: data.board, key, ambient: p.tamb, result }),
+        (e: unknown) => live && setSol({ board: data.board, key, ambient: p.tamb, error: e instanceof Error ? e.message : String(e) }),
       );
     }, 0);
     return () => {
@@ -95,10 +96,10 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run]);
   // the last solve stays on the board until the next one; it is marked out of date when the inputs change
-  const now = sol;
-  const solving = !!sol?.solving;
+  const now = sol?.board === data.board ? sol : null;
+  const solving = !!now?.solving;
   const solved = now?.result?.ok ? now.result : null;
-  const stale = !!solved && sol?.key !== key;
+  const stale = !!solved && now?.key !== key;
 
   const mapLayer = solved?.layers.some((l) => l.layer === p.tlayer) ? p.tlayer : (solved?.hottest.layer ?? '');
   const heat = useMemo((): BoardHeat | null => {
@@ -117,7 +118,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
   }, [solved, mapLayer]);
   const visible = useMemo(() => Object.fromEntries((d?.copper ?? []).map((l) => [l, true])), [d]);
 
-  if (!drawing || drawing.board !== data.board) return <Panel title="Thermal"><p className="p-3" role="status">Drawing the board…</p></Panel>;
+  if (!drawing || drawing.board !== data.board) return <Panel title="Thermal"><p className="p-3" role="status" data-result-busy="true">Drawing the board…</p></Panel>;
   if (drawing.error || !d) return <Panel title="Thermal"><p className="p-3">{drawing.error}</p></Panel>;
 
   const setSources = (next: { ref: string; watts: number; psi?: number }[]) => set({ tsrc: encodeSources(next) });
@@ -130,7 +131,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
   };
 
   const controls = (
-    <div className="grid gap-x-6 gap-y-1 px-2.5 py-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-x-6 gap-y-1 px-2.5 py-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,310px),1fr))' }}>
       <NumField label="Ambient" value={p.tamb} unit="°C" allowNegative onChange={(v) => set({ tamb: v })} hint="Air temperature around the board. Inside a closed box, use the air temperature in the box." />
       <Row label="Air">
         <Segmented
@@ -150,7 +151,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
       <NumField label="Surface emissivity" symbol="ε" value={p.teps} max={1} allowZero onChange={(v) => set({ teps: v })} hint="Solder mask about 0.9 (measured 0.88–0.97 for red, white and black mask); bare copper 0.05–0.15. In still air, radiation carries about as much heat as convection." />
       <NumField label="Laminate in-plane" symbol="k" value={p.tkxy} unit="W/m·K" onChange={(v) => set({ tkxy: v })} hint="Thermal conductivity of the laminate along the board: 0.81 W/m·K measured on a bare FR-4 board (Graebner). The copper does nearly all the spreading, so this matters little." />
       <NumField label="Laminate through" symbol="k" value={p.tkz} unit="W/m·K" onChange={(v) => set({ tkz: v })} hint="Thermal conductivity of the laminate through the board, from its datasheet: FR-4 about 0.25–0.4 (Isola 370HR 0.4)." />
-      <div className="sm:col-span-2 xl:col-span-3">
+      <div className="col-span-full">
         <Check
           label={
             lossRequests.length
@@ -170,9 +171,9 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
     <div className="border-t border-line px-2.5 py-2">
       <p className="mb-1 font-semibold">Heat sources</p>
       {sources.length === 0 && <p className="mb-1 text-muted">Add the parts that dissipate power, with their power. ψJB from the datasheet (optional) gives the junction temperature.</p>}
-      <ul className="grid max-h-[176px] gap-x-4 gap-y-1 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid max-h-[176px] gap-x-4 gap-y-1 overflow-y-auto" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,330px),1fr))' }}>
         {sources.map((s, k) => (
-          <li key={`${s.ref}-${k}`} className="flex items-center gap-1.5">
+          <li key={`${s.ref}-${k}`} className="flex flex-wrap items-center gap-1.5">
             <select className="fld min-w-0 max-w-[110px]" aria-label={`Heat source ${k + 1}`} value={s.ref} onChange={(e) => setSources(sources.map((x, j) => (j === k ? { ...x, ref: e.target.value } : x)))}>
               {parts
                 .filter((x) => x.ref === s.ref || !used.has(x.ref))
@@ -221,11 +222,11 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
       </ul>
       {parts.length === 0 && (
         <p className="mb-1 text-[var(--err-line)]">
-          This board has no footprints, so it has no parts to heat. Load the board with its parts placed; the site's example has four.
+          This board has no footprints, so it has no parts to heat. Load the board with its parts placed, or try the demonstration project.
         </p>
       )}
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <button type="button" className="btn btn-primary" disabled={solving || (!sources.some((x) => x.watts > 0) && !withLoss)} onClick={() => setRun((r) => r + 1)}>
+        <button type="button" className="btn btn-primary" disabled={solving || zf.busy || (!sources.some((x) => x.watts > 0) && !withLoss)} onClick={() => { setSol(prev => ({ board: data.board, key, ambient: p.tamb, result: prev?.board === data.board ? prev.result : undefined, solving: true })); setRun(r => r + 1); }}>
           {solving ? 'Solving…' : 'Solve'}
         </button>
         <button
@@ -284,7 +285,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
       <span className="flex items-center gap-1.5">
         {heat.layer}: {num(heat.min ?? p.tamb)} °C
         <i aria-hidden="true" className="inline-block h-2 w-28 rounded-sm" style={{ background: HEAT_GRADIENT }} />
-        {num(heat.max)} °C (coolest to hottest of the board; ambient {num(p.tamb)} °C)
+        {num(heat.max)} °C (coolest to hottest of the board; ambient {num(now?.ambient ?? p.tamb)} °C)
       </span>
     </div>
   );
@@ -355,12 +356,14 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
 
   return (
     <Panel title="Thermal" allowInvalid>
+      <div data-result-busy={solving || zf.busy || undefined} data-result-stale={stale || undefined} />
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
-        <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
+        <KicadPanelSettings title="Thermal setup" full={!!full}>
           {controls}
           {sourcesEditor}
-        </div>
+        </KicadPanelSettings>
         {toolbar}
+        {!full && <div className="border-t border-line px-2.5 py-2" data-testid="thermal-summary">{summary}</div>}
         <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
           <div className={full ? 'flex min-h-0 flex-1 flex-col' : undefined}>
             <div className={full ? 'min-h-0 flex-1' : undefined}>
@@ -377,7 +380,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
             </div>
             {legend}
           </div>
-          <div className={full ? 'max-h-[38vh] overflow-y-auto border-t border-line px-2.5 py-2 lg:max-h-none lg:w-[400px] lg:border-l lg:border-t-0' : 'border-t border-line px-2.5 py-2'}>{summary}</div>
+          {full && <div className="max-h-[38vh] overflow-y-auto border-t border-line px-2.5 py-2 lg:max-h-none lg:w-[400px] lg:border-l lg:border-t-0">{summary}</div>}
         </div>
       </div>
     </Panel>

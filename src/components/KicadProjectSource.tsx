@@ -50,6 +50,7 @@ export function KicadProjectSource({
   applyLabel = 'Apply',
   title = 'From KiCad Project',
   defaultOpen = true,
+  layerMode = 'signal',
 }: {
   pick: KicadPickKind[];
   require?: KicadPickKind[];
@@ -59,6 +60,8 @@ export function KicadProjectSource({
   applyLabel?: string;
   title?: string;
   defaultOpen?: boolean;
+  /** Current/width tools can use every copper layer, including planes and unreferenced layers. */
+  layerMode?: 'signal' | 'copper';
 }) {
   const kp = useKicadProject();
   const data = kp.data;
@@ -71,12 +74,14 @@ export function KicadProjectSource({
   const options = useMemo(() => {
     if (!data) return null;
     return {
-      layers: signalLayers(data, { mask: sel.mask ?? true }),
+      layers: layerMode === 'copper'
+        ? data.board.copper.map((l, i) => ({ name: l.name, referenced: true, kind: i === 0 || i === data.board.copper.length - 1 ? 'outer copper' : 'inner copper', outer: false }))
+        : signalLayers(data, { mask: sel.mask ?? true }),
       classes: netClasses(data),
       nets: nets(data),
       pairs: pairs(data),
     };
-  }, [data, sel.mask]);
+  }, [data, sel.mask, layerMode]);
 
   if (!data || !options) {
     return (

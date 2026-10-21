@@ -30,6 +30,7 @@ export function ToolPage({
   onReset,
   children,
   method,
+  reportCapture,
 }: {
   title: string;
   description: string;
@@ -38,6 +39,7 @@ export function ToolPage({
   onReset?: () => void;
   children: ReactNode;
   method?: ReactNode;
+  reportCapture?: (snapshot: ReportSnapshot) => Promise<ReportSnapshot>;
 }) {
   const { pathname } = useLocation();
   const interaction = useFieldInteractionState();
@@ -64,6 +66,8 @@ export function ToolPage({
   }, [pathname]);
   const reportReturnFocus = useRef<HTMLElement | null>(null);
   const [reportSnapshot, setReportSnapshot] = useState<ReportSnapshot | null>(null);
+  const reportId = useRef(0);
+  useEffect(() => () => { reportId.current++; }, [pathname]);
   const paused = interaction.issues.length > 0;
   const focusIssue = () => {
     showInputs();
@@ -77,11 +81,22 @@ export function ToolPage({
   const related = guidesForTool(pathname);
   const relatedT = relatedTools(pathname);
   const tool = toolByPath(pathname);
-  const createReport = useCallback(() => {
+  const createReport = useCallback(async () => {
     reportReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (resultsRef.current) setReportSnapshot(captureReport(title, description, resultsRef.current, propsEl, methodRef.current, statusEl));
-  }, [title, description, propsEl, statusEl]);
+    if (!resultsRef.current) return;
+    const snapshot = captureReport(title, description, resultsRef.current, propsEl, methodRef.current, statusEl);
+    const id = ++reportId.current;
+    if (!reportCapture || snapshot.blocked) { setReportSnapshot(snapshot); return; }
+    setReportSnapshot({ ...snapshot, preparing: true, blocked: 'Solving the configured project analyses. This can take a moment on a large board.' });
+    try {
+      const report = await reportCapture(snapshot);
+      if (id === reportId.current) setReportSnapshot(report);
+    } catch (error) {
+      if (id === reportId.current) setReportSnapshot({ ...snapshot, blocked: error instanceof Error ? error.message : String(error) });
+    }
+  }, [title, description, propsEl, statusEl, reportCapture]);
   const closeReport = () => {
+    reportId.current++;
     setReportSnapshot(null);
     requestAnimationFrame(() => {
       const trigger = reportReturnFocus.current;
@@ -197,7 +212,7 @@ export function ToolPage({
       {propsEl && properties && createPortal(<FieldInteractionContext.Provider value={{ ...interaction, inProperties: true }}>{properties}</FieldInteractionContext.Provider>, propsEl)}
       {statusEl && status && createPortal(paused ? 'Results paused \u00b7 Check the inputs' : status, statusEl)}
     </div>
-    {reportSnapshot && <CalculationReport snapshot={reportSnapshot} onClose={closeReport} />}
+    {reportSnapshot && <CalculationReport key={`${reportSnapshot.preparing ? 'preparing' : 'ready'}:${reportSnapshot.title}`} snapshot={reportSnapshot} onClose={closeReport} />}
     </FieldInteractionContext.Provider>
   );
 }

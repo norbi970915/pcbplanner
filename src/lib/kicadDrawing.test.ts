@@ -112,7 +112,9 @@ describe('part bodies', () => {
   it('the parts of the example board carry a Fab body', () => {
     const text = fs.readFileSync('public/examples/pcbplanner-example-6layer.kicad_pcb', 'utf8');
     const d = readBoardDrawing(text);
-    expect(d.parts.map((p) => [p.ref, p.body?.length])).toEqual([['J1', 1], ['U1', 1], ['U2', 1], ['C1', 1]]);
+    expect(d.parts.map(p => p.ref)).toEqual(['J1', 'U1', 'U2', 'C1', 'J2', 'J3', 'J4', 'J5', 'J6', 'C2', 'C3', 'J8', 'R1', 'TP1', 'TP2', 'TP3', 'TP4']);
+    expect(d.parts.every(p => p.body?.length === 1)).toBe(true);
+    expect(d.labels?.some(l => l.text === '48 V / CLEARANCE')).toBe(true);
   });
 });
 

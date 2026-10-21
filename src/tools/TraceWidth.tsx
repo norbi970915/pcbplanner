@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { KicadProjectSource } from '../components/KicadProjectSource';
 import { Sources } from '../components/Sources';
 import { ToolPage } from '../components/ToolPage';
 import { Big, LenField, Notes, NumField, Panel, Section, SelectField } from '../components/ui';
@@ -17,6 +19,7 @@ type Row = [string, string, string];
 
 export default function TraceWidth() {
   const [p, set, reset] = useUrlState(DEFAULTS);
+  const [importNote, setImportNote] = useState('Apply takes copper thickness and, when selected, the routed net width and length on this layer. It never guesses the operating current.');
   const { unit } = useSettings();
   const mode = p.mode as Mode;
   const std = p.std as Std;
@@ -141,6 +144,11 @@ export default function TraceWidth() {
 
   const properties = (
     <>
+      <KicadProjectSource pick={['layer', 'netclass', 'net']} layerMode="copper" note={importNote} onApply={v => {
+        const width = v.netLayer?.w ?? (!v.net ? v.netClass?.trackWidth : undefined);
+        set({ ...(v.copperT !== undefined ? { t: v.copperT } : {}), ...(width !== undefined ? { width, mode: 'current' } : {}), ...(v.netLayer ? { len: v.netLayer.len } : {}) });
+        setImportNote(`Applied from ${v.boardName}${v.net ? `, ${v.net.name}` : ''}. ${width !== undefined ? 'Current-capacity mode uses the imported width.' : 'No routed width on this layer was imported.'} Current and thermal assumptions remain yours to set.`);
+      }} />
       <Section title="Calculation">
         <SelectField
           label="Standard"

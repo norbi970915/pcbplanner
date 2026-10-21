@@ -3,6 +3,7 @@ export interface GuidedTask {
   id: string;
   label: string;
   tool: string;
+  to?: string;
   why: string;
   prepare: string[];
   guide?: string;
@@ -36,6 +37,8 @@ export const GUIDED_CATEGORIES: GuidedCategory[] = [
     { id: 'transition', label: 'Check a differential via transition', tool: '/differential-via', why: 'Explore a differential via geometry and its stub-related limits.', prepare: ['Via, pad, antipad and pair geometry.', 'Board thickness, stub length and signal bandwidth.'], guide: '/guides/via-stub-back-drilling' },
   ] },
   { id: 'power', title: 'Power & cooling', description: 'Power rails, regulators, decoupling and temperature.', group: 'Thermal', tasks: [
+    { id: 'board-drop', label: 'Check voltage drop on a KiCad board', tool: '/kicad-project', to: '/kicad-project?view=power&pmode=dc', why: 'Solve the supply and return copper of a routed board, including tracks, zones and vias, and inspect the voltage-drop map.', prepare: ['A .kicad_pcb saved with filled zones; optionally its .kicad_pro.', 'Source part, consuming parts and their actual load currents.'], guide: '/guides/kicad-voltage-drop-thermal' },
+    { id: 'board-thermal', label: 'Map the temperature of a KiCad board', tool: '/kicad-project', to: '/kicad-project?view=thermal', why: 'Estimate board temperature from the placed parts and copper, then inspect heat sources and hot spots.', prepare: ['A .kicad_pcb saved with filled zones.', 'Part dissipation, ambient conditions and optional datasheet ψJB.'], guide: '/guides/kicad-voltage-drop-thermal' },
     { id: 'rails', label: 'Plan the board power rails', tool: '/power-tree', why: 'Build a power tree and budget source currents, regulator losses and ratings across your rails.', prepare: ['Input sources and regulator connections.', 'Load currents, rail voltages, efficiencies and ratings.'] },
     { id: 'buck', label: 'Size a buck converter power stage', tool: '/buck-converter', why: 'Estimate the inductor and capacitors, then check ratings and IC timing limits across the input range.', prepare: ['Input range, output voltage and load current.', 'Switching frequency, ripple targets and IC limits.'], guide: '/guides/buck-converter-formulas' },
     { id: 'boost', label: 'Size a boost converter power stage', tool: '/boost-converter', why: 'Check boost-stage currents and component requirements across the input range.', prepare: ['Input range, output voltage and load current.', 'Switching frequency, ripple targets and IC limits.'], guide: '/guides/boost-converter-formulas' },
@@ -53,6 +56,7 @@ export const GUIDED_CATEGORIES: GuidedCategory[] = [
     { id: 'marking', label: 'Decode an SMD resistor marking', tool: '/smd-resistor-code', why: 'Read three-digit, four-digit and EIA-96 resistor markings, or find a marking from the value.', prepare: ['The printed marking or the resistance value.'] },
   ] },
   { id: 'files', title: 'Inspect design files', description: 'Gerber layouts, revision differences and S-parameters.', group: 'Utilities', tasks: [
+    { id: 'kicad', label: 'Check a KiCad project', tool: '/kicad-project', why: 'Inspect a board and its stackup, routing, voltage drop, thermal behaviour and same-layer clearance without uploading the files.', prepare: ['A .kicad_pcb and optionally the .kicad_pro, or use the demonstration project.'] },
     { id: 'gerber', label: 'Inspect Gerbers or compare board revisions', tool: '/gerber-viewer', why: 'Load one layout to inspect it, or two layouts to overlay selected layers and highlight their differences. You can also analyse copper distribution.', prepare: ['Gerber layer files or ZIP archives.', 'For copper distribution: a closed board outline. Files stay on your device.'] },
     { id: 'touchstone', label: 'Inspect Touchstone S-parameter files', tool: '/s-parameter-viewer', why: 'View S-parameter plots and inspect transmission, reflection and supported differential measurements.', prepare: ['A Touchstone file from measurement or simulation.', 'Port order and reference impedance. Files stay on your device.'], guide: '/guides/s-parameters-s11-s21' },
   ] },

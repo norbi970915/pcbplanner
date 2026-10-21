@@ -5,7 +5,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'codex/**'] # verify agent branches before publishing to main
   pull_request:
   schedule:
     - cron: '0 3 * * *' # nightly full browser suite, 03:00 UTC
@@ -78,6 +78,8 @@ jobs:
           set -o pipefail
           node scripts/e2e.mjs e2e-out http://localhost:4173 2>&1 | tee e2e-out.log
       # each failed check as an annotation, readable on the run's page (and through the API) without the log
+      - name: KiCad workflow regressions
+        run: node scripts/audit-kicad-workflow.mjs http://localhost:4173
       - name: Failures as annotations
         if: failure()
         run: grep -E '^  FAIL ' e2e-out.log | sort -u | head -50 | sed -E 's/^  FAIL /::error title=e2e::/' || true
@@ -85,5 +87,7 @@ jobs:
         if: failure()
         with:
           name: e2e-report
-          path: e2e-out
+          path: |
+            e2e-out
+            dist-check/kicad-workflow
           retention-days: 7

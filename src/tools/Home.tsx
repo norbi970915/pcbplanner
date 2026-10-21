@@ -268,6 +268,17 @@ export default function Home() {
           </Card>
         ) : (
           <>
+            <Card>
+              <Heading>Check a KiCad board</Heading>
+              <div className="guide-grid">
+                {[
+                  { title: 'Routing and impedance', to: '/kicad-project', text: 'Read your stackup and check routed widths, pair impedance, skew and reference planes.' },
+                  { title: 'Power and voltage drop', to: '/kicad-project?view=power&pmode=dc', text: 'Follow the supply and return copper from the source to your loads, with a voltage-drop map.' },
+                  { title: 'Board temperature', to: '/kicad-project?view=thermal', text: 'Enter part dissipation and inspect how the copper spreads heat across the board.' },
+                ].map(task => <Link className="guide-card" key={task.to} to={task.to}><h3>{task.title}</h3><p>{task.text}</p><span className="guide-footer">Open KiCad Project <ArrowRight size={15} /></span></Link>)}
+              </div>
+              <p className="px-4 pb-3 text-faint">Files stay in your browser. No board at hand? Try the demonstration project on the KiCad page. Same-layer clearance checks are available there too.</p>
+            </Card>
             <FeaturedTools />
             <section
               className="categories-section"

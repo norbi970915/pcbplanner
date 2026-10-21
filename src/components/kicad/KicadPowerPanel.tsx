@@ -21,45 +21,30 @@ import {
   quickCheck,
   requiredWidth,
   type DcResult,
-  type PowerSettings,
   type TrackLoad,
   type ViaLoad,
 } from '../../lib/kicadPower';
 import { solveDcInWorker } from '../../lib/kicadPowerClient';
-import { copperThickness, type KicadProjectData } from '../../lib/kicadProjectQueries';
+import { type KicadProjectData } from '../../lib/kicadProjectQueries';
 import { netLeaf } from '../../lib/kicadRouting';
-import { copperFaces } from '../../lib/kicadVias';
+import { settingsFor } from '../../lib/kicadPowerSettings';
 import { BoardView, HEAT_GRADIENT, layerColor, type BoardHeat, type BoardViewApi } from './BoardView';
 import { useFullScreen } from './useFullScreen';
+import { preferredLoads, spreadSelectedLoads } from '../../lib/kicadLoadSelection';
+import { KicadPanelSettings } from './KicadPanelSettings';
 import type { KicadAnalysisInputs, SetKicadInputs } from './useKicadAnalysis';
-
-const PLATING_MM = 0.025; // via barrel plating, as the Via tool's default
 
 /** Green within half the allowed rise, amber up to it, red above it. */
 const riseColor = (dT: number, limit: number) => (dT > limit ? '#f85149' : dT > limit / 2 ? '#d29922' : '#3fb950');
 const riseTone = (dT: number, limit: number) => (dT > limit ? 'text-[var(--err-line)]' : dT > limit / 2 ? 'text-[var(--accent-ink)]' : 'text-ok');
 const num = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 
-export function settingsFor(data: KicadProjectData, copper: string[], dT: number, ambient: number): PowerSettings {
-  const thickness: Record<string, number> = {};
-  for (const l of copper) thickness[l] = copperThickness(data, l) ?? 0.035;
-  const faces = copperFaces(data.board.stackup);
-  const layerZ: Record<string, number> = {};
-  const total = data.board.thickness ?? 1.6;
-  copper.forEach((l, i) => {
-    const f = faces?.get(l);
-    layerZ[l] = f ? (f.top + f.bottom) / 2 : copper.length > 1 ? (i * total) / (copper.length - 1) : 0;
-  });
-  // the resistance of copper at the hottest it is allowed to get
-  return { thickness, layerZ, platingMm: PLATING_MM, tempC: ambient + dT, dTC: dT };
-}
-
 export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: KicadAnalysisInputs; set: SetKicadInputs }) {
   const [drawing, setDrawing] = useState<{ board: object; d?: BoardDrawing; error?: string } | null>(null);
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
-  const [dc, setDc] = useState<{ key: string; result?: DcResult; error?: string } | null>(null);
-  const [ret, setRet] = useState<{ key: string; result?: DcResult; error?: string } | null>(null);
+  const [dc, setDc] = useState<{ board: object; key: string; result?: DcResult; error?: string } | null>(null);
+  const [ret, setRet] = useState<{ board: object; key: string; result?: DcResult; error?: string } | null>(null);
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -98,10 +83,10 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     if (mode !== 'dc' || !nc || !settings || !source || !loads.some((l) => l.amps > 0)) return;
     let live = true;
     const t = setTimeout(() => {
-      setDc({ key: dcKey });
+      setDc({ board: data.board, key: dcKey });
       solveDcInWorker({ nc, source, loads, s: settings }).then(
-        (result) => live && setDc({ key: dcKey, result }),
-        (e: unknown) => live && setDc({ key: dcKey, error: e instanceof Error ? e.message : String(e) }),
+        (result) => live && setDc({ board: data.board, key: dcKey, result }),
+        (e: unknown) => live && setDc({ board: data.board, key: dcKey, error: e instanceof Error ? e.message : String(e) }),
       );
     }, 300);
     return () => {
@@ -110,7 +95,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, nc, settings, dcKey]);
-  const dcNow = dc?.key === dcKey ? dc : null;
+  const dcNow = dc?.board === data.board && dc.key === dcKey ? dc : null;
   const solved = dcNow?.result?.ok ? dcNow.result : null;
 
   // the return: the ground net the loads send their current back on, from their ground pads to the source's.
@@ -130,10 +115,10 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     if (mode !== 'dc' || !retNc || !settings || !retSourceOk || !retLoads.some((l) => l.amps > 0)) return;
     let live = true;
     const t = setTimeout(() => {
-      setRet({ key: retKey });
+      setRet({ board: data.board, key: retKey });
       solveDcInWorker({ nc: retNc, source, loads: retLoads, s: settings }, 'return').then(
-        (result) => live && setRet({ key: retKey, result }),
-        (e: unknown) => live && setRet({ key: retKey, error: e instanceof Error ? e.message : String(e) }),
+        (result) => live && setRet({ board: data.board, key: retKey, result }),
+        (e: unknown) => live && setRet({ board: data.board, key: retKey, error: e instanceof Error ? e.message : String(e) }),
       );
     }, 300);
     return () => {
@@ -142,7 +127,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, retNc, settings, retKey, retSourceOk]);
-  const retNow = returnNet && ret?.key === retKey ? ret : null;
+  const retNow = returnNet && ret?.board === data.board && ret.key === retKey ? ret : null;
   const retSolved = retNow?.result?.ok ? retNow.result : null;
 
   // the map: a layer of the solved copper of the supply or the return net
@@ -177,12 +162,12 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   }, [loadsOf, p.pdt]);
   const highlight = useMemo(() => new Set([net, returnNet].filter(Boolean)), [net, returnNet]);
 
-  if (!drawing || drawing.board !== data.board) return <Panel title="Power"><p className="p-3" role="status">Drawing the board…</p></Panel>;
+  if (!drawing || drawing.board !== data.board) return <Panel title="Power"><p className="p-3" role="status" data-result-busy="true">Drawing the board…</p></Panel>;
   if (drawing.error || !d || !settings) return <Panel title="Power"><p className="p-3">{drawing.error}</p></Panel>;
   if (!nets.length) return <Panel title="Power"><p className="p-3">This board has no nets with pads to check.</p></Panel>;
 
   const setLoads = (next: { ref: string; amps: number }[]) => set({ ploads: encodeLoads(next) });
-  const others = parts.filter((x) => x.ref !== source);
+  const others = preferredLoads(parts.filter((x) => x.ref !== source));
   const zoomTrack = (t: TrackLoad) => {
     const tr = d.tracks[t.i];
     if (tr) setFocus([Math.min(tr.x1, tr.x2) - 1.5, Math.min(tr.y1, tr.y2) - 1.5, Math.max(tr.x1, tr.x2) + 1.5, Math.max(tr.y1, tr.y2) + 1.5]);
@@ -199,7 +184,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const innerT = d.copper.length > 2 ? (settings.thickness[d.copper[1]] ?? 0.035) : undefined;
 
   const controls = (
-    <div className="grid gap-x-6 gap-y-1 px-2.5 py-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-x-6 gap-y-1 px-2.5 py-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,310px),1fr))' }}>
       <SelectField
         label="Net"
         value={net}
@@ -223,7 +208,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
         value={p.pi}
         unit="A"
         onChange={(v) => set({ pi: v })}
-        hint={mode === 'quick' ? 'Current every track and via of the net is checked at: the whole current of the net, the worst case.' : 'Spread over the loads by the button below the loads.'}
+        hint={mode === 'quick' ? 'Current every track and via of the net is checked at: the whole current of the net, the worst case.' : 'Optional total to distribute over the loads you select. It does not override their currents until you press Spread.'}
       />
       <NumField label="Allowed rise" symbol="ΔT" value={p.pdt} unit="°C" onChange={(v) => set({ pdt: v })} hint="Temperature rise above ambient a track or via may reach (IPC-2221). 10 °C is a common choice; the Trace Width tool uses it too." />
       <NumField label="Ambient" value={p.pamb} unit="°C" allowNegative onChange={(v) => set({ pamb: v })} hint="The copper resistance of the DC drop is taken at ambient plus the allowed rise, the hottest the copper is allowed to get." />
@@ -253,16 +238,16 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     <div className="border-t border-line px-2.5 py-2">
       <p className="mb-1 font-semibold">Loads on {netLeaf(net)}</p>
       {loads.length === 0 && <p className="mb-1 text-muted">Add the parts that draw current from the net, with their current.</p>}
-      <ul className="grid max-h-[176px] gap-x-4 gap-y-1 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid max-h-[176px] gap-x-4 gap-y-1 overflow-y-auto" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,250px),1fr))' }}>
         {loads.map((l, k) => (
-          <li key={`${l.ref}-${k}`} className="flex items-center gap-1.5">
+          <li key={`${l.ref}-${k}`} className="flex flex-wrap items-center gap-1.5">
             <select
               className="fld min-w-0 max-w-[130px]"
               aria-label={`Load ${k + 1}`}
               value={l.ref}
               onChange={(e) => setLoads(loads.map((x, j) => (j === k ? { ...x, ref: e.target.value } : x)))}
             >
-              {others.map((x) => (
+              {others.filter(x => x.ref === l.ref || !loads.some(load => load.ref === x.ref)).map((x) => (
                 <option key={x.ref} value={x.ref}>
                   {x.ref}
                 </option>
@@ -295,15 +280,16 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
           disabled={others.length === loads.length}
           onClick={() => {
             const free = others.find((x) => !loads.some((l) => l.ref === x.ref));
-            if (free) setLoads([...loads, { ref: free.ref, amps: 0.1 }]);
+            if (free) setLoads([...loads, { ref: free.ref, amps: 0 }]);
           }}
         >
           Add load
         </button>
-        <button type="button" className="btn" disabled={!others.length || !(p.pi > 0)} onClick={() => setLoads(others.map((x) => ({ ref: x.ref, amps: p.pi / others.length })))}>
-          Spread {num(p.pi, 3).replace(/\.?0+$/, '')} A over every other part
+        <button type="button" className="btn" disabled={!loads.length || !(p.pi > 0)} onClick={() => setLoads(spreadSelectedLoads(loads, p.pi))}>
+          Spread {num(p.pi, 3).replace(/\.?0+$/, '')} A over selected loads
         </button>
       </div>
+      <p className="mt-1 text-faint">ICs and transistors are suggested first by reference. Verify the source and enter each load’s actual DC current; new loads start at 0 A. Capacitors and other parts remain available for manual selection.</p>
     </div>
   );
 
@@ -470,7 +456,8 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     const total = !l.connected ? NaN : retSolved ? (r?.onNet && r.connected ? l.dropMv + r.dropMv : NaN) : l.dropMv;
     return { ref: l.ref, amps: l.amps, supply: l, ret: r, total };
   });
-  const worstTotal = Math.max(0, ...totals.map((t) => t.total).filter(Number.isFinite));
+  const completeTotals = totals.map(t => t.total).filter(Number.isFinite);
+  const worstTotal = completeTotals.length ? Math.max(...completeTotals) : NaN;
   const returnNote =
     mode !== 'dc' || !returnNet
       ? ''
@@ -533,8 +520,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
           <p className="mt-1 text-muted">
             {retSolved ? (
               <>
-                Largest drop seen by a load {num(worstTotal, 2)} mV{volts > 0 && ` (${num(worstTotal / 10 / volts, 2)} % of ${volts} V)`}: up to {num(solved.maxDropMv, 2)} mV on {netLeaf(net)} and{' '}
-                {num(retSolved.maxDropMv, 2)} mV on {netLeaf(returnNet)}. {num((solved.powerW + retSolved.powerW) * 1000, 1)} mW lost in the copper of both nets.
+                {Number.isFinite(worstTotal) ? <>Largest drop seen by a connected load {num(worstTotal, 2)} mV{volts > 0 && ` (${num(worstTotal / 10 / volts, 2)} % of ${volts} V)`}: up to {num(solved.maxDropMv, 2)} mV on {netLeaf(net)} and {num(retSolved.maxDropMv, 2)} mV on {netLeaf(returnNet)}.</> : 'No load has a complete supply and return connection; total voltage drop is unavailable.'} {num((solved.powerW + retSolved.powerW) * 1000, 1)} mW lost in the copper of both nets.
               </>
             ) : (
               <>
@@ -559,13 +545,15 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
 
   return (
     <Panel title="Power" allowInvalid>
+      <div data-result-busy={zf.busy || (mode === 'dc' && loads.some(l => l.amps > 0) && ((!dcNow?.result && !dcNow?.error) || (!!returnNet && retSourceOk && retLoads.some(l => l.amps > 0) && !retNow?.result && !retNow?.error))) || undefined} />
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
-        <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
+        <KicadPanelSettings title="Power setup" full={!!full}>
           {controls}
           <ZoneFillNote zf={zf} onChange={(n) => set({ zfill: encodeNets(n) })} what="the DC drop comes out higher than it will be" />
           {loadsEditor}
-        </div>
+        </KicadPanelSettings>
         {toolbar}
+        {!full && <div className="border-t border-line px-2.5 py-2" data-testid="power-summary">{mode === 'quick' ? quickSummary : dcSummary}</div>}
         <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
           <div className={full ? 'flex min-h-0 flex-1 flex-col' : undefined}>
             <div className={full ? 'min-h-0 flex-1' : undefined}>
@@ -592,7 +580,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
                 : 'grid gap-3 border-t border-line px-2.5 py-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]'
             }
           >
-            <div>{mode === 'quick' ? quickSummary : dcSummary}</div>
+            {full && <div>{mode === 'quick' ? quickSummary : dcSummary}</div>}
             <div className="flex flex-col gap-3">{itemLists}</div>
           </div>
         </div>

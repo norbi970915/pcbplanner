@@ -1,4 +1,5 @@
 import { ToolPage } from '../components/ToolPage';
+import { KicadViaSource } from '../components/KicadViaSource';
 import { Big, LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { parallelViaCount, via } from '../lib/via';
 import { fmt, si } from '../lib/units';
@@ -24,6 +25,7 @@ export default function Via() {
 
   const properties = (
     <>
+      <KicadViaSource onApply={set} />
       <Section title="Geometry">
         <LenField label="Finished hole" symbol="d" value={p.hole} onChange={(v) => set({ hole: v })} hint="Diameter after plating; do not use the larger production drill diameter." />
         <LenField label="Plating thickness" value={p.plating} onChange={(v) => set({ plating: v })} units={['um', 'mil', 'mm', 'oz']} />

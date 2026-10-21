@@ -6,7 +6,7 @@
 // src/lib/kicadExampleFills.ts. Then regenerate the example:
 //   WRITE_KICAD_EXAMPLE=1 npx vitest run src/lib/kicadImport.test.ts -t "write the example"
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -46,7 +46,10 @@ try {
   }
   const file = join(dir, 'example.kicad_pcb');
   writeFileSync(file, bare);
+  const project = board.replace(/\.kicad_pcb$/, '.kicad_pro');
+  if (existsSync(project)) copyFileSync(project, join(dir, 'example.kicad_pro'));
   execFileSync(cli, ['pcb', 'drc', '--refill-zones', '--save-board', '-o', join(dir, 'drc.rpt'), file], { stdio: 'inherit' });
+  if (process.env.KICAD_DRC_OUT) copyFileSync(join(dir, 'drc.rpt'), process.env.KICAD_DRC_OUT);
   const filled = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   const fills = {};
   for (let z = filled.indexOf('\n\t(zone'); z >= 0; z = filled.indexOf('\n\t(zone', z + 1)) {

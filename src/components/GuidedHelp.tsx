@@ -34,7 +34,13 @@ export default function GuidedHelp({ onClose }: { onClose: () => void }) {
   const reset = (next: string) => { focusStep.current = false; setMode(next); setCategoryId(null); setTaskId(null); setTopicId(null); };
   const closeForNavigation = () => { navigating.current = true; onClose(); };
   // Returning to the current tool must preserve unsaved URL inputs.
-  const destination = (path: string) => path === location.pathname ? path + location.search + location.hash : path;
+  const destination = (path: string) => {
+    const [pathname, query = ''] = path.split('?');
+    if (pathname !== location.pathname) return path;
+    const params = new URLSearchParams(location.search);
+    for (const [key, value] of new URLSearchParams(query)) params.set(key, value);
+    return pathname + (params.size ? '?' + params.toString() : '') + location.hash;
+  };
   return <Dialog.Root defaultOpen onOpenChange={open => { if (!open) onClose(); }}>
     <Dialog.Portal>
       <Dialog.Overlay className="workspace-dialog-overlay guidance-overlay" />
@@ -91,7 +97,7 @@ export default function GuidedHelp({ onClose }: { onClose: () => void }) {
                   <div className="guidance-result-label"><Check size={14} aria-hidden="true" />Recommended starting point</div>
                   <div className="guidance-tool-title"><CategoryIcon group={tool.group} color={GROUP_COLORS[tool.group]} size={24} /><h3>{tool.title}</h3></div>
                   <p>{task.why}</p>
-                  <Button asChild size="sm"><Link to={destination(tool.path)} onClick={closeForNavigation}>Open {tool.nav}<ArrowRight size={14} aria-hidden="true" /></Link></Button>
+                  <Button asChild size="sm"><Link to={destination(task.to ?? tool.path)} onClick={closeForNavigation}>Open {tool.nav}<ArrowRight size={14} aria-hidden="true" /></Link></Button>
                 </div>
                 <section className="guidance-prepare"><h3>Have these ready</h3><ul>{task.prepare.map(item => <li key={item}>{item}</li>)}</ul></section>
                 {guide && <Link className="guidance-guide" to={guide.path} onClick={closeForNavigation}><BookOpen size={19} aria-hidden="true" /><span><small>Read the guide</small><strong>{guide.seoTitle}</strong></span><ArrowRight size={16} aria-hidden="true" /></Link>}

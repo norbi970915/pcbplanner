@@ -16,6 +16,9 @@ import { netClasses, pairSummary, pairs, type KicadProjectData } from '../lib/ki
 import { KICAD_DB_NAME } from '../state/kicadProjectStore';
 import { useUrlState } from '../state/useUrlState';
 import type { DataSource } from '../data/source';
+import { captureProjectReport } from '../lib/kicadProjectReport';
+import { EXAMPLE_SCENARIO } from '../lib/kicadExampleScenario';
+import { KICAD_EXAMPLE } from '../state/kicadProjectStore';
 
 /**
  * The tools that read the active project and what each takes from it. `ready`: the tool has its From KiCad
@@ -27,8 +30,8 @@ const KICAD_PROJECT_TOOLS: { path: string; label: string; takes: string; ready: 
   { path: '/trace-loss', label: 'Trace loss', takes: 'the layer, the line width and the routed length', ready: true },
   { path: '/timing', label: 'Delay & timing', takes: 'the layer and the routed length and skew of a net or pair', ready: true },
   { path: '/crosstalk', label: 'Crosstalk', takes: 'the layer and two nets: width, spacing and parallel length', ready: true },
-  { path: '/trace-width', label: 'Trace width / current', takes: 'the copper thickness of a layer and a net’s width', ready: false },
-  { path: '/via', label: 'Via', takes: 'the board thickness and the copper layers', ready: false },
+  { path: '/trace-width', label: 'Trace width / current', takes: 'the copper thickness of a layer and a net’s width and routed length on that layer', ready: true },
+  { path: '/via', label: 'Via', takes: 'the board thickness, or a selected via’s layer span, hole and pad diameters', ready: true },
   { path: '/pdn', label: 'PDN', takes: 'the power and ground plane pair: overlap area, dielectric thickness and εr', ready: true },
   { path: '/stackup', label: 'Layer Stack Manager', takes: 'the whole stackup, to edit or export (Open in Layer Stack Manager under Impedance by Layer)', ready: true },
 ];
@@ -179,7 +182,7 @@ function UseInPanel() {
 
 export default function KicadProject() {
   const [p, set, reset] = useUrlState(KICAD_ANALYSIS_DEFAULTS);
-  const { kp, dropZone, inputs, busy, errors: loadErrors } = useKicadFileLoader();
+  const { kp, dropZone, inputs, busy, errors: loadErrors } = useKicadFileLoader(() => set(EXAMPLE_SCENARIO));
   const data = kp.data;
   const a = useKicadAnalysis(data, p, set);
   const { calc, unit, L } = a;
@@ -189,11 +192,17 @@ export default function KicadProject() {
 
   const properties = (
     <>
-      <div className="lg:hidden">
+      {!data && <div className="lg:hidden">
         <Section title="Board File">{dropZone(true)}</Section>
-      </div>
-      {data ? (
+      </div>}
+      {data && ['overview', 'board'].includes(p.view) ? (
         <AnalysisProperties a={a} p={p} set={set} />
+      ) : data ? (
+        <>
+          <Section title="Project"><p className="break-words font-semibold">{data.boardName}</p><p className="text-faint">{data.board.copper.length} copper layers. Files stay in this browser.</p>
+            <button className="btn" type="button" onClick={() => set({ view: 'overview' })}>Stackup and routing settings</button>
+          </Section>
+        </>
       ) : (
         <Section title="Project">
           <p className="text-faint">Load a board to see its layer roles, impedance targets and routing targets here.</p>
@@ -205,11 +214,12 @@ export default function KicadProject() {
   return (
     <ToolPage
       title="KiCad Project"
-      description="Drop a KiCad .kicad_pcb file or the whole project folder to read its physical stackup, net classes and differential pairs. Get the trace width for 50 Ω single-ended and the width and gap for 90 Ω and 100 Ω differential pairs on every signal layer, with the loss per inch, from a 2D field solver, and a routing check of every routed pair: width, gap, impedance, skew, length, loss and gaps in its reference plane. The Power tab checks the current capacity of the tracks and vias of a power net and solves its DC voltage drop, and the Thermal tab the temperature of the board from the power of its parts, both drawn as heat maps on the board, and the Clearance tab checks high-voltage nets against IPC-2221. The project then stays loaded for the other calculators. The files are read in your browser and not uploaded."
+      description="Inspect a KiCad board’s stackup, routing, voltage drop, temperature and same-layer clearance. Open a .kicad_pcb or project folder; files stay in your browser."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}
       onReset={reset}
       method={<Method />}
+      reportCapture={snapshot => data ? captureProjectReport(data, p, a, snapshot) : Promise.resolve({ ...snapshot, blocked: 'Load a KiCad board before creating a project report.' })}
     >
       {inputs}
       {!data && (
@@ -222,7 +232,15 @@ export default function KicadProject() {
           Reading {kp.boardName ?? 'the saved project'}…
         </p>
       )}
-      <Notes kind="error" items={[...loadErrors, ...(data ? a.errors : [])]} />
+      <Notes kind="error" items={[...loadErrors, ...(data && ['overview', 'board'].includes(p.view) ? a.errors : [])]} />
+      {data?.boardName === KICAD_EXAMPLE.board.name && <div className="border border-line bg-sheet px-3 py-2" data-testid="example-scenario">
+        <div className="flex flex-wrap items-center justify-between gap-2"><b>Demonstration board</b><button type="button" className="btn" onClick={() => set(EXAMPLE_SCENARIO)}>Restore demonstration inputs</button></div>
+        {!data.board.routing?.nets.some(n => n.name === '+48V') && <p className="mt-1 text-muted">An older example is saved in this browser. <button type="button" className="underline" disabled={busy} onClick={() => { void kp.loadExample().then(loaded => { if (loaded) set(EXAMPLE_SCENARIO); }); }}>Load the updated demonstration</button> to get the new power and clearance sections.</p>}
+        <details className="mt-1"><summary className="cursor-pointer text-muted">Demonstration assumptions and expected findings</summary>
+        <p className="mt-1 text-muted">Follow 5 V input J1 → 3.3 V regulator U1 → load U2. Assumed load: 0.2 A; heat: U1 0.34 W and U2 0.66 W at 25 °C in still air. Power shows the drop immediately; Thermal needs Solve. The separate 48 V test section demonstrates a clearance finding. These are teaching inputs, not device ratings or a fabrication-ready design.</p>
+        <p className="mt-1 text-faint">USB deliberately keeps the wrong width after a layer change; HDMI has uncompensated bend skew; PCIe shows a passing pair. No junction metric is assumed. <a href={KICAD_EXAMPLE.board.url} download>Download board</a> · <a href={KICAD_EXAMPLE.project.url} download>Download project</a></p>
+        </details>
+      </div>}
       {data && (
         <nav aria-label="Project views" className="flex gap-1 border-b border-line">
           {(
@@ -255,6 +273,14 @@ export default function KicadProject() {
       {data && p.view === 'clearance' && <KicadClearancePanel data={data} p={p} set={set} />}
       {data && !['board', 'power', 'thermal', 'clearance'].includes(p.view) && (
         <>
+          <Panel title="Check summary" allowInvalid>
+            <div className="flex flex-wrap items-center gap-3 px-3 py-2">
+              <b>{a.routingCheck.checked.filter(c => c.res.overall === 'fail').length} routing failures · {a.routingCheck.checked.filter(c => c.res.overall === 'warn').length} warnings</b>
+              <span className="text-muted">{a.solving || a.routingCheck.progress.done < a.routingCheck.progress.total ? 'Checks are still running…' : `${a.routingCheck.checked.filter(c => c.res.overall === 'ok').length} routed items pass the checks performed.`}</span>
+              <button type="button" className="btn" onClick={() => { const first = a.routingCheck.checked.find(c => c.res.overall === 'fail') ?? a.routingCheck.checked.find(c => c.res.overall === 'warn'); set({ view: 'board', item: first ? `${first.group.key}|${first.item.name}` : '' }); }}>Review on board</button>
+            </div>
+            <p className="px-3 pb-2 text-faint">Power, Thermal and Clearance use the operating conditions you enter in their tabs. An unconfigured check is not a pass.</p>
+          </Panel>
           <Panel title="Project" allowInvalid>
             <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
             <div className="hidden px-3 pb-3 lg:block">{dropZone(true)}</div>

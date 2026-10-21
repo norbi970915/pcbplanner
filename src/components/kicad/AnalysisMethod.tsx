@@ -13,9 +13,8 @@ export function AnalysisMethod({ limits }: { limits?: ReactNode }) {
       <p>
         A <code>.kicad_pcb</code> file is a text file of nested lists (s-expressions). The page reads it in your browser, in a background worker, and looks only at the top-level items it needs: the file
         version, <code>(general (thickness …))</code>, the <code>(layers …)</code> list, the <code>(stackup …)</code> section inside <code>(setup …)</code>, the Edge.Cuts outline graphics, the header, outline
-        and fill polygons of every <code>(zone …)</code>, every track segment and arc (start, mid and end point, width, layer, net) and every via (position, layers, net). Footprints and everything else are
-        skipped, so a board of tens of megabytes is read in about a second. Nets are named by their <code>(net N "name")</code> declarations in KiCad 6 to 9 and by <code>(net "name")</code> on each item from KiCad
-        10. From a <code>.kicad_pro</code> file, dropped with the board or found in the project folder, only the net classes are read; everything else in the folder is ignored.
+        and fill polygons of every <code>(zone …)</code>, every track segment and arc (start, mid and end point, width, layer, net) and every via (position, layers, net). The board drawing reads footprint pads, body outlines, references and board silkscreen text in a separate worker. Nets are named by their <code>(net N "name")</code> declarations in KiCad 6 to 9 and by <code>(net "name")</code> on each item from KiCad
+        10. From a <code>.kicad_pro</code> file, dropped with the board or found in the project folder, the net classes and board clearances are read; other project files are ignored.
       </p>
       <p>
         Each stackup item is <code>(layer "name" (type "…") …)</code> with <code>(thickness mm [locked])</code>, <code>(material "…")</code>, <code>(epsilon_r …)</code> and <code>(loss_tangent …)</code>; a

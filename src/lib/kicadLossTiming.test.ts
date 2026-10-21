@@ -86,9 +86,9 @@ describe('Trace Loss from the KiCad project', () => {
   it('the whole route instead of the layer length; a net is single-ended; the frequency stays without an interface', () => {
     expect(appliedLoss({ layer: 'In2.Cu', pair: '/USB_D' }, 'route').patch.len).toBeCloseTo((46.639457279872715 + 46.63987149343508) / 2, 5);
     const clk = appliedLoss({ layer: 'In2.Cu', net: '/CLK' }, 'layer', { ...TRACE_LOSS_DEFAULTS, f: 2.5 });
-    expect(clk.patch).toMatchObject({ mode: 'se', w: 0.121, len: 60, f: 2.5 });
+    expect(clk.patch).toMatchObject({ mode: 'se', w: 0.121, len: 65, f: 2.5 });
     expect(clk.patch.s).toBeUndefined();
-    expect(appliedLoss({ layer: 'In2.Cu', net: '/CLK' }, 'route').patch.len).toBe(100);
+    expect(appliedLoss({ layer: 'In2.Cu', net: '/CLK' }, 'route').patch.len).toBe(105);
     expect(traceLossPatch(data, resolvePick(data, { layer: 'In1.Cu', pair: '/USB_D' }), TRACE_LOSS_DEFAULTS, { length: 'layer', L })).toHaveProperty('error');
   });
 
@@ -169,12 +169,12 @@ describe('Delay and timing from the KiCad project', () => {
   it('a net alone fills the first length with its single-ended εeff; a pair and a net compare the pair with the net', () => {
     const clk = applied({ layer: 'In2.Cu', net: '/CLK' });
     expect(clk.src.diff).toBe(false);
-    expect(clk.patch.len).toBe(100);
+    expect(clk.patch.len).toBe(105);
     expect(clk.patch.lenB).toBeUndefined();
     expect(clk.patch.skew).toBeUndefined();
     expect(clk.eeff).toBeGreaterThan(4); // stripline: about the laminate's Dk
     const both = applied({ layer: 'F.Cu', pair: '/HDMI_D0', net: '/CLK' });
-    expect([both.patch.len, both.patch.lenB, both.patch.skew]).toEqual([44.0893420416774, 100, undefined]);
+    expect([both.patch.len, both.patch.lenB, both.patch.skew]).toEqual([44.0893420416774, 105, undefined]);
     expect(timingSource(resolvePick(data, { layer: 'F.Cu' }), L)).toEqual({ error: 'Choose a pair or a net.' });
   });
 

@@ -53,6 +53,8 @@ export interface BoardDrawing {
   read: number;
   /** Zones saved without their fill, and the rule areas that keep pours out, for an estimated fill. */
   zones?: ZoneGeom[];
+  /** Top/bottom silkscreen text, retained as text rather than interpreted as instructions. */
+  labels?: { text: string; x: number; y: number; size: number; angle: number; back: boolean }[];
 }
 
 const isList = (n: SNode | undefined): n is SNode[] => Array.isArray(n);
@@ -144,6 +146,7 @@ export function readBoardDrawing(text: string): BoardDrawing {
   const footprints: [number, number][] = [];
   const edgeItems: SNode[][] = [];
   const zones: ZoneGeom[] = [];
+  const labels: NonNullable<BoardDrawing['labels']> = [];
   let copper: string[] = [];
   let read = 0;
   scanTopLevel(text, rootStart, (name, start, end) => {
@@ -197,6 +200,17 @@ export function readBoardDrawing(text: string): BoardDrawing {
       case 'module': // KiCad 5
         footprints.push([start, end]);
         break;
+      case 'gr_text': {
+        const node = parseSexpr(text, start, end)[0];
+        if (!isList(node)) break;
+        const layer = atom(child(node, 'layer'));
+        if (layer !== 'F.SilkS' && layer !== 'B.SilkS') break;
+        const at = child(node, 'at'), effects = child(node, 'effects');
+        const size = num(child(effects ? child(effects, 'font') ?? [] : [], 'size')) ?? 1;
+        const value = atom(node), x = num(at, 1), y = num(at, 2);
+        if (value && x !== undefined && y !== undefined) labels.push({ text: value, x, y, size, angle: num(at, 3) ?? 0, back: layer === 'B.SilkS' });
+        break;
+      }
       default:
         if (/^gr_(line|arc|rect|circle|poly|curve)$/.test(name)) {
           const s = text.slice(start, Math.min(end, start + 4000));
@@ -221,7 +235,7 @@ export function readBoardDrawing(text: string): BoardDrawing {
   for (const f of fills) f.net = netOf(f.net);
   for (const p of pads) p.net = netOf(p.net);
   for (const z of zones) z.net = netOf(z.net);
-  return { copper, outline: outlineLoops(edgeItems), tracks, vias, fills, pads, parts, read, zones };
+  return { copper, outline: outlineLoops(edgeItems), tracks, vias, fills, pads, parts, read, zones, labels };
 }
 
 /** Outline of a pad in board coordinates. */

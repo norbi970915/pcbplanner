@@ -2,17 +2,17 @@
 import type { ClearanceRequest, ClearanceResult } from './kicadClearance';
 import type { KicadClearanceResponse } from './kicadClearance.worker';
 
-let current: Worker | null = null;
+const current = new Map<string, Worker>();
 let nextId = 1;
 
-export async function checkClearanceInWorker(req: ClearanceRequest): Promise<ClearanceResult> {
+export async function checkClearanceInWorker(req: ClearanceRequest, channel = 'view'): Promise<ClearanceResult> {
   if (typeof Worker === 'undefined') {
     const { checkClearance } = await import('./kicadClearance');
     return checkClearance(req);
   }
-  current?.terminate();
+  current.get(channel)?.terminate();
   const worker = new Worker(new URL('./kicadClearance.worker.ts', import.meta.url), { type: 'module' });
-  current = worker;
+  current.set(channel, worker);
   const id = nextId++;
   try {
     return await new Promise<ClearanceResult>((resolve, reject) => {
@@ -26,6 +26,6 @@ export async function checkClearanceInWorker(req: ClearanceRequest): Promise<Cle
     });
   } finally {
     worker.terminate();
-    if (current === worker) current = null;
+    if (current.get(channel) === worker) current.delete(channel);
   }
 }

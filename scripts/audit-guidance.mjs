@@ -53,7 +53,7 @@ try {
     await category(group.id);
     for (const item of group.tasks) {
       await task(group.id, item.id);
-      assert.equal(await panel.locator('.guidance-recommendation a').getAttribute('href'), item.tool);
+      assert.equal(await panel.locator('.guidance-recommendation a').getAttribute('href'), item.to ?? item.tool);
       assert.equal(await panel.locator('.guidance-prepare li').count(), item.prepare.length);
       if (item.guide) assert.equal(await panel.locator('.guidance-guide').getAttribute('href'), item.guide);
       else assert.equal(await panel.locator('.guidance-guide').count(), 0);

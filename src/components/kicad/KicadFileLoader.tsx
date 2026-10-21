@@ -6,7 +6,7 @@ import { useKicadProject } from '../../state/kicadProjectStore';
  * Loading a KiCad board or project into the shared project store: the drop zone (files, folder,
  * example), the hidden file inputs and drag and drop anywhere on the page (/kicad-project).
  */
-export function useKicadFileLoader() {
+export function useKicadFileLoader(onExampleLoaded?: () => void) {
   const kp = useKicadProject();
   const [dragging, setDragging] = useState(false);
   const [dropError, setDropError] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export function useKicadFileLoader() {
           className="btn"
           onClick={() => {
             setDropError(null);
-            void kp.loadExample();
+            void kp.loadExample().then(loaded => { if (loaded) onExampleLoaded?.(); });
           }}
           disabled={busy}
         >

@@ -2,17 +2,17 @@
 import type { ThermalRequest, ThermalResult } from './kicadThermal';
 import type { KicadThermalResponse } from './kicadThermal.worker';
 
-let current: Worker | null = null;
+const current = new Map<string, Worker>();
 let nextId = 1;
 
-export async function solveThermalInWorker(req: ThermalRequest): Promise<ThermalResult> {
+export async function solveThermalInWorker(req: ThermalRequest, channel = 'view'): Promise<ThermalResult> {
   if (typeof Worker === 'undefined') {
     const { solveThermal } = await import('./kicadThermal');
     return solveThermal(req);
   }
-  current?.terminate();
+  current.get(channel)?.terminate();
   const worker = new Worker(new URL('./kicadThermal.worker.ts', import.meta.url), { type: 'module' });
-  current = worker;
+  current.set(channel, worker);
   const id = nextId++;
   try {
     return await new Promise<ThermalResult>((resolve, reject) => {
@@ -26,6 +26,6 @@ export async function solveThermalInWorker(req: ThermalRequest): Promise<Thermal
     });
   } finally {
     worker.terminate();
-    if (current === worker) current = null;
+    if (current.get(channel) === worker) current.delete(channel);
   }
 }

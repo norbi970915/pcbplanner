@@ -5,16 +5,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check } from '../ui';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
-import { netClassResolver, netLeaf } from '../../lib/kicadRouting';
-import { unfilledNets, type EstimatedFill, type FillRules } from '../../lib/kicadZoneFill';
+import { netLeaf } from '../../lib/kicadRouting';
+import { unfilledNets, type EstimatedFill } from '../../lib/kicadZoneFill';
 import { estimatedFills } from '../../lib/kicadZoneFillClient';
+import { zoneFillRules } from '../../lib/kicadZoneFillRules';
 
 export const decodeNets = (s: string) =>
   s
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean)
-    .map((x) => decodeURIComponent(x));
+    .flatMap((x) => { try { return [decodeURIComponent(x)]; } catch { return []; } });
 export const encodeNets = (nets: string[]) => nets.map((n) => encodeURIComponent(n)).join(',');
 
 export interface ZoneFill {
@@ -32,15 +33,7 @@ export interface ZoneFill {
 export function useZoneFill(data: KicadProjectData, raw: BoardDrawing | undefined, zfill: string): ZoneFill {
   const available = useMemo(() => (raw ? unfilledNets(raw) : []), [raw]);
   const chosen = useMemo(() => decodeNets(zfill).filter((n) => available.some((a) => a.net === n)), [zfill, available]);
-  const rules = useMemo((): FillRules => {
-    const resolve = netClassResolver(data.project);
-    const netClearance: Record<string, number> = {};
-    if (raw) for (const n of new Set([...raw.pads, ...raw.tracks, ...raw.vias, ...raw.fills].map((x) => x.net))) {
-      const c = resolve(n).clearance;
-      if (c !== undefined) netClearance[n] = c;
-    }
-    return { netClearance, edgeClearance: data.project?.edgeClearance, holeClearance: data.project?.holeClearance };
-  }, [data.project, raw]);
+  const rules = useMemo(() => zoneFillRules(data, raw), [data, raw]);
   const key = chosen.join('\n');
   const [state, setState] = useState<{ d: BoardDrawing; key: string; result?: EstimatedFill; error?: string } | null>(null);
   useEffect(() => {
