@@ -9,7 +9,7 @@ const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:1600,height:1050},serviceWorkers:'block'});
 await context.addInitScript(()=>{
   if(!sessionStorage.getItem('pcbtk-settings'))sessionStorage.setItem('pcbtk-settings',JSON.stringify({theme:'dark',unit:'mm'}));
-  localStorage.setItem('pcbplanner:analytics-consent',JSON.stringify({choice:'declined',updatedAt:new Date().toISOString()}));
+  localStorage.setItem('pcbplanner:analytics-consent',JSON.stringify({choice:'declined',version:2,updatedAt:new Date().toISOString()}));
 });
 const page=await context.newPage(),errors=[],checks=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
@@ -82,7 +82,7 @@ try {
   query.set('region','flex');query.set('minW','0.02');query.set('minS','0.02');query.set('maxW','1');query.set('etch','0.005');
   query.set('reqs',JSON.stringify([{id:'r1',label:'50 ohm',kind:'se',z:50,spacing:'fixed',s:0.1,ratio:1,where:'outer'}]));
   await goto('/stackup-advisor?'+query);await page.getByRole('button',{name:'Find Best Stackups',exact:true}).click();
-  await page.getByText(/of .* stackups meet every requirement/).waitFor({timeout:60000});
+  await page.locator('.status-bar').getByText(/of .* stackups meet every requirement/).waitFor({timeout:60000});
   const results=await page.locator('table.tbl > tbody > tr').allTextContents();assert.equal(results.length,3);assert.ok(results.some(s=>s.includes('Meets')));
   await page.locator('table.tbl > tbody > tr').first().click();
   await page.getByRole('button',{name:'Open in Layer Stack Manager',exact:true}).click();

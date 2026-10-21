@@ -7,6 +7,7 @@
 // added. The engine is kicadPower.ts.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NumField, Panel, Row, Segmented, SelectField } from '../ui';
+import { parseNumericInput } from '../../lib/numericInput';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
 import { encodeNets, useZoneFill, ZoneFillNote } from './useZoneFill';
@@ -260,8 +261,8 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
               defaultValue={l.amps}
               key={`${l.ref}-${l.amps}`}
               onBlur={(e) => {
-                const v = Number(e.target.value.replace(',', '.'));
-                if (Number.isFinite(v) && v >= 0) setLoads(loads.map((x, j) => (j === k ? { ...x, amps: v } : x)));
+                const v = parseNumericInput(e.target.value.replace(',', '.'));
+                if (v !== null && v >= 0) setLoads(loads.map((x, j) => (j === k ? { ...x, amps: v } : x)));
                 else e.target.value = String(l.amps);
               }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}

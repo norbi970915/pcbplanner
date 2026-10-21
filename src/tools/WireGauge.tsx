@@ -8,14 +8,26 @@ const DEFAULTS = { n: 18, metal: 'copper', len: 2, rt: true, i: 3, v: 12, t: 20,
 
 export default function WireGauge() {
   const [p, set, reset] = useUrlState(DEFAULTS);
-  const metal = p.metal as Metal;
+  const knownMetal = Object.hasOwn(METALS, p.metal);
+  const metal = (knownMetal ? p.metal : 'copper') as Metal;
   const errors: string[] = [];
+  if (!knownMetal) errors.push('Choose a supported conductor: copper or aluminium.');
   if (!(p.len > 0)) errors.push('Length must be greater than 0.');
   if (!(p.i >= 0)) errors.push('Current cannot be negative.');
   if (!(p.v > 0)) errors.push('Supply voltage must be greater than 0.');
+  if (!GAUGES.some(g => g.n === p.n)) errors.push('Choose a supported AWG gauge.');
+  if (!(p.maxPct > 0)) errors.push('Allowed drop must be greater than 0.');
   const base = { metal, lengthM: p.len, roundTrip: p.rt, currentA: p.i, supplyV: p.v, tempC: p.t };
-  const r = errors.length ? null : voltageDrop({ ...base, n: p.n });
-  const minG = errors.length ? null : minimumGauge(base, p.maxPct);
+  let r: ReturnType<typeof voltageDrop> | null = null;
+  let minG: ReturnType<typeof minimumGauge> = null;
+  if (!errors.length) {
+    try {
+      const calculated = voltageDrop({ ...base, n: p.n });
+      if (![calculated.R, calculated.V, calculated.loadV, calculated.power, calculated.dropPct].every(Number.isFinite)) throw new RangeError('The resistance or voltage-drop result is outside the supported numerical range.');
+      r = calculated;
+      minG = minimumGauge(base, p.maxPct);
+    } catch (error) { r = null; errors.push(error instanceof Error ? error.message : 'Unable to calculate wire resistance.'); }
+  }
   const notes: string[] = [];
   if (r && r.dropPct > p.maxPct) notes.push(`The drop is ${fmt(r.dropPct, 3)} %, above your ${fmt(p.maxPct, 3)} % limit. ${minG ? `Use AWG ${minG.label} or thicker.` : 'No AWG size meets it.'}`);
 
@@ -23,7 +35,7 @@ export default function WireGauge() {
     <>
       <Section title="Wire">
         <SelectField label="Gauge (AWG)" value={String(p.n)} onChange={(v) => set({ n: Number(v) })} options={GAUGES.map((g) => ({ value: String(g.n), label: g.label }))} width={110} />
-        <SelectField label="Conductor" value={metal} onChange={(v) => set({ metal: v })} options={(Object.keys(METALS) as Metal[]).map((m) => ({ value: m, label: METALS[m].label }))} />
+        <SelectField label="Conductor" value={p.metal} onChange={(v) => set({ metal: v })} options={[...(!knownMetal ? [{ value: p.metal, label: 'Choose a conductor' }] : []), ...(Object.keys(METALS) as Metal[]).map((m) => ({ value: m, label: METALS[m].label }))]} />
         <NumField label="Conductor temperature" value={p.t} onChange={(v) => set({ t: v })} unit="°C" allowNegative />
       </Section>
       <Section title="Circuit">
@@ -91,6 +103,7 @@ export function Method() {
         This is the definition of the American Wire Gauge in ASTM B258. Gauge 0000 is n = −3, 000 is −2, 00 is −1 and 0 is 0. Resistance uses ρ = 1.7241 µΩ·cm and α = 0.00393 /°C for
         annealed copper (IEC 60028), and 2.8264 µΩ·cm and α = 0.00403 /°C for aluminium (IEC 60889). The voltage drop counts both conductors when the return path is a wire.
       </p>
+      <p>The linear resistance correction is an approximation around 20 °C. Inputs that predict nonpositive resistivity are rejected; this is not a cryogenic material model. For copper at low temperatures, use <a href="https://www.nist.gov/publications/properties-copper-and-copper-alloys-cryogenic-temperatures" target="_blank" rel="noreferrer">NIST's temperature-specific material data</a>.</p>
       <div className="eq">
         <span className="no">(2)</span>
         <i>I</i>

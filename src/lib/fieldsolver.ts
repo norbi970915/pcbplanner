@@ -493,6 +493,7 @@ export interface SolveOptions {
 
 export function solve(g: Geometry, opts: SolveOptions = {}): SolveResult {
   validate(g);
+  if (opts.accuracy !== undefined && !Object.hasOwn(ACC, opts.accuracy)) throw new GeometryError('Choose a supported solver accuracy: fast, normal or high.');
   const m = buildMesh(g, opts.accuracy ?? 'normal');
   const cDiel = coefficients(m, false);
   const cAir = coefficients(m, true);
@@ -538,6 +539,10 @@ export function solve(g: Geometry, opts: SolveOptions = {}): SolveResult {
     }
     if (opts.field) res.field = field(o.phi, 'odd');
   }
+  const modes = [res.se, res.odd, res.even].filter((mode): mode is ModeResult => !!mode);
+  if (modes.some(mode => !Number.isFinite(mode.z) || !(mode.z > 0) || !Number.isFinite(mode.eeff) || !(mode.eeff > 0)) || res.field?.phi.some(value => !Number.isFinite(value))) {
+    throw new GeometryError('The field solution is outside the supported numerical range. Check the geometry and dielectric constants.');
+  }
   return res;
 }
 
@@ -556,6 +561,7 @@ function validate(g: Geometry) {
   if (g.topPlane !== undefined && !(g.topPlane > g.yTrace + g.t)) bad('The top plane must be above the trace.');
   if (g.coplanarGap !== undefined && !(g.coplanarGap > 0)) bad('Coplanar gap must be greater than 0.');
   for (const s of g.slabs) if (!(s.er >= 1 && s.er <= 1000)) bad('Dielectric constant must be between 1 and 1000.');
+  if (g.mask && !(g.mask.er >= 1 && g.mask.er <= 1000)) bad('Solder-mask dielectric constant must be between 1 and 1000.');
   const dims = [g.w, g.t, g.yTrace, g.s, g.coplanarGap, g.topPlane, g.mask?.overSubstrate || undefined, g.mask?.overTrace || undefined].filter(
     (v): v is number => v !== undefined,
   );

@@ -77,13 +77,13 @@ function warn(route, step, msg) {
 // ---------------------------------------------------------------- page helpers
 function track(page) {
   const errs = [];
-  page.on('console', (m) => m.type() === 'error' && errs.push(`console.error: ${m.text()}`));
+  page.on('console', (m) => m.type() === 'error' && !(page.expectNotFound && /Failed to load resource.*404/.test(m.text())) && errs.push(`console.error: ${m.text()}`));
   page.on('pageerror', (e) => errs.push(`pageerror: ${e.message}`));
   page.on('requestfailed', (r) => {
     const t = r.failure()?.errorText ?? '';
     if (!/ERR_ABORTED/.test(t)) errs.push(`requestfailed: ${r.url()} ${t}`);
   });
-  page.on('response', (r) => r.status() >= 400 && errs.push(`HTTP ${r.status()}: ${r.url()}`));
+  page.on('response', (r) => r.status() >= 400 && !(page.expectNotFound && r.status() === 404 && new URL(r.url()).pathname === '/no-such-tool') && errs.push(`HTTP ${r.status()}: ${r.url()}`));
   page.drain = () => errs.splice(0);
   page.setDefaultTimeout(15000);
   return page;
@@ -882,9 +882,11 @@ async function flowTabsMenus(page) {
   await check(page, (await panelItem.count()) === 1, route, 'status "Panels" opens View menu', 'menu not open');
   await page.keyboard.press('Escape');
   // unknown route
+  page.expectNotFound = true;
   await page.goto(`${BASE}/no-such-tool`, { waitUntil: 'networkidle' });
   await checkPage(page, '/no-such-tool', 'unknown route');
   await check(page, (await page.locator('main').innerText()).trim().length > 0, '/no-such-tool', 'unknown route shows something', 'empty document area');
+  page.expectNotFound = false;
 }
 
 async function flowMobile(page) {

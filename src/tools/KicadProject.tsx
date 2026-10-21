@@ -217,6 +217,7 @@ export default function KicadProject() {
       description="Inspect a KiCad board’s stackup, routing, voltage drop, temperature and same-layer clearance. Open a .kicad_pcb or project folder; files stay in your browser."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}
+      reportBusy={busy || a.solving || a.routingCheck.progress.done < a.routingCheck.progress.total || a.routingCheck.checked.some(c => c.res.overall === 'pending')}
       onReset={reset}
       method={<Method />}
       reportCapture={snapshot => data ? captureProjectReport(data, p, a, snapshot) : Promise.resolve({ ...snapshot, blocked: 'Load a KiCad board before creating a project report.' })}

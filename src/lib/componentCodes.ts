@@ -61,16 +61,17 @@ export function readBands(bands: BandColor[]): BandReading | null {
   const digits = n === 4 ? 2 : 3;
   let m = 0;
   for (const c of bands.slice(0, digits)) {
-    const d = COLORS[c].digit;
+    const d = Object.hasOwn(COLORS, c) ? COLORS[c].digit : undefined;
     if (d === undefined) return null;
     m = m * 10 + d;
   }
-  const exp = COLORS[bands[digits]].exp;
-  const tol = COLORS[bands[digits + 1]];
-  if (exp === undefined || tol.tol === undefined) return null;
+  const mult = bands[digits], tolerance = bands[digits + 1];
+  const exp = Object.hasOwn(COLORS, mult) ? COLORS[mult].exp : undefined;
+  const tol = Object.hasOwn(COLORS, tolerance) ? COLORS[tolerance] : undefined;
+  if (exp === undefined || tol?.tol === undefined) return null;
   let tcr: number | undefined;
   if (n === 6) {
-    tcr = COLORS[bands[5]].tcr;
+    tcr = Object.hasOwn(COLORS, bands[5]) ? COLORS[bands[5]].tcr : undefined;
     if (tcr === undefined) return null;
   }
   return { ohms: pow10(m, exp), tol: tol.tol, tolLetter: tol.tolLetter!, tcr };

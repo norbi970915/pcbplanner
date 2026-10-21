@@ -80,14 +80,29 @@ jobs:
       # each failed check as an annotation, readable on the run's page (and through the API) without the log
       - name: KiCad workflow regressions
         run: node scripts/audit-kicad-workflow.mjs http://localhost:4173
+      - name: Reliability regressions
+        run: node scripts/audit-reliability.mjs http://localhost:4173
+      - name: Full conditional input coverage
+        if: github.event_name == 'schedule' || inputs.full
+        run: node scripts/audit-control-modes.mjs http://localhost:4173
+      - name: All tool actions
+        if: github.event_name == 'schedule' || inputs.full
+        run: node scripts/audit-actions.mjs http://localhost:4173
+      - name: Active project handoffs
+        if: github.event_name == 'schedule' || inputs.full
+        run: node scripts/audit-project-handoffs.mjs http://localhost:4173
       - name: Failures as annotations
         if: failure()
         run: grep -E '^  FAIL ' e2e-out.log | sort -u | head -50 | sed -E 's/^  FAIL /::error title=e2e::/' || true
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: e2e-report
           path: |
             e2e-out
             dist-check/kicad-workflow
+            dist-check/reliability
+            dist-check/control-modes
+            dist-check/actions
+            dist-check/project-handoffs
           retention-days: 7

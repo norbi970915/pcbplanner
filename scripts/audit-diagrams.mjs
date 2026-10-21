@@ -67,7 +67,7 @@ try {
   await visit('/impedance?mode=diff&w=0.145&s=0.127&h=0.0994&t=0.04064&target=85');
   await page.waitForFunction(()=>Number(document.querySelector('.headline-result [data-copy-value]')?.textContent)>0);
   assert.ok(Math.abs(Number(await page.locator('.headline-result [data-copy-value]').first().textContent())-85.21)<.15);
-  await page.getByLabel(/Width /).first().fill('0.2');
+  await page.getByLabel(/Width /).and(page.locator('input')).first().fill('0.2');
   await page.waitForFunction(()=>[...document.querySelectorAll('.diagram-values dd')].some(el=>el.textContent==='0.2 mm'));
   checks.push('Existing 85-ohm field-solver reference and live width annotation');
   await visit('/rc-filter?kind=highpass&rs=50&rl=10000');
@@ -79,7 +79,7 @@ try {
   await visit('/thermal-vias?padW=6&padH=3&n=12');
   const ratio=await page.locator('[data-thermal-pad]').evaluate(el=>Number(el.getAttribute('width'))/Number(el.getAttribute('height')));
   assert.equal(ratio,2);assert.equal(await page.locator('[data-thermal-via]').count(),12);
-  await page.getByLabel('Thermal pad width',{exact:true}).fill('3');
+  await page.getByLabel('Thermal pad width',{exact:true}).and(page.locator('input')).fill('3');
   await page.waitForFunction(()=>{const el=document.querySelector('[data-thermal-pad]');return Number(el.getAttribute('width'))===Number(el.getAttribute('height'));});
   await visit('/thermal-vias?n=500&fill=copper');
   assert.equal(await page.locator('[data-thermal-via]').count(),400);
@@ -90,7 +90,7 @@ try {
   assert.equal(await page.locator('.engineering-diagram').count(),4);
   assert.ok((await page.locator('.diagram-values').first().innerText()).includes('Pad side'));
   const sizes=await page.locator('.diagram-values dd').allTextContents();
-  await page.getByLabel(/Max lead width/).fill('1');
+  await page.getByLabel(/Max lead width/).and(page.locator('input')).fill('1');
   await page.waitForFunction(prev=>JSON.stringify([...document.querySelectorAll('.diagram-values dd')].map(e=>e.textContent))!==JSON.stringify(prev),sizes);
   await checkLayout('/padstack rectangular');
   checks.push('Four square-pad views, six-spoke relief and annotations follow edited lead dimensions');

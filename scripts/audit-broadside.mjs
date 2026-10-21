@@ -11,7 +11,7 @@ const errors = [], checks = [];
 const context = await browser.newContext({viewport:{width:1600,height:1050}, permissions:['clipboard-read','clipboard-write']});
 await context.addInitScript(() => {
   if(!sessionStorage.getItem('pcbtk-settings')) sessionStorage.setItem('pcbtk-settings', JSON.stringify({theme:'dark',unit:'mm'}));
-  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({choice:'declined',updatedAt:new Date().toISOString()}));
+  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({choice:'declined',version:2,updatedAt:new Date().toISOString()}));
 });
 const page = await context.newPage();
 page.on('pageerror', e=>errors.push(e.message));
@@ -38,14 +38,14 @@ async function noOverflow() {
 }
 try {
   await goto('type=microstrip&mode=diff&s=0.127&w=0.145&h=0.0994&t=0.04064&target=85');
-  assert.equal(await page.getByLabel('Pair coupling',{exact:true}).inputValue(),'edge');
+  assert.equal(await page.getByLabel('Pair coupling',{exact:true}).and(page.locator('select')).inputValue(),'edge');
   const legacy=await z();
   assert.ok(Math.abs(legacy-85.21)<0.15, 'legacy coated-microstrip reference');
   checks.push('Existing edge-coupled reference unchanged');
 
   await page.getByLabel('Pair coupling',{exact:true}).selectOption('broadside');
   await ready();
-  const gapInput=page.getByLabel(/Inter-layer gap/).first();
+  const gapInput=page.getByLabel(/Inter-layer gap/).and(page.locator('input')).first();
   assert.ok(await gapInput.isVisible());
   assert.equal(await page.getByLabel('Line type',{exact:true}).count(),0);
   const section=page.getByRole('img',{name:/Broadside differential pair/});
@@ -57,15 +57,15 @@ try {
   assert.equal(page.url(),shared);
   checks.push('Coupling control, two-layer diagram, URL sharing and reload');
 
-  await page.getByLabel('Target Zdiff',{exact:true}).fill('100');
+  await page.getByLabel('Target Zdiff',{exact:true}).and(page.locator('input')).fill('100');
   await page.getByRole('button',{name:'Solve Width',exact:true}).click();
   await ready();
   await page.waitForFunction(()=>Math.abs(Number(document.querySelector('.headline-result [data-copy-value]')?.textContent)-100)<0.06,undefined,{timeout:30000});
   await ready();
   assert.ok(Math.abs(await z()-100)<0.06);
-  const solvedWidth=Number(await page.getByLabel(/Width /).inputValue());
+  const solvedWidth=Number(await page.getByLabel(/Width /).and(page.locator('input')).inputValue());
   assert.ok(solvedWidth>0 && Math.abs(solvedWidth-0.145)>0.005);
-  await page.getByLabel('Target Zdiff',{exact:true}).fill('110');
+  await page.getByLabel('Target Zdiff',{exact:true}).and(page.locator('input')).fill('110');
   await page.getByRole('button',{name:'Solve Spacing',exact:true}).click();
   await ready();
   await page.waitForFunction(()=>Math.abs(Number(document.querySelector('.headline-result [data-copy-value]')?.textContent)-110)<0.06,undefined,{timeout:30000});
@@ -113,10 +113,10 @@ try {
   await page.setViewportSize({width:1600,height:1050});
   await page.evaluate(()=>sessionStorage.setItem('pcbtk-settings',JSON.stringify({theme:'dark',unit:'mil'})));
   await goto('mode=diff&coupling=broadside');
-  assert.ok(Math.abs(Number(await page.getByLabel(/Inter-layer gap/).first().inputValue())-0.15/0.0254)<0.001);
+  assert.ok(Math.abs(Number(await page.getByLabel(/Inter-layer gap/).and(page.locator('input')).first().inputValue())-0.15/0.0254)<0.001);
   await ready();
   const mmImpedance=await z();
-  await page.getByLabel(/Inter-layer gap/).first().fill('7');
+  await page.getByLabel(/Inter-layer gap/).and(page.locator('input')).first().fill('7');
   await page.waitForFunction(()=>Math.abs(Number(new URLSearchParams(location.search).get('s'))-7*0.0254)<1e-6);
   await ready();
   assert.ok(await z()>mmImpedance);
@@ -130,7 +130,7 @@ try {
   await goto('mode=diff&coupling=broadside');
   await page.getByRole('button',{name:'Apply',exact:true}).click();
   await ready();
-  assert.equal(await page.getByLabel('Pair coupling',{exact:true}).inputValue(),'edge');
+  assert.equal(await page.getByLabel('Pair coupling',{exact:true}).and(page.locator('select')).inputValue(),'edge');
   checks.push('Single-ended and stackup apply correctly return to supported geometry');
 
   await page.goto(base+'/impedance?mode=diff&coupling=broadside&s=0');

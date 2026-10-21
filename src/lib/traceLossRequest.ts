@@ -2,6 +2,7 @@
 // sends to the solver worker. Kept apart from the page so the KiCad mapping (kicadLossTiming.ts) can
 // be tested against the routing check without rendering anything.
 import { laminateById, maskById } from '../data/laminates';
+import { copperTemperatureError } from './copper';
 import { djordjevicSarkar, type DielectricSpec } from './dielectric';
 import type { Accuracy, Geometry } from './fieldsolver';
 import type { RoughnessModel } from './loss';
@@ -58,6 +59,8 @@ function specOf(mat: string, er: number, df: number, f0: number, lookup: typeof 
 /** The loss request for the inputs (the sweep, then the frequency of interest last), or the input errors. */
 export function buildTraceLossRequest(p: TraceLossInputs): { req: LossRequest | null; errors: string[] } {
   const errors: string[] = [];
+  const temperatureError = copperTemperatureError(p.temp);
+  if (temperatureError) errors.push(temperatureError);
   const type = p.type as TraceLossLineType;
   const diff = p.mode === 'diff';
   const pos = (v: number, name: string) => {

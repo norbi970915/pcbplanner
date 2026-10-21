@@ -14,7 +14,20 @@ export const T_MELT_CU = 1084.62;
 
 /** Copper resistivity at temperature T (°C), ohm·m. */
 export function rhoCu(tempC: number): number {
-  return RHO20 * (1 + ALPHA20 * (tempC - 20));
+  return linearResistivity(RHO20, ALPHA20, tempC, 'copper');
+}
+
+/** The room-temperature linear correction cannot represent zero/negative resistivity or cryogenic behavior. */
+export function linearResistivity(rho20: number, alpha20: number, tempC: number, material: string): number {
+  const rho = rho20 * (1 + alpha20 * (tempC - 20));
+  if (!Number.isFinite(tempC) || !Number.isFinite(rho) || !(rho > 0)) {
+    throw new RangeError(`Temperature is outside the positive-resistivity range of the linear ${material} model. Use temperature-specific material data for cryogenic conditions.`);
+  }
+  return rho;
+}
+
+export function copperTemperatureError(tempC: number): string | null {
+  try { rhoCu(tempC); return null; } catch (error) { return error instanceof Error ? error.message : 'Invalid copper temperature.'; }
 }
 
 /** DC resistance of a conductor, ohm. Lengths in mm, area in mm². */

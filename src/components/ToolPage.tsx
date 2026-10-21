@@ -31,6 +31,7 @@ export function ToolPage({
   children,
   method,
   reportCapture,
+  reportBusy = false,
 }: {
   title: string;
   description: string;
@@ -40,6 +41,7 @@ export function ToolPage({
   children: ReactNode;
   method?: ReactNode;
   reportCapture?: (snapshot: ReportSnapshot) => Promise<ReportSnapshot>;
+  reportBusy?: boolean;
 }) {
   const { pathname } = useLocation();
   const interaction = useFieldInteractionState();
@@ -84,7 +86,8 @@ export function ToolPage({
   const createReport = useCallback(async () => {
     reportReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!resultsRef.current) return;
-    const snapshot = captureReport(title, description, resultsRef.current, propsEl, methodRef.current, statusEl);
+    const snapshot = captureReport(title, description, resultsRef.current, propsEl, methodRef.current);
+    if (reportBusy && !snapshot.blocked) snapshot.blocked = 'Wait for the calculation to finish, then create the report.';
     const id = ++reportId.current;
     if (!reportCapture || snapshot.blocked) { setReportSnapshot(snapshot); return; }
     setReportSnapshot({ ...snapshot, preparing: true, blocked: 'Solving the configured project analyses. This can take a moment on a large board.' });
@@ -94,7 +97,7 @@ export function ToolPage({
     } catch (error) {
       if (id === reportId.current) setReportSnapshot({ ...snapshot, blocked: error instanceof Error ? error.message : String(error) });
     }
-  }, [title, description, propsEl, statusEl, reportCapture]);
+  }, [title, description, propsEl, reportCapture, reportBusy]);
   const closeReport = () => {
     reportId.current++;
     setReportSnapshot(null);
@@ -177,7 +180,7 @@ export function ToolPage({
         <div><strong>Results paused</strong><p>{interaction.issues[0].label}: {interaction.issues[0].message}</p></div>
         <Button type="button" variant="outline" size="sm" onClick={focusIssue}>Go to input</Button>
       </div>}
-      <div ref={resultsRef} className="space-y-4" data-inputs-invalid={paused || undefined}>{children}</div>
+      <div ref={resultsRef} className="space-y-4" data-inputs-invalid={paused || undefined} data-result-busy={reportBusy || undefined}>{children}</div>
 
       {related.length > 0 && (
         <RelatedGuides key={pathname} guides={related} toolPath={pathname} />

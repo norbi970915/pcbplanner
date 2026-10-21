@@ -7,7 +7,7 @@ const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:1600,height:1050},reducedMotion:'reduce'});
 await context.addInitScript(()=>{
  if(!sessionStorage.getItem('pcbtk-settings'))sessionStorage.setItem('pcbtk-settings',JSON.stringify({theme:'dark',unit:'mm'}));
- localStorage.setItem('pcbplanner:analytics-consent',JSON.stringify({choice:'declined',updatedAt:new Date().toISOString()}));
+ localStorage.setItem('pcbplanner:analytics-consent',JSON.stringify({choice:'declined',version:2,updatedAt:new Date().toISOString()}));
 });
 const page=await context.newPage(),checks=[],errors=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('404'))errors.push(m.text());});
@@ -25,8 +25,8 @@ try {
  await visit('/');
  assert.equal(await page.locator('.welcome-news .news-item').count(),2);
  assert.ok((await page.locator('.welcome-card').boundingBox()).height<400);
- assert.ok((await page.locator('.featured-heading').boundingBox()).y<520);
- await page.getByLabel('Find a tool or guide',{exact:true}).fill('boost');await page.locator('#search-results').waitFor();
+ assert.equal(await page.getByRole('heading',{name:'Check a KiCad board',exact:true}).count(),1);
+ await page.getByLabel('Find a tool or guide',{exact:true}).and(page.locator('input')).fill('boost');await page.locator('#search-results').waitFor();
  assert.equal(await page.locator('.welcome-news').count(),0);await page.getByRole('button',{name:'Clear search',exact:true}).click();
  checks.push('Compact desktop Home preserves both announcements and search');
  await visit('/buck-converter');
@@ -42,7 +42,7 @@ try {
  checks.push('Properties resize with mouse and keyboard; width persists and reset works');
  for(const route of ['/buck-converter','/boost-converter']){
   await visit(route);await page.getByRole('radio',{name:'Switch off',exact:true}).click();assert.equal(await page.locator('[data-current-phase]').getAttribute('data-current-phase'),'off');
-  const prior=await page.locator('.diagram-values').innerText();await page.getByLabel('Output load current',{exact:true}).fill(route.includes('buck')?'1.5':'0.7');
+  const prior=await page.locator('.diagram-values').innerText();await page.getByLabel('Output load current',{exact:true}).and(page.locator('input')).fill(route.includes('buck')?'1.5':'0.7');
   await page.waitForFunction(previous=>document.querySelector('.diagram-values').innerText!==previous,prior);
   await page.locator('.engineering-diagram').screenshot({path:resolve(out,route.slice(1)+'-diagram.png')});
  }
@@ -50,7 +50,7 @@ try {
  await visit('/buck-converter?iout=0.001&l=1');assert.equal(await page.locator('[data-current-phase]').count(),0);assert.ok((await page.locator('.diagram-caption').innerText()).includes('outside'));
  checks.push('Buck/boost phase controls, live annotations, diode configuration and topology-only DCM display');
  await visit('/crosstalk?w=0.15&s=0.3');assert.ok((await page.locator('.diagram-values').innerText()).includes('(3 W)'));
- await page.getByLabel(/Edge-to-edge spacing/).fill('0.15');await page.waitForFunction(()=>document.querySelector('.diagram-values').innerText.includes('(2 W)'));
+ await page.getByLabel(/Edge-to-edge spacing/).and(page.locator('input')).fill('0.15');await page.waitForFunction(()=>document.querySelector('.diagram-values').innerText.includes('(2 W)'));
  checks.push('Crosstalk distinguishes edge gap from 3W centre pitch');
  for(const theme of ['dark','light']){
   await page.evaluate(theme=>sessionStorage.setItem('pcbtk-settings',JSON.stringify({theme,unit:'mm'})),theme);
@@ -68,7 +68,7 @@ try {
  await page.setViewportSize({width:390,height:900});await visit('/rc-filter');
  const nav=page.getByRole('navigation',{name:'Calculator sections'}),summary=page.locator('.mobile-workbench-summary');
  await summary.locator('strong').first().waitFor();const prev=await summary.innerText();
- await page.getByLabel(/Filter resistor/).fill('2');await page.waitForFunction(prev=>document.querySelector('.mobile-workbench-summary').innerText!==prev,prev);
+ await page.getByLabel(/Filter resistor/).and(page.locator('input')).fill('2');await page.waitForFunction(prev=>document.querySelector('.mobile-workbench-summary').innerText!==prev,prev);
  const primary=await page.locator('.headline-result [data-copy-value]').first().innerText();assert.ok((await summary.innerText()).includes(primary));
  await nav.getByRole('button',{name:/Results/}).click();
  await page.waitForFunction(()=>document.querySelector('main').getBoundingClientRect().top>=document.querySelector('.mobile-workbench-bar').getBoundingClientRect().bottom-1);
@@ -76,7 +76,7 @@ try {
  await page.waitForFunction(()=>document.querySelector('#tool-inputs').getBoundingClientRect().top>=document.querySelector('.mobile-workbench-bar').getBoundingClientRect().bottom-1);
  await page.locator('.mobile-workbench-bar').screenshot({path:resolve(out,'mobile-summary.png')});
  checks.push('Mobile summary follows live values and Inputs/Results navigation keeps the selected section clear of the sticky controls');
- await visit('/rc-filter?r=0');await page.waitForFunction(()=>document.querySelector('.mobile-workbench-summary').innerText.includes('Check inputs'));
+ await visit('/rc-filter?r=0');await page.waitForFunction(()=>['Check inputs','Results paused'].some(label=>document.querySelector('.mobile-workbench-summary').innerText.includes(label)));
  await visit('/guides/pcb-crosstalk-3w-rule');assert.equal(await page.locator('.mobile-workbench-bar').count(),0);
  checks.push('Invalid inputs replace the summary; guide pages keep their article layout');
  assert.deepEqual(errors,[]);writeFileSync(resolve(out,'report.json'),JSON.stringify({base,checks,errors},null,2));console.log('PASS '+checks.length+' workbench checks');

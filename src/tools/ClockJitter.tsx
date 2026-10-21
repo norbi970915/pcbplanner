@@ -23,6 +23,7 @@ import {
 } from '../lib/jitter';
 import { fmt, si } from '../lib/units';
 import { RESET_EVENT, useUrlState } from '../state/useUrlState';
+import { useFieldIssue } from '../state/fieldInteraction';
 
 // Default curve: the Wenzel Sprinter 100 MHz oscillator of ADI MT-008 Figure 7.
 const DEFAULT_PN = encodePoints([
@@ -319,6 +320,10 @@ function PointsEditor({ value, onChange }: { value: string; onChange: (v: string
   const [paste, setPaste] = useState('');
   const [pasteErr, setPasteErr] = useState<string[]>([]);
   const id = useId();
+  const invalidRow = rows.findIndex(row => !(parseFrequency(row.f)! > 0) || parseLevel(row.l) === null);
+  const invalidOffset = invalidRow >= 0 && !(parseFrequency(rows[invalidRow].f)! > 0);
+  const invalidId = invalidRow < 0 ? undefined : `${id}-${invalidOffset ? 'offset' : 'level'}-${invalidRow}`;
+  useFieldIssue(invalidId, 'Phase noise points', invalidRow < 0 ? undefined : 'Enter a positive offset frequency and a numeric phase noise level for every point.', true);
   useEffect(() => {
     latest.current = value;
     if (value !== emitted.current) {
@@ -362,7 +367,7 @@ function PointsEditor({ value, onChange }: { value: string; onChange: (v: string
   };
 
   return (
-    <div className="space-y-[3px]">
+    <div className="space-y-[3px]" data-uncommitted-input={invalidRow >= 0 || undefined}>
       <div className="grid grid-cols-[minmax(0,1fr)_76px_22px] items-center gap-1 text-[11px] text-faint">
         <span>Offset (Hz, k, M)</span>
         <span className="text-right">dBc/Hz</span>
@@ -374,8 +379,8 @@ function PointsEditor({ value, onChange }: { value: string; onChange: (v: string
         const badL = parseLevel(r.l) === null;
         return (
           <div key={i} className="grid grid-cols-[minmax(0,1fr)_76px_22px] items-center gap-1">
-            <input className="fld w-full text-right" data-field="code" aria-label={`Offset ${i + 1}`} aria-invalid={badF || undefined} value={r.f} spellCheck={false} onChange={(e) => edit(i, { f: e.target.value })} />
-            <input className="fld w-full text-right" aria-label={`Phase noise ${i + 1}`} aria-invalid={badL || undefined} inputMode="decimal" value={r.l} onChange={(e) => edit(i, { l: e.target.value })} />
+            <input id={`${id}-offset-${i}`} className="fld w-full text-right" data-field="code" aria-label={`Offset ${i + 1}`} aria-invalid={badF || undefined} value={r.f} spellCheck={false} onChange={(e) => edit(i, { f: e.target.value })} />
+            <input id={`${id}-level-${i}`} className="fld w-full text-right" aria-label={`Phase noise ${i + 1}`} aria-invalid={badL || undefined} inputMode="decimal" value={r.l} onChange={(e) => edit(i, { l: e.target.value })} />
             <button type="button" className="h-[20px] text-muted hover:bg-hover hover:text-ink" title="Remove point" aria-label={`Remove point ${i + 1}`} onClick={() => commit(rows.filter((_, j) => j !== i))}>
               ×
             </button>

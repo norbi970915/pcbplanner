@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-const DIST = 'dist';
+const DIST = process.argv[2] ?? 'dist';
 const walk = (dir) => readdirSync(dir).flatMap((f) => (statSync(join(dir, f)).isDirectory() ? walk(join(dir, f)) : [join(dir, f)]));
 const url = (file) => '/' + relative(DIST, file).split('\\').join('/');
 

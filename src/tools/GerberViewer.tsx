@@ -127,6 +127,7 @@ export default function GerberViewer(){
   };
   const warnings=[...layouts.A.warnings.map(w=>'A: '+w),...layouts.B.warnings.map(w=>'B: '+w)];
   return <ToolPage title="Gerber Viewer & Compare" description="Inspect one PCB layout or compare two revisions. Open Gerber files or ZIP archives, select layers independently, and highlight geometry present only in A or B. Files stay on your device." properties={fullscreen?undefined:properties} onReset={reset}
+    reportBusy={!!loading.A || !!loading.B || viewBusy}
     status={loading.A||loading.B||(comparing?'Comparing selected layers':'Gerber inspection')+' - '+(selectedA.length+selectedB.length)+' visible layers'} method={<Method/>}>
     <div className="gerber-upload-grid">{upload('A')}{upload('B')}</div>
     <Notes kind="error" items={error?[error]:[]}/>

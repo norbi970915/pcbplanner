@@ -9,7 +9,11 @@ describe('ply lists', () => {
     expect(formatPlies([{ t: 0.084, dk: 3.91 }, { t: 0.2104, dk: 4.4, df: 0.02 }])).toBe('0.084:3.91,0.2104:4.4:0.02');
   });
   it('rejects nonsense', () => {
-    for (const bad of ['x:4', '0.1:0.5', '-0.1:4', '0.1:4:2', '0.1']) expect(parsePlies(bad)).toBeNull();
+    for (const bad of ['x:4', '0.1:0.5', '-0.1:4', '0.1:4:2', '0.1', '0.1mm:4.2', '0.1:4.2abc', '0.1:4.2:0.02junk', 'Infinity:4.2', '0.1:Infinity', '0.1:4.2::::extra']) expect(parsePlies(bad)).toBeNull();
+  });
+  it('retains a small positive thickness and loss instead of rounding a ply out of existence', () => {
+    const plies = [{ t: 1e-9, dk: 4.2, df: 1e-9 }];
+    expect(parsePlies(formatPlies(plies))).toEqual(plies);
   });
   it('thickness and weighted average Dk', () => {
     const p = [{ t: 0.084, dk: 3.91 }, { t: 0.2104, dk: 4.4 }];

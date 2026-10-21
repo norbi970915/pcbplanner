@@ -11,6 +11,11 @@ const net = (n: Partial<NetCopper>): NetCopper => ({ net: 'VCC', copper: ['F.Cu'
 const track = (i: number, x1: number, y1: number, x2: number, y2: number, w: number, layer = 'F.Cu') => ({ i, layer, w, x1, y1, x2, y2, len: Math.hypot(x2 - x1, y2 - y1) });
 
 describe('DC drop', () => {
+  it('reports an invalid material temperature before constructing a resistor network', () => {
+    const r = solveDc({ nc: net({}), source: 'J1', loads: [{ ref: 'U1', amps: 1 }], s: { ...S, tempC: -250 } });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/positive-resistivity/);
+  });
   it('a single track drops ρL/(Wt)', () => {
     const nc = net({ tracks: [track(0, 0, 0, 20, 0, 0.2)], pads: [pad('J1', 0, 0), pad('U1', 20, 0)] });
     const r = solveDc({ nc, source: 'J1', loads: [{ ref: 'U1', amps: 1 }], s: S });

@@ -2,6 +2,7 @@ import { ToolPage } from '../components/ToolPage';
 import { KicadViaSource } from '../components/KicadViaSource';
 import { Big, LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { parallelViaCount, via } from '../lib/via';
+import { copperTemperatureError } from '../lib/copper';
 import { fmt, si } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
@@ -17,6 +18,8 @@ export default function Via() {
   if (!(p.antipad > p.pad)) errors.push('Antipad (plane clearance) must be larger than the pad.');
   if (!(p.dT > 0)) errors.push('Temperature rise must be greater than 0.');
   if (p.target < 0) errors.push('Target current cannot be negative.');
+  const temperatureError = copperTemperatureError(p.amb + p.dT);
+  if (temperatureError) errors.push(temperatureError);
   const r = errors.length ? null : via({ holeMm: p.hole, platingMm: p.plating, lengthMm: p.len, padMm: p.pad, antipadMm: p.antipad, er: p.er, dTC: p.dT, ambientC: p.amb, z0: p.z0 });
   const count = r && p.target > 0 ? parallelViaCount(p.target, r.currentInt) : null;
   const externalCount = r && p.target > 0 ? parallelViaCount(p.target, r.currentExt) : null;

@@ -56,9 +56,13 @@ export function capsNeeded(cap: CapModel, f: number, zTarget: number): number {
 export function capBand(cap: CapModel, n: number, zTarget: number): { fLow: number; fHigh: number } | null {
   const lim = n * zTarget;
   if (cap.esr >= lim) return null;
-  const xMax = Math.sqrt(lim * lim - cap.esr * cap.esr);
+  const xMax = Math.sqrt(lim - cap.esr) * Math.sqrt(lim + cap.esr);
   const L = cap.esl, C = cap.c;
-  const omega = (x: number) => (x + Math.sqrt(x * x + (4 * L) / C)) / (2 * L);
+  const omega = (x: number) => {
+    const root = Math.hypot(x, 2 * Math.sqrt(L / C));
+    // Rationalize the negative root to retain the low edge when the band is very wide.
+    return x < 0 ? (2 / C) / (root - x) : (x + root) / (2 * L);
+  };
   return { fLow: omega(-xMax) / (2 * Math.PI), fHigh: omega(xMax) / (2 * Math.PI) };
 }
 

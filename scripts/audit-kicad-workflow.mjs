@@ -23,6 +23,10 @@ const report = () => page.getByRole('dialog', { name: 'Calculation report', exac
 const preview = () => page.frameLocator('iframe[title="Calculation report preview"]');
 const closeReport = async () => { await report().getByRole('button', { name: 'Close report' }).click(); await report().waitFor({ state: 'detached' }); };
 const noOverflow = async label => check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), label + ' has no page overflow');
+const rejectBlankNumber = async label => {
+  const input = page.getByRole('textbox', { name: label, exact: true }), original = await input.inputValue();
+  for (const value of ['', 'abc', '1.2x', '1e309']) { await input.fill(value); await input.press('Tab'); check(await input.inputValue() === original, label + ' retains its committed value after ' + JSON.stringify(value)); }
+};
 
 try {
   await page.goto(base + '/');
@@ -34,6 +38,7 @@ try {
   await page.waitForFunction(() => document.body.textContent.includes('routing check done'));
   check(await page.getByText('1 routing failures', { exact: false }).count() > 0 || (await page.getByRole('heading', { name: 'Check summary' }).locator('..').locator('..').innerText()).includes('1'), 'Example presents a routing summary');
   await view('Power'); await idle();
+  await rejectBlankNumber('Current of U2, A');
   const power = page.getByTestId('power-summary');
   check((await power.innerText()).includes('U2') && !(await power.innerText()).includes('not connected'), 'Demonstration supply and return connect to U2');
   check(await page.locator('#tool-inputs').getByRole('combobox', { name: 'Source', exact: true }).count() === 1, 'Power controls are in Properties on desktop');
@@ -46,6 +51,7 @@ try {
   await page.screenshot({ path: out + '/power-desktop.png' });
 
   await view('Thermal');
+  await rejectBlankNumber('Power of U1, W');
   check(await page.getByRole('textbox', { name: 'Power of U1, W', exact: true }).inputValue() === '0.34', 'Thermal has explicit regulator dissipation');
   check(await page.getByRole('textbox', { name: 'Power of U2, W', exact: true }).inputValue() === '0.66', 'Thermal has explicit load dissipation');
   await page.getByRole('button', { name: 'Solve', exact: true }).click(); await idle();
@@ -66,6 +72,7 @@ try {
   await page.locator('#tool-inputs').getByRole('textbox', { name: 'Power of U1, W', exact: true }).waitFor();
   check(await page.locator('#tool-inputs').getByRole('textbox', { name: 'Power of U1, W', exact: true }).count() === 1, 'Exiting fullscreen restores Properties without duplicate inputs');
   await view('Clearance'); await idle();
+  await rejectBlankNumber('Peak voltage of +48V, V');
   check((await page.getByTestId('clearance-summary').innerText()).includes('closer than'), 'The separate 48 V coupon demonstrates a clearance finding');
 
   await nav().getByRole('button', { name: 'Overview', exact: true }).click();

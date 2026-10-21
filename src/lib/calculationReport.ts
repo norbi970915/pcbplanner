@@ -52,9 +52,9 @@ export function collectReportInputs(roots: (HTMLElement | null)[]): ReportInput[
   }
   return inputs;
 }
-export function reportBlockReason(results: HTMLElement, inputs: HTMLElement | null, status: HTMLElement | null): string | null {
+export function reportBlockReason(results: HTMLElement, inputs: HTMLElement | null): string | null {
   if (results.matches('[data-inputs-invalid="true"]') || results.querySelector('[data-inputs-invalid="true"], [aria-invalid="true"]') || inputs?.querySelector('[aria-invalid="true"]')) return 'Correct the highlighted inputs before creating a report.';
-  if (results.querySelector('[data-result-busy="true"], [aria-busy="true"]') || /solving|calculating|loading|running/i.test(cleanText(status))) return 'Wait for the calculation to finish, then create the report.';
+  if (results.matches('[data-result-busy="true"], [aria-busy="true"]') || results.querySelector('[data-result-busy="true"], [aria-busy="true"]')) return 'Wait for the calculation to finish, then create the report.';
   if (results.querySelector('[data-result-stale="true"]')) return 'The inputs changed. Solve again before creating a report.';
   const error = results.querySelector('[role="alert"]');
   if (error && cleanText(error)) return 'Resolve the calculation error before creating a report: ' + cleanText(error);
@@ -101,7 +101,7 @@ export function snapshotMarkup(root: HTMLElement): string {
   clone.removeAttribute('hidden');
   return clone.innerHTML;
 }
-export function captureReport(title: string, description: string, results: HTMLElement, inputs: HTMLElement | null, method: HTMLElement | null, status: HTMLElement | null): ReportSnapshot {
+export function captureReport(title: string, description: string, results: HTMLElement, inputs: HTMLElement | null, method: HTMLElement | null): ReportSnapshot {
   const comparison = results.querySelector<HTMLElement>('.design-comparison');
   // Capture against live nodes first, so computed paint and canvas pixels are still available.
   const staticResults = document.createElement('div'); staticResults.innerHTML = snapshotMarkup(results);
@@ -109,7 +109,7 @@ export function captureReport(title: string, description: string, results: HTMLE
   return { title, description, created: new Date().toLocaleString(), url: currentToolUrl(),
     inputs: collectReportInputs([inputs, results]), results: staticResults.innerHTML,
     comparison: comparison ? snapshotMarkup(comparison) : '', method: method ? snapshotMarkup(method) : '',
-    blocked: reportBlockReason(results, inputs, status), usesLocalData: !!document.querySelector('.tool-page input[type="file"]') || !!inputs?.querySelector('input[type="file"]'),
+    blocked: reportBlockReason(results, inputs), usesLocalData: !!document.querySelector('.tool-page input[type="file"]') || !!inputs?.querySelector('input[type="file"]'),
   };
 }
 const REPORT_CSS = `

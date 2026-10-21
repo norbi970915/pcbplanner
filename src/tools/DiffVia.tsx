@@ -109,6 +109,7 @@ export default function DiffVia() {
       title="Differential Via"
       description="Differential, odd-, even- and common-mode impedance of a via pair through a reference plane, from a 2D field solution of the barrels in their antipad, plus the stub resonance and the delay through the board."
       onReset={reset}
+      reportBusy={solving}
       properties={properties}
       status={r ? `Via pair Zdiff ${fmt(r.zDiff, 4)} Ω (target ${fmt(p.target, 4)} Ω) · stub f0 ${Number.isFinite(stubF) ? si(stubF, 'Hz', 3) : '—'}` : 'Check the inputs'}
       method={<Method />}

@@ -668,6 +668,7 @@ export default function SParameterViewer() {
       properties={properties}
       onReset={clear}
       status={status}
+      reportBusy={busy}
       method={<Method budget={budget} />}
     >
       {dragging && (

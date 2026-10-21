@@ -77,7 +77,7 @@ export function SiField({
   const error = numericInputIssue(text, options);
   const help = hint;
   return (
-    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey}>
+    <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey} uncommitted>
         <input
           id={id}
           className="fld w-[84px] text-right"

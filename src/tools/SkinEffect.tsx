@@ -1,6 +1,6 @@
 import { ToolPage } from '../components/ToolPage';
-import { LenField, NumField, Panel, Result, Section } from '../components/ui';
-import { acResistance } from '../lib/copper';
+import { LenField, Notes, NumField, Panel, Result, Section } from '../components/ui';
+import { acResistance, copperTemperatureError } from '../lib/copper';
 import { fmt, MM_PER_OZ, si } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
@@ -9,8 +9,16 @@ const SWEEP = [1e5, 1e6, 1e7, 1e8, 5e8, 1e9, 2.5e9, 5e9, 1e10];
 
 export default function SkinEffect() {
   const [p, set, reset] = useUrlState(DEFAULTS);
-  const ok = p.f > 0 && p.w > 0 && p.t > 0 && p.len > 0;
-  const r = ok ? acResistance(p.len, p.w, p.t, p.f * 1e6, p.temp) : null;
+  const errors: string[] = [];
+  if (!(p.f > 0 && p.w > 0 && p.t > 0 && p.len > 0)) errors.push('Frequency, width, copper thickness and length must be greater than 0.');
+  const temperatureError = copperTemperatureError(p.temp);
+  if (temperatureError) errors.push(temperatureError);
+  let r: ReturnType<typeof acResistance> | null = null;
+  if (!errors.length) {
+    const calculated = acResistance(p.len, p.w, p.t, p.f * 1e6, p.temp);
+    if (![calculated.rdc, calculated.rac, calculated.ratio, calculated.skinDepthMm].every(Number.isFinite)) errors.push('The resistance or skin-depth result is outside the supported numerical range.');
+    else r = calculated;
+  }
 
   const properties = (
     <Section title="Conductor">
@@ -31,6 +39,7 @@ export default function SkinEffect() {
       status={r ? `δ = ${fmt(r.skinDepthMm * 1000, 4)} µm at ${fmt(p.f, 4)} MHz · Rac/Rdc = ${fmt(r.ratio, 3)}` : 'Check the inputs'}
       method={<Method />}
     >
+      <Notes kind="error" items={errors} />
       <div className="grid gap-3 xl:grid-cols-2">
         {r && (
           <Panel title={`At ${fmt(p.f, 4)} MHz`}>
@@ -44,7 +53,7 @@ export default function SkinEffect() {
             </table>
           </Panel>
         )}
-        {ok && (
+        {r && (
           <Panel title="Frequency Sweep">
             <table className="tbl">
               <thead>
@@ -93,10 +102,12 @@ export function Method() {
         Over a plane the current concentrates on the side facing the plane, and surface roughness adds loss above a few GHz, so the real resistance can be higher. Use this for trends
         and sizing, not for multi-GHz loss budgets.
       </p>
+      <p>The linear correction around 20 °C is not a cryogenic model. Temperatures that predict nonpositive resistivity are rejected. Use temperature-specific material data for those conditions.</p>
       <h2>References</h2>
       <ol>
         <li>S. Ramo, J. Whinnery, T. Van Duzer, <i>Fields and Waves in Communication Electronics</i>, Wiley.</li>
         <li>IEC 60028, International standard of resistance for copper.</li>
+        <li><a href="https://www.nist.gov/publications/properties-copper-and-copper-alloys-cryogenic-temperatures" target="_blank" rel="noreferrer">NIST Monograph 177: Properties of Copper and Copper Alloys at Cryogenic Temperatures.</a></li>
       </ol>
     </>
   );

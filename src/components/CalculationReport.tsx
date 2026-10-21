@@ -7,11 +7,12 @@ import { buildReportHtml, type ReportOptions, type ReportSnapshot } from '../lib
 export function CalculationReport({ snapshot, onClose }: { snapshot: ReportSnapshot; onClose: () => void }) {
   const { title } = snapshot;
   const [options, setOptions] = useState<ReportOptions>({ title, notes: '', diagrams: true, comparison: !!snapshot.comparison, method: true });
-  const [loaded, setLoaded] = useState(false);
+  const [loadedHtml, setLoadedHtml] = useState('');
   const [message, setMessage] = useState('');
   const frame = useRef<HTMLIFrameElement>(null);
   const html = useMemo(() => snapshot.blocked ? '' : buildReportHtml(snapshot, options), [snapshot, options]);
-  const change = (update: Partial<ReportOptions>) => { setLoaded(false); setOptions(value => ({ ...value, ...update })); };
+  const loaded = loadedHtml === html;
+  const change = (update: Partial<ReportOptions>) => { setOptions(value => ({ ...value, ...update })); };
   const download = () => {
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
     const anchor = document.createElement('a'); anchor.href = url;
@@ -33,7 +34,7 @@ export function CalculationReport({ snapshot, onClose }: { snapshot: ReportSnaps
             {snapshot.comparison && <label><input type="checkbox" checked={options.comparison} onChange={event => change({ comparison: event.target.checked })} />A/B comparison</label>}
           </div>
         </div>
-        <iframe ref={frame} title="Calculation report preview" className="report-preview" srcDoc={html} onLoad={() => setLoaded(true)} />
+        <iframe ref={frame} title="Calculation report preview" className="report-preview" srcDoc={html} onLoad={() => setLoadedHtml(html)} />
         <div className="report-dialog-footer"><p role="status">{message || 'Inputs and results are fixed at the moment you opened this report.'}</p><div>
           <Button variant="outline" size="sm" onClick={download}><Download size={14} />Save HTML</Button>
           <Button size="sm" disabled={!loaded} onClick={() => { try { frame.current?.contentWindow?.focus(); frame.current?.contentWindow?.print(); } catch { setMessage('Use Save HTML, then open the saved report to print it.'); } }}><Printer size={14} />Print / Save PDF</Button>

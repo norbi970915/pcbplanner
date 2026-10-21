@@ -15,7 +15,7 @@
 // every node, the current in every track and via and the current density in the copper areas (sparseSolve.ts).
 // Temperature rise uses the IPC-2221 curve fit of the Trace Width and Via tools (ipc2221.ts), applied to a
 // track's cross-section and, as the Via tool does, to a via barrel with the external-layer constant.
-import { rhoCu } from './copper';
+import { copperTemperatureError, rhoCu } from './copper';
 import { areaMil2, IPC2221, tempRiseFor } from './ipc2221';
 import { padPolygon, type BoardDrawing, type DrawPad } from './kicadDrawing';
 import { buildGrid, cellAt, cellsInBox, forEachCellNode, gridEdges, type CopperGrid } from './copperGrid';
@@ -181,6 +181,8 @@ const polyArea = (xy: ArrayLike<number>) => {
 
 export function solveDc(req: DcRequest): DcResult {
   const { nc, s } = req;
+  const temperatureError = copperTemperatureError(s.tempC);
+  if (temperatureError) return { ok: false, error: temperatureError };
   const rho = rhoCu(s.tempC) * 1e3; // Ω·mm
   const thick = (l: string) => s.thickness[l] ?? 0.035;
   const maxCells = req.maxCells ?? 250_000;

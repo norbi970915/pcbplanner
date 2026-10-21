@@ -18,6 +18,7 @@ import { fmt, fromMm, MM_PER_OZ, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { useTrackedState } from '../state/useTrackedState';
 import { useSyncedText } from '../state/useNumericText';
+import { parseNumericInput } from '../lib/numericInput';
 import { stackupStore, useStackups } from '../state/stackupStore';
 
 const TYPE_LABEL: Record<LayerKind, string> = { mask: 'Solder Mask', copper: 'Signal', dielectric: 'Dielectric', coverlay: 'Coverlay film', adhesive: 'Adhesive' };
@@ -50,8 +51,8 @@ const layerSwatch = (l: Layer, i: number, all: Layer[]) => {
 /** Numeric cell; only values above `min` (or at least `min` when `inclusive`) are accepted. */
 function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false, label, digits = 5 }: { value: number; onChange: (v: number) => void; width?: number; disabled?: boolean; min?: number; inclusive?: boolean; label?: string; digits?: number }) {
   const { text, setText, emit } = useSyncedText(value, v => plain(v, digits));
-  const n = Number.parseFloat(text);
-  const valid = (v: number) => Number.isFinite(v) && (inclusive ? v >= min : v > min) && v < 1000;
+  const n = parseNumericInput(text);
+  const valid = (v: number | null): v is number => v !== null && Number.isFinite(v) && (inclusive ? v >= min : v > min) && v < 1000;
   return (
     <input
       className="fld text-right"
@@ -64,7 +65,7 @@ function Num({ value, onChange, width = 70, disabled, min = 0, inclusive = false
       data-uncommitted-input={!valid(n) || undefined}
       onChange={(e) => {
         setText(e.target.value);
-        const v = Number.parseFloat(e.target.value);
+        const v = parseNumericInput(e.target.value);
         if (valid(v)) { emit(v); onChange(v); }
       }}
     />
@@ -444,6 +445,7 @@ function StackupEditor({ current, stackups }: { current: Stackup; stackups: Stac
       title="Layer Stack Manager"
       description={`${PRESETS.length} rigid FR-4 stackups plus ${FLEX_PRESETS.length} flex and rigid-flex design starters, plus your own linked constructions. Edit materials and thicknesses, assign signal and plane layers, and see the trace widths for your impedance targets on every layer.`}
       properties={properties}
+      reportBusy={kicadBusy || (tab === 'impedance' && active.layers.some(l => l.kind === 'copper' && l.role !== 'plane' && geometryForLayer(active, l.id) && (!imp[l.id]?.se || !imp[l.id]?.diff)))}
       status={`${active.name} · ${copperCount(active)} layers · ${L(board)} ${unit}${dirty ? ' · modified' : ''}`}
     >
       <Notes kind="error" items={issues} />

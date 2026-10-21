@@ -3,6 +3,7 @@
 // reference plane up to the trace; above it runs from the trace outward.
 // A ply may name a material from the laminate library instead of its own numbers; the
 // stored dk/df are then only a cache for display, and the library value is what counts.
+import { parseNumericInput } from './numericInput';
 export interface PlyInput {
   t: number; // mm
   dk: number;
@@ -17,21 +18,25 @@ export function parsePlies(text: string): PlyInput[] | null {
   if (!s) return [];
   const out: PlyInput[] = [];
   for (const part of s.split(',')) {
+    if (part.split(':').length > 5) return null;
     const [a, b, c, m, freq] = part.split(':');
-    const t = Number.parseFloat(a);
-    const dk = Number.parseFloat(b);
-    const df = c === undefined || c === '' ? undefined : Number.parseFloat(c);
+    const t = parseNumericInput(a ?? '');
+    const dk = parseNumericInput(b ?? '');
+    const df = c === undefined || c === '' ? undefined : parseNumericInput(c);
     const fGHz = freq === undefined || freq === '' ? undefined : Number(freq);
     if (fGHz !== undefined && (!Number.isFinite(fGHz) || fGHz <= 0 || fGHz > 200)) return null;
     const mat = m === undefined || m === '' ? undefined : m;
-    if (!(t > 0) || !(dk >= 1) || (df !== undefined && !(df >= 0 && df < 1))) return null;
+    if (t === null || dk === null || !(t > 0) || !(dk >= 1) || (df !== undefined && (df === null || !(df >= 0 && df < 1)))) return null;
     if (mat !== undefined && !/^[\w.-]+$/.test(mat)) return null;
     out.push({ t, dk, ...(df === undefined ? {} : { df }), ...(mat === undefined ? {} : { mat }), ...(fGHz === undefined ? {} : { fGHz }) });
   }
   return out;
 }
 
-const n = (v: number) => Number(v.toFixed(6));
+const n = (v: number) => {
+  const rounded = Number(v.toFixed(6));
+  return rounded === 0 && v !== 0 ? Number(v.toPrecision(6)) : rounded;
+};
 export const formatPlies = (plies: PlyInput[]): string =>
   plies
     .map((p) => {

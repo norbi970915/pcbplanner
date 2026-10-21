@@ -111,7 +111,7 @@ function CapacitanceEstimate({ p, set, model, estimate, limitPf }: {
   estimate: ReturnType<typeof i2cBusCapacitance>;
   limitPf: number;
 }) {
-  return <Panel title="Estimate Capacitance on One Bus Line">
+  return <Panel title="Estimate Capacitance on One Bus Line" allowInvalid>
     <p className="px-3 pt-2 text-muted">Add every branch of either SDA or SCL. Enter pin capacitance from the devices' datasheets and include any cable, connectors, ESD parts or level shifters connected to that net. The total below feeds the pull-up calculation immediately.</p>
     <div className="grid gap-5 border-b border-line px-3 py-3 xl:grid-cols-2">
       <div className="space-y-1">

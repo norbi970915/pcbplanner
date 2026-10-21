@@ -13,9 +13,11 @@ const DEFAULTS = { n: 9, hole: 0.3, plating: 0.025, len: 1.6, fill: 'none', fill
 
 export default function ThermalVias() {
   const [p, set, reset] = useUrlState(DEFAULTS);
-  const fill = p.fill as Fill | 'custom';
+  const knownFill = p.fill === 'custom' || Object.hasOwn(FILLS, p.fill);
+  const fill = (knownFill ? p.fill : 'none') as Fill | 'custom';
   const fillK = fill === 'custom' ? p.fillK : FILLS[fill].k;
   const errors: string[] = [];
+  if (!knownFill) errors.push('Choose a supported via fill.');
   if (!(p.n >= 1 && p.n <= 10000 && Number.isInteger(p.n))) errors.push('Via count must be a whole number from 1 to 10 000.');
   if (!(p.hole > 0 && p.plating > 0 && p.len > 0)) errors.push('Hole, plating and length must be greater than 0.');
   if (!(p.padW >= 0 && p.padH >= 0)) errors.push('Pad size cannot be negative.');
@@ -50,9 +52,9 @@ export default function ThermalVias() {
         <LenField label="Board thickness" symbol="h" value={p.len} onChange={(v) => set({ len: v })} />
         <SelectField
           label="Via fill"
-          value={fill}
+          value={p.fill}
           onChange={(v) => set({ fill: v })}
-          options={[...Object.entries(FILLS).map(([k, f]) => ({ value: k as Fill | 'custom', label: f.label })), { value: 'custom', label: 'Custom k' }]}
+          options={[...(!knownFill ? [{ value: p.fill, label: 'Choose a via fill' }] : []), ...Object.entries(FILLS).map(([k, f]) => ({ value: k, label: f.label })), { value: 'custom', label: 'Custom k' }]}
         />
         {fill === 'custom' && <NumField label="Fill conductivity" value={p.fillK} onChange={(v) => set({ fillK: v })} unit="W/m·K" allowZero />}
       </Section>

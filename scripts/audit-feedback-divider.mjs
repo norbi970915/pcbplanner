@@ -9,7 +9,7 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1050 } });
 await context.addInitScript(() => {
   if (!sessionStorage.getItem('pcbtk-settings')) sessionStorage.setItem('pcbtk-settings', JSON.stringify({ theme: 'dark', unit: 'mm' }));
-  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', updatedAt: new Date().toISOString() }));
+  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', version: 2, updatedAt: new Date().toISOString() }));
 });
 const page = await context.newPage(), errors = [], checks = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -27,24 +27,24 @@ try {
   await visit(); await matches();
   for (const [label, value] of [['Target output voltage', '5'], ['Divider current', '200'], ['Feedback (reference) voltage', '1.25']]) {
     const previous = await page.locator('.diagram-svg').textContent();
-    await page.getByLabel(label, { exact: false }).fill(value);
+    await page.getByLabel(label, { exact: false }).and(page.locator('input')).fill(value);
     await page.waitForFunction(previous => document.querySelector('.diagram-svg').textContent !== previous, previous);
     await matches();
   }
   await page.getByLabel('Resistor series', { exact: true }).selectOption('E24');
   await page.waitForFunction(() => document.querySelector('.diagram-caption').textContent.includes('E24'));
   await matches(); checks.push('Live R1, R2 and output match the best pair after voltage, current, reference and series changes');
-  await page.getByLabel('FB bias current', { exact: false }).fill('50');
+  await page.getByLabel('FB bias current', { exact: false }).and(page.locator('input')).fill('50');
   await page.locator('[data-bias-direction="into-fb"]').waitFor({ state: 'attached' }); await matches();
   assert.ok((await page.locator('.diagram-values dd').nth(1).innerText()).startsWith('+'));
-  await page.getByLabel('FB bias current', { exact: false }).fill('-50');
+  await page.getByLabel('FB bias current', { exact: false }).and(page.locator('input')).fill('-50');
   await page.locator('[data-bias-direction="out-of-fb"]').waitFor({ state: 'attached' }); await matches();
   assert.ok((await page.locator('.diagram-values dd').nth(1).innerText()).startsWith('-'));
-  await page.getByLabel('FB bias current', { exact: false }).fill('0');
+  await page.getByLabel('FB bias current', { exact: false }).and(page.locator('input')).fill('0');
   assert.equal(await page.locator('[data-bias-direction]').count(), 0);
   checks.push('Positive, negative and zero bias current show the correct direction and output shift');
   const beforeTolerance = await page.locator('.diagram-svg').textContent();
-  await page.getByLabel('Resistor tolerance', { exact: false }).fill('5');
+  await page.getByLabel('Resistor tolerance', { exact: false }).and(page.locator('input')).fill('5');
   assert.equal(await page.locator('.diagram-svg').textContent(), beforeTolerance);
   assert.ok(/Worst case with .5 % resistors/.test(await page.locator('main').innerText()));
   checks.push('Tolerance changes the range without changing the nominal circuit');
@@ -67,7 +67,7 @@ try {
     }
   }
   checks.push('Diagram fits desktop and mobile at 1600, 1024, 390 and 320px in both themes');
-  await page.getByLabel('Target output voltage', { exact: false }).fill('0.5');
+  await page.getByLabel('Target output voltage', { exact: false }).and(page.locator('input')).fill('0.5');
   await page.getByRole('alert').first().waitFor(); assert.equal(await page.locator('.engineering-diagram').count(), 0);
   checks.push('Invalid inputs hide the circuit instead of showing stale resistor values');
   assert.deepEqual(errors, []);

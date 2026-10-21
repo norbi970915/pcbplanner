@@ -112,6 +112,7 @@ export interface LossResult {
 }
 
 export function lineLoss(inp: LossInput): LossResult {
+  const rho = rhoCu(inp.tempC);
   const g = inp.geom;
   const sol = solve(g, { accuracy: inp.accuracy, even: false, parts: true });
   const mode = g.diff ? sol.odd : sol.se;
@@ -119,7 +120,6 @@ export function lineLoss(inp: LossInput): LossResult {
   const parts = mode.parts;
   const zAir = mode.z * Math.sqrt(mode.eeff);
   const dZdn = incrementalDZ(g, inp.accuracy); // Ω/mm
-  const rho = rhoCu(inp.tempC);
   const area = (((g.w + (g.wTop ?? g.w)) / 2) * g.t) * 1e-6; // m²
   const rdc = rho / area;
 

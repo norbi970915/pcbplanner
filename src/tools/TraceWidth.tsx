@@ -5,7 +5,7 @@ import { Sources } from '../components/Sources';
 import { ToolPage } from '../components/ToolPage';
 import { Big, LenField, Notes, NumField, Panel, Section, SelectField } from '../components/ui';
 import { IPC2152_EXTERNAL, IPC2152_EXTERNAL_VALIDITY, ipc2152Current, ipc2152DeltaT, ipc2152Width, SOURCES as IPC2152_SOURCES } from '../data/ipc2152';
-import { rhoCu } from '../lib/copper';
+import { copperTemperatureError, rhoCu } from '../lib/copper';
 import { currentFor, IPC2221, ipc2221Warnings, tempRiseFor, traceWidth } from '../lib/ipc2221';
 import { fmt, fromMm, MM_PER_MIL, MM_PER_OZ, si } from '../lib/units';
 import { useSettings } from '../state/settings';
@@ -29,7 +29,9 @@ export default function TraceWidth() {
   if (mode !== 'current' && !(p.current > 0)) errors.push('Current must be greater than 0.');
   if (mode !== 'width' && !(p.width > 0)) errors.push('Width must be greater than 0.');
   if (!(p.len >= 0)) errors.push('Length cannot be negative.');
-  const ok = errors.length === 0;
+  const temperatureError = copperTemperatureError(p.amb);
+  if (temperatureError) errors.push(temperatureError);
+  let ok = errors.length === 0;
   const L = (mm: number) => fmt(fromMm(mm, unit), 4);
   const R = (areaMm2: number, tempC: number) => (rhoCu(tempC) * p.len * 1e-3) / (areaMm2 * 1e-6);
   const tMil = p.t / MM_PER_MIL;
@@ -41,6 +43,7 @@ export default function TraceWidth() {
   let tempNote = '';
   let viaTargets: { label: string; current: number }[] = [];
 
+  try {
   if (ok && std === 'ipc2221') {
     if (mode === 'width') {
       const res = traceWidth({ currentA: p.current, dTC: p.dT, thicknessMm: p.t, lengthMm: p.len, ambientC: p.amb });
@@ -135,6 +138,10 @@ export default function TraceWidth() {
     warnings.push('IPC-2152 data: a single trace in still air on a board without copper planes (close to worst case). Nearby planes and copper pours lower the real temperature considerably.');
   }
 
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Unable to calculate copper resistance.');
+    ok = false; rows = []; headline = null; viaTargets = [];
+  }
   if (ok && mode !== 'current') viaTargets = [{ label: 'Design current', current: p.current }];
   const viaLink = (current: number) => {
     const query = new URLSearchParams({ target: String(Number(current.toPrecision(7))), amb: String(p.amb), handoff: '1' });

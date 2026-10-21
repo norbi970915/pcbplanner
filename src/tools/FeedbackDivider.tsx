@@ -11,6 +11,8 @@ const DEFAULTS = { vfb: 0.8, vout: 3.3, idiv: 100, ifb: 0, tol: 1, series: 'E96'
 export default function FeedbackDivider() {
   const [p, set, reset] = useUrlState(DEFAULTS);
   const errors: string[] = [];
+  const knownSeries = p.series === 'E12' || p.series === 'E24' || p.series === 'E96';
+  if (!knownSeries) errors.push('Choose a supported resistor series: E12, E24 or E96.');
   if (!(p.vfb > 0)) errors.push('Feedback voltage must be greater than 0.');
   if (!(p.vout > p.vfb)) errors.push('Output voltage must be above the feedback voltage.');
   if (!(p.idiv > 0)) errors.push('Divider current must be greater than 0.');
@@ -46,6 +48,7 @@ export default function FeedbackDivider() {
           value={p.series as ESeries}
           onChange={(v) => set({ series: v })}
           options={[
+            ...(!knownSeries ? [{ value: p.series, label: 'Choose a resistor series' }] : []),
             { value: 'E12', label: 'E12 (10 %)' },
             { value: 'E24', label: 'E24 (5 %)' },
             { value: 'E96', label: 'E96 (1 %)' },

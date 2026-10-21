@@ -315,6 +315,7 @@ export default function TraceLoss() {
       onReset={reset}
       properties={properties}
       status={status}
+      reportBusy={st.busy}
       method={<Method />}
     >
       <Notes kind="error" items={[...errors, ...(st.error && req ? [st.error] : [])]} />

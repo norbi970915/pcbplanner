@@ -1,26 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useId } from 'react';
 import { formatPlies, parsePlies, pliesThickness, type PlyInput } from '../lib/plies';
-import { fmt, fromMm, plain, toMm } from '../lib/units';
+import { fmt, fromMm, LEN_UNITS, plain, toMm } from '../lib/units';
 import { useSettings } from '../state/settings';
+import { numericInputIssue, parseNumericInput } from '../lib/numericInput';
+import { useSyncedText } from '../state/useNumericText';
+import { useFieldIssue } from '../state/fieldInteraction';
 
-function Cell({ value, onChange, width = 60, digits = 5, disabled }: { value: number; onChange: (v: number) => void; width?: number; digits?: number; disabled?: boolean }) {
-  const [text, setText] = useState(() => plain(value, digits));
-  useEffect(() => {
-    setText(plain(value, digits));
-  }, [value, digits]);
-  const n = Number.parseFloat(text);
+function Cell({ value, onChange, label, width = 60, digits = 5, disabled, min = 0, allowZero = false, scale = 1, max, exclusiveMax = false }: { value: number; onChange: (v: number) => void; label: string; width?: number; digits?: number; disabled?: boolean; min?: number; allowZero?: boolean; scale?: number; max?: number; exclusiveMax?: boolean }) {
+  const { text, setText, emit } = useSyncedText(value, v => plain(v, digits));
+  const id = useId(), options = { min, allowZero, scale, max };
+  const issue = (entry: string) => numericInputIssue(entry, options) || (exclusiveMax && max !== undefined && (parseNumericInput(entry) ?? -Infinity) * scale >= max ? `Enter a value less than ${max}.` : undefined);
+  const error = disabled ? undefined : issue(text);
+  useFieldIssue(id, label, error, true);
   return (
     <input
       className="fld text-right"
+      id={id}
+      aria-label={label}
       style={{ width }}
       inputMode="decimal"
       value={text}
       disabled={disabled}
-      aria-invalid={!Number.isFinite(n)}
+      aria-invalid={!!error}
+      title={error}
+      data-uncommitted-input={!!error || undefined}
       onChange={(e) => {
         setText(e.target.value);
-        const v = Number.parseFloat(e.target.value);
-        if (Number.isFinite(v)) onChange(v);
+        const v = parseNumericInput(e.target.value);
+        if (v !== null && !issue(e.target.value)) { emit(v); onChange(v); }
       }}
     />
   );
@@ -101,17 +108,17 @@ export function PlyEditor({
                 </td>
               )}
               <td className="text-right">
-                <Cell value={fromMm(p.t, unit)} onChange={(v) => patch(i, { t: toMm(v, unit) })} />
+                <Cell label={`${firstLabel} ply ${i + 1} thickness (${unit})`} value={fromMm(p.t, unit)} scale={LEN_UNITS[unit].toMm} max={1000} onChange={(v) => patch(i, { t: toMm(v, unit) })} />
               </td>
               <td className="text-right">
-                <Cell value={p.dk} onChange={(v) => patch(i, { dk: v })} width={50} digits={4} disabled={!!p.mat} />
+                <Cell label={`${firstLabel} ply ${i + 1} Dk`} value={p.dk} min={1} allowZero max={1000} onChange={(v) => patch(i, { dk: v })} width={50} digits={4} disabled={!!p.mat} />
               </td>
               {withDf && (
                 <td className="text-right">
-                  <Cell value={p.df ?? 0.02} onChange={(v) => patch(i, { df: v })} width={56} digits={4} disabled={!!p.mat} />
+                  <Cell label={`${firstLabel} ply ${i + 1} Df`} value={p.df ?? 0.02} allowZero max={1} exclusiveMax onChange={(v) => patch(i, { df: v })} width={56} digits={4} disabled={!!p.mat} />
                 </td>
               )}
-              {showFrequency && <td className="text-right"><Cell value={p.fGHz ?? fallbackFrequency} onChange={fGHz=>patch(i,{fGHz})} width={64} digits={6} disabled={!!p.mat} /></td>}
+              {showFrequency && <td className="text-right"><Cell label={`${firstLabel} ply ${i + 1} reference frequency (GHz)`} value={p.fGHz ?? fallbackFrequency} max={200} onChange={fGHz=>patch(i,{fGHz})} width={64} digits={6} disabled={!!p.mat} /></td>}
               <td className="text-right">
                 <button className="btn" aria-label={`Remove ply ${i + 1}`} disabled={plies.length < 2} onClick={() => set(plies.filter((_, k) => k !== i))}>
                   ✕

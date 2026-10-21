@@ -8,7 +8,7 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1050 } });
 await context.addInitScript(() => {
   if (!sessionStorage.getItem('pcbtk-settings')) sessionStorage.setItem('pcbtk-settings', JSON.stringify({ theme: 'dark', unit: 'mm' }));
-  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', updatedAt: new Date().toISOString() }));
+  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', version: 2, updatedAt: new Date().toISOString() }));
 });
 const page = await context.newPage(), errors = [], checks = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -37,36 +37,36 @@ async function ledMatches(label) {
 }
 try {
   await visit(); await dividerMatches('2.5 V'); await ledMatches('Next higher E24');
-  await page.getByLabel('Top resistor', { exact: false }).fill('20'); await dividerMatches('1.667 V');
-  await page.getByLabel('Bottom resistor', { exact: false }).fill('20'); await dividerMatches('2.5 V');
-  await page.getByLabel('Input voltage', { exact: false }).fill('9'); await dividerMatches('4.5 V');
-  await page.getByLabel(/^Load/).fill('10000'); await dividerMatches('2.25 V');
+  await page.getByLabel('Top resistor', { exact: false }).and(page.locator('input')).fill('20'); await dividerMatches('1.667 V');
+  await page.getByLabel('Bottom resistor', { exact: false }).and(page.locator('input')).fill('20'); await dividerMatches('2.5 V');
+  await page.getByLabel('Input voltage', { exact: false }).and(page.locator('input')).fill('9'); await dividerMatches('4.5 V');
+  await page.getByLabel(/^Load/).and(page.locator('input')).fill('10000'); await dividerMatches('2.25 V');
   assert.equal(await page.locator('[data-divider-load]').count(), 1);
   assert.ok(clean(await voltage().locator('.diagram-svg').textContent()).includes('10k'));
-  await page.getByLabel(/^Load/).fill('0'); await dividerMatches('4.5 V');
+  await page.getByLabel(/^Load/).and(page.locator('input')).fill('0'); await dividerMatches('4.5 V');
   assert.equal(await page.locator('[data-divider-load]').count(), 0);
-  await page.getByLabel('Input voltage', { exact: false }).fill('-9'); await dividerMatches('-4.5 V');
+  await page.getByLabel('Input voltage', { exact: false }).and(page.locator('input')).fill('-9'); await dividerMatches('-4.5 V');
   checks.push('Divider updates R1, R2, Vin and Vout live, connects/removes RL, and handles negative Vin');
-  const top = page.getByLabel('Top resistor', { exact: false });
+  const top = page.getByLabel('Top resistor', { exact: false }).and(page.locator('input'));
   await top.locator('..').getByLabel('unit', { exact: true }).selectOption('M');
   await dividerMatches('-4.5 V'); await top.fill('0.01'); await dividerMatches('-6 V');
   checks.push('Changing SI prefixes preserves resistance; editing in the new prefix updates the circuit');
-  await visit(); await page.getByLabel('Supply voltage', { exact: false }).fill('5.1');
+  await visit(); await page.getByLabel('Supply voltage', { exact: false }).and(page.locator('input')).fill('5.1');
   for (const [option, label] of [['Exact','Exact'], ['Nearest','Nearest E24'], ['Next higher','Next higher E24']]) {
     await page.getByRole('radio', { name: option, exact: true }).click(); await ledMatches(label);
   }
   for (const [label, value] of [['LED forward voltage','2.2'], ['LED current','10']]) {
     const previous = await led().locator('.diagram-svg').textContent();
-    await page.getByLabel(label, { exact: false }).fill(value);
+    await page.getByLabel(label, { exact: false }).and(page.locator('input')).fill(value);
     assert.notEqual(await led().locator('.diagram-svg').textContent(), previous); await ledMatches('Next higher E24');
   }
   assert.ok(clean(await led().locator('.diagram-svg').textContent()).includes('2.2V'));
   await page.getByLabel('Series', { exact: true }).nth(1).selectOption('E96'); await ledMatches('Next higher E96');
   checks.push('LED exact/nearest/next-higher choices match table resistance, current and dissipation after supply, Vf, current and series changes');
-  await page.getByLabel('Supply voltage', { exact: false }).fill('12');
-  for (const n of [2,3]) { await page.getByLabel('LEDs in series', { exact: true }).fill(String(n)); assert.equal(await page.locator('[data-led-symbol]').count(), n); await ledMatches('Next higher E96'); }
-  await page.getByLabel('Supply voltage', { exact: false }).fill('30');
-  await page.getByLabel('LEDs in series', { exact: true }).fill('10');
+  await page.getByLabel('Supply voltage', { exact: false }).and(page.locator('input')).fill('12');
+  for (const n of [2,3]) { await page.getByLabel('LEDs in series', { exact: true }).and(page.locator('input')).fill(String(n)); assert.equal(await page.locator('[data-led-symbol]').count(), n); await ledMatches('Next higher E96'); }
+  await page.getByLabel('Supply voltage', { exact: false }).and(page.locator('input')).fill('30');
+  await page.getByLabel('LEDs in series', { exact: true }).and(page.locator('input')).fill('10');
   assert.equal(await page.locator('[data-led-symbol]').count(), 2);
   assert.ok((await led().locator('.diagram-caption').innerText()).includes('10-LED')); await ledMatches('Next higher E96');
   await visit({ vs:'300000', n:'100000' }); assert.equal(await page.locator('[data-led-symbol]').count(), 2); await ledMatches('Next higher E24');

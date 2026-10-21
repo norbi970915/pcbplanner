@@ -237,6 +237,7 @@ export default function Crosstalk() {
       title="Crosstalk Calculator"
       description="Near-end (NEXT) and far-end (FEXT) crosstalk between two parallel PCB traces, from the even- and odd-mode solution of the field solver, with a sweep over the spacing."
       onReset={reset}
+      reportBusy={st.busy}
       properties={properties}
       status={x ? `NEXT ${pct(x.next / p.v)} (${fmt(x.next * 1000, 4)} mV) · FEXT ${fmt(Math.abs(x.fext) * 1000, 4)} mV` : st.busy ? 'Solving…' : 'Check the inputs'}
       method={<Method />}

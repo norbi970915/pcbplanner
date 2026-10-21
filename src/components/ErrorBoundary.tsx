@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { clearFailedToolState } from '../lib/toolRecovery';
 
 interface State {
   error: Error | null;
@@ -32,6 +33,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
             <button
               className="btn btn-primary"
               onClick={() => {
+                try { clearFailedToolState(window.location.pathname, window.sessionStorage); } catch { /* Storage can be blocked. */ }
                 window.history.replaceState(null, '', window.location.pathname);
                 window.location.reload();
               }}

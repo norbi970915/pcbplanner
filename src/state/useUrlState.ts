@@ -86,6 +86,8 @@ export function useUrlState<T extends Record<string, Primitive>>(defaults: T) {
   const reset = useCallback(() => {
     setState(defaultsRef.current, 'Reset inputs');
     saveSession(path, defaultsRef.current, defaultsRef.current);
+    // Reset is immediate: a reload before the normal URL debounce must not restore the old design.
+    window.history.replaceState(window.history.state, '', path + window.location.hash);
     // after the re-render, tell every field to re-display its value (clears unparsable text)
     setTimeout(() => window.dispatchEvent(new Event(RESET_EVENT)), 0);
   }, [path, setState]);

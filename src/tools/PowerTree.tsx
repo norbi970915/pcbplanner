@@ -77,7 +77,7 @@ export default function PowerTree() {
     <Notes kind="error" items={errors} />
     <Notes items={result.warnings} />
 
-    <Panel title="Supply Rails" right={<button type="button" className="btn" onClick={addRail} disabled={tree.rails.length >= 20}>Add rail</button>}>
+    <Panel title="Supply Rails" allowInvalid right={<button type="button" className="btn" onClick={addRail} disabled={tree.rails.length >= 20}>Add rail</button>}>
       {!tree.rails.length && <p className="px-3 py-3 text-muted">No regulated rails yet. Add a rail, or attach a load directly to the input source.</p>}
       {tree.rails.map((rail, index) => {
         const referenced = tree.rails.some(child => child.parentId === rail.id || child.afterId === rail.id) || tree.loads.some(load => load.railId === rail.id);
@@ -106,7 +106,7 @@ export default function PowerTree() {
       })}
     </Panel>
 
-    <Panel title="Loads" right={<button type="button" className="btn" onClick={addLoad} disabled={tree.loads.length >= 40}>Add load</button>}>
+    <Panel title="Loads" allowInvalid right={<button type="button" className="btn" onClick={addLoad} disabled={tree.loads.length >= 40}>Add load</button>}>
       {!tree.loads.length && <p className="px-3 py-3 text-muted">Add the circuits drawing current from each rail. Use datasheet or measured normal and peak values.</p>}
       {tree.loads.map((load, index) => <div key={load.id} className="border-t border-line">
         <div className="flex items-center justify-between bg-panel-head px-3 py-1.5">

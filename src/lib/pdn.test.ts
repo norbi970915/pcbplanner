@@ -50,6 +50,13 @@ describe('decoupling capacitor', () => {
   it('no band when ESR/N exceeds Ztarget', () => {
     expect(capBand(cap, 1, 0.01)).toBeNull();
   });
+  it('retains a positive low band edge over a wide numerical range', () => {
+    const band = capBand(cap, 1e9, .025)!;
+    expect(band.fLow).toBeGreaterThan(0);
+    expect(Number.isFinite(band.fHigh)).toBe(true);
+    expect(capImpedance(cap, band.fLow) / 1e9).toBeCloseTo(.025, 9);
+    expect(capImpedance(cap, band.fHigh) / 1e9).toBeCloseTo(.025, 9);
+  });
 });
 
 describe('PDN impedance', () => {

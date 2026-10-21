@@ -39,7 +39,7 @@ export default function Pdn() {
   if (!(p.esl > 0)) errors.push('Mounted ESL must be greater than 0.');
   if (!(p.f > 0)) errors.push('Frequency must be greater than 0.');
   if (!p.auto && !(p.n >= 1 && Number.isInteger(p.n))) errors.push('Capacitor count must be a whole number ≥ 1.');
-  const ok = errors.length === 0;
+  let ok = errors.length === 0;
 
   const dI = p.useMax ? p.imax / 2 : p.step;
   const zt = targetImpedance(p.v, p.ripple, dI);
@@ -54,6 +54,10 @@ export default function Pdn() {
   const band = capBand(cap, n, zt);
   const zTotal = pdnImpedance(cap, n, cp, fHz);
   const zPlane = 1 / (2 * Math.PI * fHz * cp);
+  if (ok && (![zt, cp, cpCm2, f0, z1, zTotal, zPlane].every(value => Number.isFinite(value) && value > 0) || !Number.isSafeInteger(needed) || !Number.isSafeInteger(n) || (band && ![band.fLow, band.fHigh].every(value => Number.isFinite(value) && value > 0)))) {
+    errors.push('The impedance or capacitor-count result is outside the supported numerical range. Reduce the input magnitudes or check the component values.');
+    ok = false;
+  }
 
   // From KiCad project: the plane pair's overlap area (as L × W), dielectric thickness and series εr
   const applyKicad = (v: KicadPlaneApplied) => {
@@ -176,13 +180,14 @@ function PdnPlot({ cap, n, planeC, zt, fMark }: { cap: CapModel; n: number; plan
   const caps = fs.map((f) => capImpedance(cap, f) / n);
   const plane = fs.map((f) => 1 / (2 * Math.PI * f * planeC));
 
-  const lo = Math.min(...total, ...caps, zt);
-  const hi = Math.max(...total, ...caps, zt);
+  const positive = [...total, ...caps, zt].filter(value => Number.isFinite(value) && value > 0);
+  const lo = Math.min(...positive);
+  const hi = Math.max(...positive);
   const y0 = Math.floor(Math.log10(lo) - 0.05);
   const y1 = Math.max(y0 + 1, Math.ceil(Math.log10(hi) + 0.05));
   const x0 = Math.log10(F0), x1 = Math.log10(F1);
   const X = (f: number) => ml + ((Math.log10(f) - x0) / (x1 - x0)) * (W - ml - mr);
-  const Y = (z: number) => mt + ((y1 - Math.log10(z)) / (y1 - y0)) * (H - mt - mb);
+  const Y = (z: number) => z === Infinity ? mt : !(z > 0) ? H - mb : mt + ((y1 - Math.log10(z)) / (y1 - y0)) * (H - mt - mb);
   const path = (zs: number[]) => zs.map((z, i) => `${i ? 'L' : 'M'}${X(fs[i]).toFixed(1)},${Y(z).toFixed(1)}`).join('');
 
   const decadesX = Array.from({ length: x1 - x0 + 1 }, (_, i) => 10 ** (x0 + i));

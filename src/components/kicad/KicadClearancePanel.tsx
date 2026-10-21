@@ -4,6 +4,7 @@
 // is kicadClearance.ts.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Row, Segmented } from '../ui';
+import { parseNumericInput } from '../../lib/numericInput';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
 import { decodeVolts, encodeVolts, type ClearanceFinding, type ClearanceResult, type OuterCoating } from '../../lib/kicadClearance';
@@ -145,8 +146,8 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
               defaultValue={x.v}
               key={`${x.net}-${x.v}`}
               onBlur={(e) => {
-                const v = Number(e.target.value.replace(',', '.'));
-                if (Number.isFinite(v)) setVolts(volts.map((y, j) => (j === k ? { ...y, v } : y)));
+                const v = parseNumericInput(e.target.value.replace(',', '.'));
+                if (v !== null) setVolts(volts.map((y, j) => (j === k ? { ...y, v } : y)));
                 else e.target.value = String(x.v);
               }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}

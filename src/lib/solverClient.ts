@@ -67,23 +67,24 @@ export interface LossState {
 
 /** Re-run the loss analysis whenever the request changes (debounced); stale answers are dropped. */
 export function useLossSolve(req: LossRequest | null): LossState {
-  const [state, setState] = useState<LossState>({ result: null, error: null, busy: false });
+  const [state, setState] = useState<LossState & { key: string }>({ result: null, error: null, busy: false, key: '' });
   const seq = useRef(0);
   const key = JSON.stringify(req);
   useEffect(() => {
-    if (!req) return;
     const mySeq = ++seq.current;
-    setState((s) => ({ ...s, busy: true }));
+    let alive = true;
+    if (!req) return;
     const t = setTimeout(() => {
       runSolver({ type: 'loss', req }).then((r) => {
-        if (mySeq !== seq.current) return;
-        setState(r.ok && r.loss ? { result: r.loss, error: null, busy: false } : { result: null, error: r.ok ? 'No result' : r.error, busy: false });
+        if (!alive || mySeq !== seq.current) return;
+        setState(r.ok && r.loss ? { key, result: r.loss, error: null, busy: false } : { key, result: null, error: r.ok ? 'No result' : r.error, busy: false });
       });
     }, 150);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-  return state;
+  const current = state.key === key;
+  return { result: req && current ? state.result : null, error: req && current ? state.error : null, busy: !!req && !current };
 }
 
 /** Re-solve whenever the geometry changes (debounced); stale answers are dropped. */

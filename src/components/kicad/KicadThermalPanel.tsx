@@ -3,6 +3,7 @@
 // heat map on a chosen layer. The engine is kicadThermal.ts.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, NumField, Panel, Row, Segmented } from '../ui';
+import { parseNumericInput } from '../../lib/numericInput';
 import { dcScenario, type DcRequest } from '../../lib/kicadPower';
 import { netLeaf } from '../../lib/kicadRouting';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
@@ -190,8 +191,8 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
               defaultValue={s.watts}
               key={`w-${s.ref}-${s.watts}`}
               onBlur={(e) => {
-                const v = Number(e.target.value.replace(',', '.'));
-                if (Number.isFinite(v) && v >= 0) setSources(sources.map((x, j) => (j === k ? { ...x, watts: v } : x)));
+                const v = parseNumericInput(e.target.value.replace(',', '.'));
+                if (v !== null && v >= 0) setSources(sources.map((x, j) => (j === k ? { ...x, watts: v } : x)));
                 else e.target.value = String(s.watts);
               }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}

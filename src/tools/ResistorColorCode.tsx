@@ -28,7 +28,7 @@ export default function ResistorColorCode() {
   const r = bands.length ? readBands(bands) : null;
 
   const errors: string[] = [];
-  if (read && !r) errors.push('Those colours do not form a valid code: gold, silver and pink are multipliers or tolerances, never digits.');
+  if (bands.length && !r) errors.push('Choose valid colours for each band. Gold, silver and pink are multipliers or tolerances, never digits.');
   if (!read && !(p.r > 0)) errors.push('Enter a resistance greater than 0.');
   else if (!read && !found) errors.push('The value is outside the range the colour code can mark (0.001 Ω to 99.9 GΩ).');
   const notes: string[] = [];
@@ -49,7 +49,7 @@ export default function ResistorColorCode() {
       label={title}
       value={p[key]}
       onChange={(v) => set({ [key]: v })}
-      options={options.map((c) => ({ value: c, label: `${label(c)} – ${describe(c)}` }))}
+      options={[...(!options.includes(p[key] as BandColor) ? [{ value: p[key], label: 'Choose a colour' }] : []), ...options.map((c) => ({ value: c, label: `${label(c)} – ${describe(c)}` }))]}
       width={170}
     />
   );

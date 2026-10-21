@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { microstripHJ, striplineWheeler } from './closedform';
-import { solve, type Geometry } from './fieldsolver';
+import { solve, type Accuracy, type Geometry } from './fieldsolver';
 
 const pct = (a: number, b: number) => (100 * (a - b)) / b;
 
@@ -9,6 +9,13 @@ function microstrip(w: number, h: number, t: number, er: number): Geometry {
 }
 
 describe('field solver vs closed-form', () => {
+  it.each(['unsupported', '__proto__', 'constructor'])('rejects an unsupported solver accuracy %s', accuracy => {
+    expect(() => solve(microstrip(.15,.1,.035,4.1), { accuracy: accuracy as Accuracy })).toThrow(/supported solver accuracy/);
+  });
+  it.each([0, -1, 1001, 1e308, NaN, Infinity])('rejects an unsupported solder-mask permittivity %s before solving', er => {
+    const geometry = { ...microstrip(.15, .1, .035, 4.1), mask: { surfaceY: .1, overSubstrate: .03, overTrace: .015, er } };
+    expect(() => solve(geometry)).toThrow(/Solder-mask dielectric constant/);
+  });
   it.each([
     [0.3, 0.2, 0.035, 4.3],
     [0.15, 0.1, 0.035, 4.1],

@@ -1,4 +1,5 @@
 // Round wire (AWG) properties, resistance and voltage drop.
+import { linearResistivity } from './copper';
 
 export type Metal = 'copper' | 'aluminium';
 /** Resistivity at 20 °C (Ω·m) and temperature coefficient (1/°C). Copper: IEC 60028 annealed; aluminium: IEC 60889 hard-drawn (61 % IACS). */
@@ -21,8 +22,9 @@ export const awgDiameterMm = (n: number) => 0.005 * Math.pow(92, (36 - n) / 39) 
 export const awgAreaMm2 = (n: number) => (Math.PI / 4) * awgDiameterMm(n) ** 2;
 
 export function resistancePerM(areaMm2: number, metal: Metal, tempC: number) {
+  if (!Object.hasOwn(METALS, metal)) throw new RangeError('Choose a supported conductor: copper or aluminium.');
   const m = METALS[metal];
-  return (m.rho20 * (1 + m.alpha * (tempC - 20))) / (areaMm2 * 1e-6);
+  return linearResistivity(m.rho20, m.alpha, tempC, metal) / (areaMm2 * 1e-6);
 }
 
 export interface DropInput {

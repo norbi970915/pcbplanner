@@ -408,6 +408,7 @@ export default function Impedance() {
       onReset={reset}
       properties={properties}
       status={status}
+      reportBusy={busy}
       method={<Method />}
     >
       <Notes kind="error" items={[...errors, ...(solveState.error && geom ? [solveState.error] : []), ...(solveErr ? [solveErr] : [])]} />

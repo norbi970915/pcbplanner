@@ -295,6 +295,7 @@ export default function StackupAdvisor() {
       description="Find rigid, flex and rigid-flex stackup regions by thickness and layer count. Add optional impedance requirements to solve trace widths and rank candidates against your fabrication limits."
       onReset={reset}
       properties={properties}
+      reportBusy={running}
       status={
         running
           ? `Solving ${progress.done}/${progress.total} line designs on ${poolSize()} threads…`

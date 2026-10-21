@@ -4,6 +4,14 @@ import { bandsFor, capCode, eia96Code, readBands, readCap, readDielectric, readS
 const near = (a: number, b: number) => expect(Math.abs(a - b)).toBeLessThanOrEqual(Math.abs(b) * 1e-12);
 
 describe('resistor colour bands (IEC 60062:2016)', () => {
+  it.each([0, 1, 2, 3, 4, 5])('rejects an unknown colour in position %s from restored or shared inputs', position => {
+    const bands = ['brown', 'black', 'black', 'red', 'brown', 'red'] as BandColor[];
+    bands[position] = 'audit-unknown' as BandColor;
+    expect(readBands(bands)).toBeNull();
+  });
+  it('does not treat object prototype names as colours', () => {
+    expect(readBands(['constructor', 'black', 'red', 'gold'] as BandColor[])).toBeNull();
+  });
   it.each<[BandColor[], number, number]>([
     [['yellow', 'violet', 'red', 'gold'], 4700, 5],
     [['brown', 'black', 'orange', 'none'], 10e3, 20],
