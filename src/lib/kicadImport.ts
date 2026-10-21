@@ -16,6 +16,7 @@ import { analyseRouting, isGroundName, trackLength, type RawTrack, type RawVia, 
 import { addSpacing } from './kicadSpacing';
 import { addVias } from './kicadVias';
 import { addVoids, type FillPoly } from './kicadVoids';
+import { boardLoops, footprintEdgesAt } from './kicadPlanes';
 import { sweepArea } from './polygonArea';
 import { MASK_DF, type CopperRole, type Layer, type Stackup } from './stackups';
 
@@ -169,7 +170,7 @@ export interface KicadBoard {
   copperFinish?: string;
   copper: KicadCopperLayer[]; // top to bottom
   stackup: KicadStackupItem[] | null;
-  board: { area: number; bbox: [number, number, number, number] | null; source: 'outline' | 'bbox' | 'zones' | 'none' };
+  board: { area: number; bbox: [number, number, number, number] | null; source: 'outline' | 'bbox' | 'zones' | 'copper' | 'none' };
   stats: { bytes: number; zones: number; tracks: number; ms: number };
   /** Nets, widths, lengths and differential-pair coupling (absent in summaries stored by older versions of the page). */
   routing?: RoutingSummary;
@@ -546,6 +547,11 @@ export function parseKicadBoard(text: string): KicadBoard {
         edgeItems.push(parseSexpr(text, start, end)[0] as SNode[]);
         break;
       }
+      case 'footprint':
+      case 'module':
+        // a board outline drawn inside a (mechanical) footprint
+        edgeItems.push(...footprintEdgesAt(text, start, end));
+        break;
       case 'zone': {
         const z = readZone(text, start, end);
         if (z) zones.push(z);
@@ -594,8 +600,27 @@ export function parseKicadBoard(text: string): KicadBoard {
   }
   copper.sort((a, b) => copperOrder(a.name) - copperOrder(b.name));
 
-  const { loops: outline, ...outlineInfo } = outlineFrom(edgeItems);
+  const { loops: allLoops, ...outlineInfo } = outlineFrom(edgeItems);
   let board: KicadBoard['board'] = outlineInfo;
+  let outline: Pt[][] = [];
+  // the board is the largest closed shape with the shapes inside it as cut-outs; a largest shape that
+  // leaves most of the copper out is a slot or a cut-out, not the board. Tracks measure the copper (zone
+  // outlines are often drawn well past the board, KiCad clips their fill); zones only on a board without tracks.
+  const cu = rawTracks.length ? rawTracks.flatMap((t): Pt[] => [[t.x1, t.y1], [t.x2, t.y2]]) : zones.flatMap((z) => z.polys.flat());
+  const cuBox: [number, number, number, number] | null = cu.length
+    ? cu.reduce<[number, number, number, number]>((b, [x, y]) => [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)], [Infinity, Infinity, -Infinity, -Infinity])
+    : null;
+  if (board.source === 'outline') {
+    const b = boardLoops(allLoops, cuBox);
+    if (b) {
+      outline = b.loops;
+      // the area of the largest shape as outlineFrom measured it (a circle exactly, not as a polygon)
+      board = { area: outlineInfo.area, bbox: b.bbox, source: 'outline' };
+    } else if (cuBox) board = { area: (cuBox[2] - cuBox[0]) * (cuBox[3] - cuBox[1]), bbox: cuBox, source: 'copper' };
+  } else if (board.source === 'bbox' && cuBox && board.bbox && (board.bbox[2] - board.bbox[0]) * (board.bbox[3] - board.bbox[1]) < 0.5 * (cuBox[2] - cuBox[0]) * (cuBox[3] - cuBox[1])) {
+    // open Edge.Cuts pieces that span only a small part of the copper
+    board = { area: (cuBox[2] - cuBox[0]) * (cuBox[3] - cuBox[1]), bbox: cuBox, source: 'copper' };
+  }
   if (board.source === 'none' && zones.length) {
     // no outline: measure against the extent of all zones (reported as a note)
     const all = zones.flatMap((z) => z.polys.flat());
@@ -817,6 +842,7 @@ export function boardNotes(b: KicadBoard): string[] {
   if (b.stackup && b.thickness !== undefined && Math.abs(sum - b.thickness) > 0.005)
     notes.push(`The board thickness in the file (${b.thickness} mm) differs from the sum of the stackup layers (${Number(sum.toFixed(4))} mm). Impedance uses the stackup layers.`);
   if (b.board.source === 'none') notes.push('No board outline (Edge.Cuts) and no zones were found, so plane layers could not be detected from zones. Set the layer roles by hand.');
+  else if (b.board.source === 'copper') notes.push('The closed board outline (Edge.Cuts) found leaves most of the copper out, so it is taken as a slot or cut-out: zone coverage is measured against the extent of the copper. Close the board outline in KiCad.');
   else if (b.board.source === 'zones') notes.push('No board outline (Edge.Cuts) was found; zone coverage is measured against the extent of all zones.');
   return notes;
 }

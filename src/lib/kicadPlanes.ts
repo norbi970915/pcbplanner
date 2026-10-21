@@ -181,6 +181,78 @@ export function outlineLoops(items: SNode[][]): Pt[][] {
 }
 
 /**
+ * The Edge.Cuts graphics inside one footprint (fp_line, fp_arc, fp_rect, fp_circle, fp_poly, fp_curve) as the
+ * board graphics they stand for (gr_…), turned into board coordinates like the pads: x' = fx + x·cos a + y·sin a,
+ * y' = fy − x·sin a + y·cos a (KiCad's angle, counter-clockwise on screen, y down). Boards often carry their
+ * outline in a mechanical footprint. A rectangle becomes a polygon, since it may be turned.
+ */
+export function footprintEdges(node: SNode[]): SNode[][] {
+  const at = child(node, 'at');
+  const fx = num(at, 1) ?? 0;
+  const fy = num(at, 2) ?? 0;
+  const a = ((num(at, 3) ?? 0) * Math.PI) / 180;
+  const c = Math.cos(a);
+  const sn = Math.sin(a);
+  const pt = (n: SNode[]): SNode[] => {
+    const x = num(n, 1);
+    const y = num(n, 2);
+    return x === undefined || y === undefined ? n : [n[0], String(fx + x * c + y * sn), String(fy - x * sn + y * c)];
+  };
+  const out: SNode[][] = [];
+  for (const it of node) {
+    const kind = head(it);
+    if (!kind?.startsWith('fp_') || atom(child(it as SNode[], 'layer')) !== 'Edge.Cuts') continue;
+    const g = it as SNode[];
+    if (kind === 'fp_rect') {
+      const s0 = xy(child(g, 'start'));
+      const e0 = xy(child(g, 'end'));
+      if (!s0 || !e0) continue;
+      const corners = [s0, [e0[0], s0[1]], e0, [s0[0], e0[1]]].map(([x, y]) => pt(['xy', String(x), String(y)]));
+      out.push(['gr_poly', ['pts', ...corners], ['layer', 'Edge.Cuts']]);
+      continue;
+    }
+    out.push([
+      'gr_' + kind.slice(3),
+      ...g.slice(1).map((ch) => {
+        const h = head(ch);
+        if (h === 'start' || h === 'end' || h === 'mid' || h === 'center') return pt(ch as SNode[]);
+        if (h === 'pts') return ['pts', ...(ch as SNode[]).slice(1).map((p) => (head(p) === 'xy' ? pt(p as SNode[]) : p))];
+        return ch;
+      }),
+    ]);
+  }
+  return out;
+}
+
+/** The Edge.Cuts graphics of a top-level footprint item of the board text, or none (a cheap test first). */
+export function footprintEdgesAt(text: string, start: number, end: number): SNode[][] {
+  if (!text.slice(start, end).includes('Edge.Cuts')) return [];
+  const node = parseSexpr(text, start, listEnd(text, start, end))[0];
+  return isList(node) ? footprintEdges(node) : [];
+}
+
+const loopBox = (l: Pt[]): Box => [Math.min(...l.map((p) => p[0])), Math.min(...l.map((p) => p[1])), Math.max(...l.map((p) => p[0])), Math.max(...l.map((p) => p[1]))];
+
+/**
+ * The board among the closed Edge.Cuts loops: the largest is the board, the loops inside it are cut-outs
+ * (filled even-odd), loops outside it (another board of a panel, a stray drawing) are left out. When the
+ * extent of the copper is given and the largest loop covers less than half of it (a slot or a cut-out was the
+ * only closed shape, the real outline left open), there is no usable outline: null.
+ */
+export function boardLoops(loops: Pt[][], copper?: Box | null): { loops: Pt[][]; area: number; bbox: Box } | null {
+  const closed = loops.filter((l) => l.length >= 3);
+  if (!closed.length) return null;
+  const largest = closed.reduce((m, l) => (Math.abs(shoelace(l)) > Math.abs(shoelace(m)) ? l : m));
+  const bb = loopBox(largest);
+  if (copper && copper[2] > copper[0] && copper[3] > copper[1]) {
+    const ov = Math.max(0, Math.min(bb[2], copper[2]) - Math.max(bb[0], copper[0])) * Math.max(0, Math.min(bb[3], copper[3]) - Math.max(bb[1], copper[1]));
+    if (ov < 0.5 * (copper[2] - copper[0]) * (copper[3] - copper[1])) return null;
+  }
+  const inside = (l: Pt[]) => l.every(([x, y]) => x >= bb[0] && x <= bb[2] && y >= bb[1] && y <= bb[3]);
+  return { loops: closed.filter((l) => l === largest || inside(l)), area: Math.abs(shoelace(largest)), bbox: bb };
+}
+
+/**
  * Zone outlines and the board outline from the text of a .kicad_pcb. `copper` lists the board's copper
  * layers (to expand '*.Cu'); `bbox` is used as the outline when Edge.Cuts has no closed loop.
  */
@@ -195,14 +267,18 @@ export function readBoardGeometry(text: string, opts: { copper?: string[]; bbox?
     if (name === 'zone') {
       const z = readZone(text, start, end, copper);
       if (z) zones.push(z);
+    } else if (name === 'footprint' || name === 'module') {
+      edgeItems.push(...footprintEdgesAt(text, start, end));
     } else if (/^gr_(line|arc|rect|circle|poly|curve)$/.test(name)) {
       const s = text.slice(start, Math.min(end, start + 4000));
       if (!/\(layer\s+"?Edge\.Cuts"?\s*\)/.test(s) && !(end - start > 4000 && text.slice(start, end).includes('Edge.Cuts'))) return;
       edgeItems.push(parseSexpr(text, start, end)[0] as SNode[]);
     }
   });
-  const loops = outlineLoops(edgeItems);
-  if (loops.length) return { zones, outline: loops, outlineSource: 'outline' };
+  // `bbox` is the board the import settled on (kicadImport.ts, measured against the tracks): an outline that
+  // leaves most of it out is a slot or a cut-out, not the board
+  const board = boardLoops(outlineLoops(edgeItems), opts.bbox);
+  if (board) return { zones, outline: board.loops, outlineSource: 'outline' };
   const b = opts.bbox;
   if (b && b[2] > b[0] && b[3] > b[1]) return { zones, outline: [[[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]], outlineSource: 'bbox' };
   return { zones, outline: [], outlineSource: 'none' };

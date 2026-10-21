@@ -353,3 +353,30 @@ describe.runIf(!!process.env.KICAD_BOARDS)('real KiCad boards', () => {
     });
   }
 });
+
+describe('which outline is the board', () => {
+  const seg = (x1: number, y1: number, x2: number, y2: number) => `(segment (start ${x1} ${y1}) (end ${x2} ${y2}) (width 0.2) (layer "F.Cu") (net 0) (uuid "s"))`;
+  const tracks = seg(5, 5, 95, 5) + seg(5, 45, 95, 45);
+
+  it('an outline drawn inside a footprint is the board outline', () => {
+    const fp = `(footprint "Outline" (layer "F.Cu") (at 50 25)
+      (fp_rect (start -50 -25) (end 50 25) (stroke (width 0.1) (type solid)) (fill none) (layer "Edge.Cuts")))`;
+    const b = parseKicadBoard(board(TWO, fp + tracks));
+    expect(b.board).toMatchObject({ area: 5000, source: 'outline' });
+  });
+
+  it('the largest closed shape is the board; a shape inside it is a cut-out and a shape outside it is left out', () => {
+    const edges = '(gr_rect (start 0 0) (end 100 50) (layer "Edge.Cuts")) (gr_rect (start 40 20) (end 60 30) (layer "Edge.Cuts")) (gr_rect (start 300 300) (end 310 310) (layer "Edge.Cuts"))';
+    const b = parseKicadBoard(board(TWO, edges + tracks));
+    expect(b.board).toMatchObject({ area: 5000, source: 'outline' });
+    expect(b.board.bbox).toEqual([0, 0, 100, 50]);
+  });
+
+  it('a closed slot that leaves the copper out is not the board: the extent of the tracks is used, with a note', () => {
+    const slot = '(gr_rect (start 40 20) (end 46 21) (layer "Edge.Cuts"))';
+    const b = parseKicadBoard(board(TWO, slot + tracks));
+    expect(b.board.source).toBe('copper');
+    expect(b.board.bbox).toEqual([5, 5, 95, 45]);
+    expect(boardNotes(b).some((n) => /leaves most of the copper out/.test(n))).toBe(true);
+  });
+});

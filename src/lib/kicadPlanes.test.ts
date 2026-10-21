@@ -295,3 +295,26 @@ describe('the example project', () => {
     expect(pdnPlaneFields([])).toBeNull();
   });
 });
+
+describe('board outline of the plane reader', () => {
+  const pcb = (extra: string) => `(kicad_pcb (version 20240108) (generator "pcbnew")
+  (layers (0 "F.Cu" signal) (31 "B.Cu" signal) (44 "Edge.Cuts" user))
+  (net 0 "")
+  ${extra}
+)`;
+  it('reads an outline inside a turned footprint', () => {
+    const fp = `(footprint "Outline" (layer "F.Cu") (at 50 50 90)
+      (fp_rect (start -20 -10) (end 20 10) (stroke (width 0.1) (type solid)) (fill none) (layer "Edge.Cuts")))`;
+    const g = readBoardGeometry(pcb(fp), { copper: ['F.Cu', 'B.Cu'] });
+    expect(g.outlineSource).toBe('outline');
+    const xs = g.outline[0].map((p) => p[0]);
+    const ys = g.outline[0].map((p) => p[1]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(20, 9); // turned: 20 wide, 40 tall
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(40, 9);
+  });
+  it('a slot that leaves the board the import settled on is not taken as the outline', () => {
+    const g = readBoardGeometry(pcb('(gr_rect (start 40 20) (end 46 21) (layer "Edge.Cuts"))'), { copper: ['F.Cu', 'B.Cu'], bbox: [0, 0, 100, 50] });
+    expect(g.outlineSource).toBe('bbox');
+    expect(g.outline[0]).toEqual([[0, 0], [100, 0], [100, 50], [0, 50]]);
+  });
+});

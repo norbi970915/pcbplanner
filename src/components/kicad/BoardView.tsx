@@ -190,14 +190,13 @@ function extent(d: BoardDrawing): [number, number, number, number] {
     x1 = Math.max(x1, x);
     y1 = Math.max(y1, y);
   };
+  // the outline and the copper together: a board whose only closed Edge.Cuts shape is a slot still fits whole
   for (const loop of d.outline) for (const [x, y] of loop) grow(x, y);
-  if (!Number.isFinite(x0)) {
-    for (const t of d.tracks) {
-      grow(t.x1, t.y1);
-      grow(t.x2, t.y2);
-    }
-    for (const p of d.pads) grow(p.x, p.y);
+  for (const t of d.tracks) {
+    grow(t.x1, t.y1);
+    grow(t.x2, t.y2);
   }
+  for (const p of d.pads) grow(p.x, p.y);
   return Number.isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 100, 100];
 }
 
