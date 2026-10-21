@@ -204,6 +204,12 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: height === 'fill' ? 560 : height });
+  // a fixed height shrinks to the board's shape on a narrow screen, so a wide board does not sit in an empty box
+  const aspect = useMemo(() => {
+    const [x0, y0, x1, y1] = extent(drawing);
+    return Math.max(y1 - y0, 1) / Math.max(x1 - x0, 1);
+  }, [drawing]);
+  const boxH = height === 'fill' ? 'fill' : Math.min(height, Math.max(240, Math.round(size.w * aspect + 24)));
   const cam = useRef<Camera>({ x: 0, y: 0, scale: 5 });
   const raf = useRef(0);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -387,10 +393,10 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setSize({ w: Math.max(200, el.clientWidth), h: height === 'fill' ? Math.max(200, el.clientHeight) : height }));
+    const ro = new ResizeObserver(() => setSize({ w: Math.max(200, el.clientWidth), h: boxH === 'fill' ? Math.max(200, el.clientHeight) : boxH }));
     ro.observe(el);
     return () => ro.disconnect();
-  }, [height]);
+  }, [boxH]);
   // a resize keeps the centre of a view the user has moved where it was
   const lastSize = useRef(size);
   useEffect(() => {
@@ -471,7 +477,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   };
 
   return (
-    <div ref={wrap} className="relative w-full select-none" style={{ height: height === 'fill' ? '100%' : height }}>
+    <div ref={wrap} className="relative w-full select-none" style={{ height: boxH === 'fill' ? '100%' : boxH }}>
       <canvas
         ref={canvas}
         style={{ width: size.w, height: size.h, touchAction: 'none', cursor: 'grab' }}

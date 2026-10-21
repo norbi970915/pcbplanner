@@ -907,12 +907,15 @@ async function mobileRoute(page, route) {
     const vis = (await aside.count()) && (await aside.isVisible());
     if (!NO_PROPS.has(route)) await check(page, !!vis, route, '10 mobile properties panel visible', 'panel not visible');
     if (vis && !NO_PROPS.has(route)) {
-      const c = aside.locator('input:visible, select:visible').first();
+      // a panel with nothing loaded yet (KiCad project, Gerber viewer) holds only buttons
+      let controls = aside.locator('input:visible:not([type=file]), select:visible');
+      if (!(await controls.count())) controls = aside.locator('button:visible');
+      const c = controls.first();
       await c.scrollIntoViewIfNeeded();
       const bb = await c.boundingBox();
       await check(page, !!bb && bb.x >= 0 && bb.x + bb.width <= 391 && bb.y >= 0 && bb.y < 844, route, '10 mobile first property control reachable', JSON.stringify(bb));
       // last control too
-      const cl = aside.locator('input:visible, select:visible').last();
+      const cl = controls.last();
       await cl.scrollIntoViewIfNeeded();
       const bl = await cl.boundingBox();
       await check(page, !!bl && bl.x >= 0 && bl.x + bl.width <= 391 && bl.y >= 0 && bl.y < 844, route, '10 mobile last property control reachable', JSON.stringify(bl));
