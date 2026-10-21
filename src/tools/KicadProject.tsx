@@ -416,7 +416,8 @@ export function Method() {
         cell stands for; a cell is joined to the same cell of the next layer through the laminate, <i>k</i>
         <sub>z</sub>·<i>A</i>/<i>h</i>, and through every via and plated hole there, <i>k</i>
         <sub>Cu</sub>·<i>a</i>/<i>h</i> for its 25 µm copper ring. The copper of a board conducts 385 W/m·K (Graebner measured 385 ± 15 in boards; pure annealed copper is about 400); the
-        laminate defaults to 0.8 W/m·K along the board and 0.35 through it, and both can be changed. A part's power enters the board through its pads on its own side.
+        laminate defaults to 0.8 W/m·K along the board and 0.35 through it, and both can be changed. A part's power enters the board through its pads on its own side. With <b>Add the copper loss</b> ticked, the DC drop set up on the Power tab is solved as well and its I²R (the tracks, planes and vias of the supply and of the
+        return net) heats each layer where it is lost; the result names the watts added per net.
       </p>
       <p>
         The two faces give the heat to the air by convection and radiation. In still air the convection comes from the natural-convection correlations of the heat-spreading tool (hot

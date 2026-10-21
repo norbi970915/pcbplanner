@@ -303,3 +303,20 @@ export function cellsInBox(g: CopperGrid, x0: number, y0: number, x1: number, y1
       if (node >= 0) out.add(node);
     }
 }
+
+/** Every copper cell's node and the centre of the cell, mm. */
+export function forEachCellNode(g: CopperGrid, cb: (node: number, x: number, y: number) => void) {
+  for (let r = 0; r < g.ny; r++)
+    for (let c = 0; c < g.nx; c++) {
+      const k = r * g.nx + c;
+      if (g.fine[k] < 0) {
+        if (g.node[k] >= 0) cb(g.node[k], g.x0 + c * g.res, g.y0 + r * g.res);
+        continue;
+      }
+      for (let sy = 0; sy < g.f; sy++)
+        for (let sx = 0; sx < g.f; sx++) {
+          const n = g.fNode[g.fine[k] + sy * g.f + sx];
+          if (n >= 0) cb(n, g.x0 + (c - 0.5) * g.res + (sx + 0.5) * g.h, g.y0 + (r - 0.5) * g.res + (sy + 0.5) * g.h);
+        }
+    }
+}

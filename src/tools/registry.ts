@@ -218,9 +218,9 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/kicad-project',
-    metaDescription: 'Load a KiCad board or project in the browser: 50/90/100 Ω widths per layer, a routing check of every diff pair, and DC drop and track current of power nets.',
+    metaDescription: 'Free KiCad board checker in the browser: impedance per layer, routing check, DC voltage drop and current density, a PCB temperature map, HV clearance.',
     title: 'KiCad Project',
-    seoTitle: 'KiCad Impedance Calculator and Routing Check',
+    seoTitle: 'KiCad PCB Checker: Impedance, Voltage Drop, Thermal',
     nav: 'KiCad project',
     group: 'Stackup',
     summary: 'Reads a .kicad_pcb file or project folder in the browser: 50 Ω and 90/100 Ω widths and loss per layer, net classes and pairs, a routing check of every routed pair, the track current and DC voltage drop of power nets, and a temperature map of the board, shared with the calculators.',

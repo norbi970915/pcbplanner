@@ -145,3 +145,22 @@ describe('which outline is the board', () => {
     expect(r.boardAreaMm2).toBeGreaterThan(1500);
   });
 });
+
+describe('copper loss as heat', () => {
+  it("heats the board with the DC drop's I²R and nothing else when no part is given power", () => {
+    const d = board(40, 10, ['F.Cu'], {
+      tracks: [{ net: 'VCC', layer: 'F.Cu', w: 0.2, x1: 2, y1: 5, x2: 38, y2: 5 }],
+      pads: [{ ...pad('J1', 2, 5, 1, 1), net: 'VCC' }, { ...pad('U1', 38, 5, 1, 1), net: 'VCC' }],
+      parts: [{ ref: 'J1', x: 2, y: 5, back: false }, { ref: 'U1', x: 38, y: 5, back: false }],
+    });
+    const nc = { net: 'VCC', copper: ['F.Cu'], tracks: [{ i: 0, layer: 'F.Cu', w: 0.2, x1: 2, y1: 5, x2: 38, y2: 5, len: 36 }], vias: [], fills: [], pads: d.pads.map((p, i) => ({ ...p, i })) };
+    const s = { thickness: { 'F.Cu': 0.035 }, layerZ: { 'F.Cu': 0 }, platingMm: 0.025, tempC: 25, dTC: 10 };
+    const r = solveThermal(base(d, { sources: [], copperLoss: [{ nc, source: 'J1', loads: [{ ref: 'U1', amps: 3 }], s }], res: 0.5 }));
+    if (!r.ok) throw new Error(r.error);
+    const i2r = 9 * ((1.7241e-8 * 1e3 * (1 + 0.00393 * 5) * 36) / (0.2 * 0.035));
+    expect(r.copperLoss[0].w).toBeCloseTo(i2r, 6);
+    expect(r.powerW).toBeCloseTo(i2r, 6);
+    expect(r.balanceW).toBeCloseTo(i2r, 4); // every watt of the loss leaves the faces
+    expect(r.hottest.c).toBeGreaterThan(25);
+  });
+});

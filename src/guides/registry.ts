@@ -19,6 +19,18 @@ export interface GuideDef {
 // newest first: the home page shows the three latest by date, and guides published on the same date keep this order
 export const GUIDES: GuideDef[] = [
   {
+    path: '/guides/kicad-voltage-drop-thermal',
+    title: 'PCB Voltage Drop and Temperature, Straight from a KiCad Board',
+    seoTitle: 'KiCad PCB Voltage Drop & Thermal Map',
+    description: 'Check the DC voltage drop of a power net and the temperature of the whole board from the .kicad_pcb file: copper counted in squares, the return through ground, how the heat leaves the board, junction temperature from ψJB, worked numbers from an open-source CM5 carrier board, and the two traps that spoil both checks.',
+    metaDescription: 'PCB voltage drop and thermal map from a KiCad board: copper resistance in squares, the ground return, heat leaving the board, ψJB, worked numbers and traps.',
+    tools: ['/kicad-project', '/trace-width', '/copper-heat-spreading', '/junction-temperature', '/thermal-vias'],
+    related: ['/guides/pcb-trace-width-current-calculation', '/guides/copper-area-for-cooling', '/guides/thermal-via-array-design'],
+    date: '2026-10-21',
+    category: 'Power & Thermal',
+    component: lazyPage(() => import('./KicadVoltageDropThermal')),
+  },
+  {
     path: '/guides/resin-rich-layer-impedance',
     title: 'Resin-rich Layers and PCB Impedance: What to Model',
     seoTitle: 'Resin-rich Layers and PCB Impedance',

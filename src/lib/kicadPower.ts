@@ -18,7 +18,7 @@
 import { rhoCu } from './copper';
 import { areaMil2, IPC2221, tempRiseFor } from './ipc2221';
 import { padPolygon, type BoardDrawing, type DrawPad } from './kicadDrawing';
-import { buildGrid, cellAt, cellsInBox, gridEdges, type CopperGrid } from './copperGrid';
+import { buildGrid, cellAt, cellsInBox, forEachCellNode, gridEdges, type CopperGrid } from './copperGrid';
 import { solveSpd } from './sparseSolve';
 import { isGroundName, netLeaf, trackLength } from './kicadRouting';
 import { MM_PER_MIL } from './units';
@@ -112,7 +112,18 @@ export interface DcRequest {
   maxCells?: number;
   /** Cell size, mm; chosen from maxCells when left out. */
   res?: number;
+  /** Also return where the copper loses its power (for the thermal solve). */
+  losses?: boolean;
 }
+
+/** Power lost in the copper around a point of a layer: the I²R of the network gathered on a 0.5 mm grid. */
+export interface CopperLoss {
+  layer: string;
+  x: number;
+  y: number;
+  w: number; // watts
+}
+const LOSS_BIN = 0.5; // mm
 
 export interface DcLayerMap {
   layer: string;
@@ -139,6 +150,7 @@ export type DcResult =
       layers: DcLayerMap[];
       maxDropMv: number;
       powerW: number;
+      losses?: CopperLoss[];
     }
   | { ok: false; error: string };
 
@@ -195,6 +207,15 @@ export function solveDc(req: DcRequest): DcResult {
   const forced = new Set([req.source, ...req.loads.filter((l) => l.amps > 0).map((l) => l.ref)]);
   const grids = new Map<string, CopperGrid>();
   let nodes = 0;
+  // where each node is (for the losses): a cell's centre, a pad's centre, a junction's point
+  const posX: number[] = [];
+  const posY: number[] = [];
+  const posL: string[] = [];
+  const place = (n: number, x: number, y: number, layer: string) => {
+    posX[n] = x;
+    posY[n] = y;
+    posL[n] = layer;
+  };
   for (const l of gridLayers) {
     const boxes: [number, number, number, number][] = [];
     nc.pads.forEach((p, k) => {
@@ -206,6 +227,7 @@ export function solveDc(req: DcRequest): DcResult {
     if (!built) continue;
     grids.set(l, built.grid);
     nodes = built.next;
+    forEachCellNode(built.grid, (n, x, y) => place(n, x, y, l));
   }
   // overlapping fills make more cells than the area promised: coarsen once
   if (req.res === undefined && nodes > maxCells * 1.5 + MAX_FINE) return solveDc({ ...req, res: res * Math.sqrt(nodes / maxCells) });
@@ -237,6 +259,7 @@ export function solveDc(req: DcRequest): DcResult {
   nc.pads.forEach((p, k) => {
     for (const l of p.layers) {
       const n = nodes++;
+      place(n, p.x, p.y, l);
       padNode.set(`${k}|${l}`, n);
       const on = padsOn.get(l);
       if (on) on.push(k);
@@ -268,7 +291,10 @@ export function solveDc(req: DcRequest): DcResult {
     for (const k of padsOn.get(layer) ?? []) if (insidePad(nc.pads[k], x, y)) return padNode.get(`${k}|${layer}`)!;
     const key = `${layer}|${Math.round(x * 1000)},${Math.round(y * 1000)}`;
     let j = junction.get(key);
-    if (!j) junction.set(key, (j = { n: nodes++, r: -1, cells: new Set() }));
+    if (!j) {
+      junction.set(key, (j = { n: nodes++, r: -1, cells: new Set() }));
+      place(j.n, x, y, layer);
+    }
     const g = grids.get(layer);
     if (g && r > j.r) {
       const more = new Set<number>();
@@ -530,13 +556,33 @@ export function solveDc(req: DcRequest): DcResult {
     layers.push({ layer: g.layer, x0: g.x0, y0: g.y0, res, nx: g.nx, ny: g.ny, drop, density });
   }
   let powerW = 0;
+  const bins = req.losses ? new Map<string, CopperLoss>() : null;
+  const addLoss = (layer: string, x: number, y: number, w: number) => {
+    const ix = Math.round(x / LOSS_BIN);
+    const iy = Math.round(y / LOSS_BIN);
+    const key = `${layer}|${ix},${iy}`;
+    const b = bins!.get(key);
+    if (b) b.w += w;
+    else bins!.set(key, { layer, x: ix * LOSS_BIN, y: iy * LOSS_BIN, w });
+  };
   for (let e = 0; e < ea.length; e++) {
     const va = val(ea[e]);
     const vb = val(eb[e]);
-    if (Number.isFinite(va) && Number.isFinite(vb)) powerW += eg[e] * (va - vb) ** 2;
+    if (!Number.isFinite(va) || !Number.isFinite(vb)) continue;
+    const w = eg[e] * (va - vb) ** 2;
+    powerW += w;
+    if (!bins || !(w > 0)) continue;
+    const a = ea[e];
+    const b = eb[e];
+    // a track or a sheet edge: between its ends on the layer; a barrel: half on each of its layers
+    if (posL[a] === posL[b]) addLoss(posL[a], (posX[a] + posX[b]) / 2, (posY[a] + posY[b]) / 2, w);
+    else {
+      addLoss(posL[a], posX[a], posY[a], w / 2);
+      addLoss(posL[b], posX[b], posY[b], w / 2);
+    }
   }
   const allDrops = [...loads.map((l) => l.maxMv)].filter(Number.isFinite);
-  return { ok: true, res, nodes, iterations: it, residual: rnorm / bnorm, loads, tracks, vias, layers, maxDropMv: allDrops.length ? Math.max(...allDrops) : 0, powerW };
+  return { ok: true, res, nodes, iterations: it, residual: rnorm / bnorm, loads, tracks, vias, layers, maxDropMv: allDrops.length ? Math.max(...allDrops) : 0, powerW, ...(bins ? { losses: [...bins.values()] } : {}) };
 }
 
 /** Is (x, y) inside the pad, with its rotation? */
@@ -606,4 +652,36 @@ export function netParts(nc: NetCopper): { ref: string; pads: number; area: numb
 /** IPC-2221 width for a current and a rise, mm, on a layer of copper thickness t (mm). */
 export function requiredWidth(amps: number, dTC: number, t: number, outer: boolean): number {
   return (areaMil2(amps, dTC, outer ? IPC2221.kExternal : IPC2221.kInternal) * MM2_PER_MIL2) / t;
+}
+
+/**
+ * The return net of a DC drop: none when asked for none or when the net is itself a ground net; the ground net
+ * chosen when it exists; else the ground net that reaches the source and the most loads.
+ */
+export function autoReturnNet(d: BoardDrawing, nets: { net: string; kind: NetKind }[], net: string, source: string, loads: { ref: string }[], pret: string): string {
+  if (pret === 'none' || nets.find((n) => n.net === net)?.kind === 'ground') return '';
+  const grounds = nets.filter((n) => n.kind === 'ground' && n.net !== net).map((n) => n.net);
+  if (grounds.includes(pret)) return pret;
+  const score = (g: string) => {
+    const refs = new Set(d.pads.filter((q) => q.net === g).map((q) => q.ref));
+    return (refs.has(source) ? 1000 : 0) + loads.filter((l) => refs.has(l.ref)).length;
+  };
+  return grounds.sort((a, b) => score(b) - score(a))[0] ?? '';
+}
+
+/**
+ * The DC drop the Power tab sets up from its page inputs (net, source, loads, return net), with the same
+ * defaults: the supply net and, when there is one, the return net with the loads that have pads on it.
+ */
+export function dcScenario(d: BoardDrawing, p: { pnet: string; psrc: string; ploads: string; pret: string }) {
+  const nets = powerNets(d);
+  const net = nets.some((n) => n.net === p.pnet) ? p.pnet : (nets.find((n) => n.kind === 'power')?.net ?? nets[0]?.net ?? '');
+  const nc = net ? netCopper(d, net) : null;
+  const parts = nc ? netParts(nc) : [];
+  const source = parts.some((x) => x.ref === p.psrc) ? p.psrc : (parts[0]?.ref ?? '');
+  const loads = decodeLoads(p.ploads).filter((l) => l.ref !== source && parts.some((x) => x.ref === l.ref));
+  const returnNet = nc ? autoReturnNet(d, nets, net, source, loads, p.pret) : '';
+  const retNc = returnNet ? netCopper(d, returnNet) : null;
+  const retRefs = new Set(retNc?.pads.map((q) => q.ref) ?? []);
+  return { net, nc, source, loads, returnNet, retNc, retLoads: loads.filter((l) => retRefs.has(l.ref)), retSourceOk: retRefs.has(source) };
 }

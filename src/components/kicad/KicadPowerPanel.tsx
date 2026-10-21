@@ -10,6 +10,7 @@ import { NumField, Panel, Row, Segmented, SelectField } from '../ui';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
 import {
+  autoReturnNet,
   decodeLoads,
   encodeLoads,
   netCopper,
@@ -113,16 +114,11 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   // the return: the ground net the loads send their current back on, from their ground pads to the source's.
   // Auto picks the ground net that reaches the source and the most loads.
   const grounds = nets.filter((n) => n.kind === 'ground' && n.net !== net);
-  const returnNet = useMemo(() => {
-    if (mode !== 'dc' || !d || p.pret === 'none' || nets.find((n) => n.net === net)?.kind === 'ground') return '';
-    if (grounds.some((g) => g.net === p.pret)) return p.pret;
-    const score = (g: string) => {
-      const refs = new Set(d.pads.filter((q) => q.net === g).map((q) => q.ref));
-      return (refs.has(source) ? 1000 : 0) + loads.filter((l) => refs.has(l.ref)).length;
-    };
-    return grounds.map((g) => g.net).sort((a, b) => score(b) - score(a))[0] ?? '';
+  const returnNet = useMemo(
+    () => (mode !== 'dc' || !d ? '' : autoReturnNet(d, nets, net, source, loads, p.pret)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, d, p.pret, net, nets, source, encodeLoads(loads)]);
+    [mode, d, p.pret, net, nets, source, encodeLoads(loads)],
+  );
   const retNc = useMemo(() => (d && returnNet ? netCopper(d, returnNet) : null), [d, returnNet]);
   const retRefs = useMemo(() => new Set(retNc?.pads.map((q) => q.ref) ?? []), [retNc]);
   const retLoads = useMemo(() => loads.filter((l) => retRefs.has(l.ref)), [loads, retRefs]);

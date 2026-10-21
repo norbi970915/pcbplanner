@@ -15,7 +15,7 @@
 // air is not counted, which is conservative.
 import { coverage } from './copperGrid';
 import { padPolygon, type BoardDrawing } from './kicadDrawing';
-import { insidePad } from './kicadPower';
+import { insidePad, solveDc, type CopperLoss, type DcRequest } from './kicadPower';
 import { arcOf } from './kicadRouting';
 import { laplacian, solveSpd } from './sparseSolve';
 import { naturalConvection, radiationH, type Orientation } from './spreading';
@@ -38,6 +38,8 @@ export interface ThermalRequest {
   kZ: number; // through-plane
   platingMm: number;
   maxCells?: number; // all layers together
+  /** DC drop solves whose copper loss (I²R of tracks, planes and vias) heats the board where it is lost. */
+  copperLoss?: DcRequest[];
   res?: number;
 }
 
@@ -66,9 +68,11 @@ export type ThermalResult =
       hRad: number;
       powerW: number;
       boardAreaMm2: number;
-      balanceW: number;
+      balanceW: number; // heat leaving the faces in the solution (equals powerW when solved)
       /** 'copper' when the file has no closed outline around the copper and its extent was used instead. */
-      outlineUsed: 'outline' | 'copper'; // heat leaving the faces in the solution (equals powerW when solved)
+      outlineUsed: 'outline' | 'copper';
+      /** The copper loss added, per DC drop solve (its net), W; included in powerW. */
+      copperLoss: { net: string; w: number; error?: string }[];
     }
   | { ok: false; error: string };
 
@@ -130,7 +134,15 @@ export function solveThermal(req: ThermalRequest): ThermalResult {
   const { d } = req;
   const L = d.copper.length;
   if (!L) return { ok: false, error: 'The board has no copper layers.' };
-  const powerW = req.sources.reduce((a, s) => a + (s.watts > 0 ? s.watts : 0), 0);
+  // the copper loss of the DC drop solves, where it is lost
+  const losses: CopperLoss[] = [];
+  const copperLoss = (req.copperLoss ?? []).map((dc) => {
+    const r = solveDc({ ...dc, losses: true });
+    if (!r.ok) return { net: dc.nc.net, w: 0, error: r.error };
+    for (const l of r.losses ?? []) losses.push(l);
+    return { net: dc.nc.net, w: r.powerW };
+  });
+  const powerW = req.sources.reduce((a, s) => a + (s.watts > 0 ? s.watts : 0), 0) + copperLoss.reduce((a, c) => a + c.w, 0);
 
   // the board: its outline, else the extent of its copper. An outline that leaves most of the copper out
   // (a slot or a cut-out read as the only closed shape, the real outline left open) is not the board.
@@ -299,6 +311,25 @@ export function solveThermal(req: ThermalRequest): ThermalResult {
       return { ref: s.ref, watts: s.watts, li, cells: [...cells], back, placed };
     });
 
+  // the copper loss on its own layer, in the cell where it is lost (a point outside the board goes to the
+  // nearest cell of the board, so that no heat is dropped)
+  for (const l of losses) {
+    const li = d.copper.indexOf(l.layer);
+    if (li < 0) continue;
+    let c = cellAt(l.x, l.y);
+    if (c < 0) {
+      const cx = Math.min(nx - 1, Math.max(0, Math.round((l.x - bx0) / res)));
+      const cy = Math.min(ny - 1, Math.max(0, Math.round((l.y - by0) / res)));
+      for (let rad = 1; c < 0 && rad < Math.max(nx, ny); rad++)
+        for (let dy = -rad; dy <= rad && c < 0; dy++)
+          for (let dx = -rad; dx <= rad && c < 0; dx++) {
+            const x = cx + dx;
+            const y = cy + dy;
+            if (x >= 0 && y >= 0 && x < nx && y < ny) c = cellOf[y * nx + x];
+          }
+    }
+    if (c >= 0) q[node(li, c)] += l.w;
+  }
   const m = laplacian(n, ea, eb, eg, ground);
   const sol = solveSpd(m, q, 1e-8, 400);
   const rise = sol.x;
@@ -335,6 +366,7 @@ export function solveThermal(req: ThermalRequest): ThermalResult {
     boardAreaMm2: boardArea,
     balanceW,
     outlineUsed,
+    copperLoss,
   };
 }
 

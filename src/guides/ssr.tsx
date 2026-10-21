@@ -35,6 +35,7 @@ import RgmiiDelayGuide from './RgmiiDelayGuide';
 import ViaStubGuide from './ViaStubGuide';
 import GlassWeaveSkew from './GlassWeaveSkew';
 import ResinRichLayer from './ResinRichLayer';
+import KicadVoltageDropThermal from './KicadVoltageDropThermal';
 import PrepregGlassGuide from './PrepregGlassGuide';
 import PthHoleGuide from './PthHoleGuide';
 import BobSmithGuide from './BobSmithGuide';
@@ -59,6 +60,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/guides/rgmii-clock-delay': RgmiiDelayGuide,
   '/guides/via-stub-back-drilling': ViaStubGuide,
   '/guides/glass-weave-skew': GlassWeaveSkew,
+  '/guides/kicad-voltage-drop-thermal': KicadVoltageDropThermal,
   '/guides/resin-rich-layer-impedance': ResinRichLayer,
   '/guides/prepreg-glass-styles': PrepregGlassGuide,
   '/guides/pth-hole-pad-size': PthHoleGuide,

@@ -153,3 +153,17 @@ describe('page helpers', () => {
     expect(requiredWidth(1, 10, 0.035, false)).toBeGreaterThan(requiredWidth(1, 10, 0.035, true) * 2);
   });
 });
+
+describe('copper losses', () => {
+  it('add up to the copper loss and sit along the copper that carries the current', () => {
+    const nc = net({ tracks: [track(0, 0, 0, 20, 0, 0.2)], pads: [pad('J1', 0, 0), pad('U1', 20, 0)] });
+    const r = solveDc({ nc, source: 'J1', loads: [{ ref: 'U1', amps: 2 }], s: S, losses: true });
+    if (!r.ok) throw new Error(r.error);
+    const total = r.losses!.reduce((a, l) => a + l.w, 0);
+    expect(total).toBeCloseTo(r.powerW, 9);
+    expect(r.powerW).toBeCloseTo(4 * ((RHO * 20) / (0.2 * 0.035)), 6); // I²R
+    // a single track: its loss at its middle, on its layer
+    expect(r.losses).toHaveLength(1);
+    expect(r.losses![0]).toMatchObject({ layer: 'F.Cu', x: 10, y: 0 });
+  });
+});

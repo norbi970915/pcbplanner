@@ -2,7 +2,9 @@
 // entered, spread by the copper of every layer and the laminate and given off by both faces to the air, as a
 // heat map on a chosen layer. The engine is kicadThermal.ts.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { NumField, Panel, Row, Segmented } from '../ui';
+import { Check, NumField, Panel, Row, Segmented } from '../ui';
+import { dcScenario, type DcRequest } from '../../lib/kicadPower';
+import { netLeaf } from '../../lib/kicadRouting';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
 import { decodeSources, encodeSources, type Air, type ThermalResult } from '../../lib/kicadThermal';
@@ -50,9 +52,19 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
   const settings = useMemo(() => (d ? settingsFor(data, d.copper, 0, p.tamb) : null), [data, d, p.tamb]);
   const air: Air = p.tair === 'f' ? { mode: 'forced', h: p.th } : { mode: 'natural', orient: p.tair === 'v' ? 'vertical' : 'horizontal' };
 
-  const key = `${encodeSources(sources)}|${p.tamb}|${p.tair}|${p.th}|${p.teps}|${p.tkxy}|${p.tkz}`;
+  // the copper loss of the Power tab's DC drop (its net, source, loads and return net), as heat
+  const scenario = useMemo(() => (d ? dcScenario(d, p) : null), [d, p.pnet, p.psrc, p.ploads, p.pret]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lossRequests = useMemo((): DcRequest[] => {
+    if (!scenario?.nc || !d || !scenario.loads.some((l) => l.amps > 0)) return [];
+    const s = settingsFor(data, d.copper, p.pdt, p.tamb);
+    const out: DcRequest[] = [{ nc: scenario.nc, source: scenario.source, loads: scenario.loads, s }];
+    if (scenario.retNc && scenario.retSourceOk && scenario.retLoads.some((l) => l.amps > 0)) out.push({ nc: scenario.retNc, source: scenario.source, loads: scenario.retLoads, s });
+    return out;
+  }, [scenario, d, data, p.pdt, p.tamb]);
+  const withLoss = p.tloss && lossRequests.length > 0;
+  const key = `${encodeSources(sources)}|${p.tamb}|${p.tair}|${p.th}|${p.teps}|${p.tkxy}|${p.tkz}|${withLoss ? `${p.pnet}|${p.psrc}|${p.ploads}|${p.pret}|${p.pdt}` : ''}`;
   useEffect(() => {
-    if (!run || !d || !settings || !sources.some((s) => s.watts > 0)) return;
+    if (!run || !d || !settings || (!sources.some((s) => s.watts > 0) && !withLoss)) return;
     let live = true;
     const t = setTimeout(() => {
       setSol((prev) => ({ key, result: prev?.result, solving: true }));
@@ -62,6 +74,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         layerZ: settings.layerZ,
         boardThickness: data.board.thickness ?? 1.6,
         sources: sources.map((s) => ({ ref: s.ref, watts: s.watts })),
+        copperLoss: withLoss ? lossRequests : undefined,
         ambientC: p.tamb,
         air,
         emissivity: p.teps,
@@ -136,6 +149,18 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
       <NumField label="Surface emissivity" symbol="ε" value={p.teps} max={1} allowZero onChange={(v) => set({ teps: v })} hint="Solder mask about 0.9 (measured 0.88–0.97 for red, white and black mask); bare copper 0.05–0.15. In still air, radiation carries about as much heat as convection." />
       <NumField label="Laminate in-plane" symbol="k" value={p.tkxy} unit="W/m·K" onChange={(v) => set({ tkxy: v })} hint="Thermal conductivity of the laminate along the board: 0.81 W/m·K measured on a bare FR-4 board (Graebner). The copper does nearly all the spreading, so this matters little." />
       <NumField label="Laminate through" symbol="k" value={p.tkz} unit="W/m·K" onChange={(v) => set({ tkz: v })} hint="Thermal conductivity of the laminate through the board, from its datasheet: FR-4 about 0.25–0.4 (Isola 370HR 0.4)." />
+      <div className="sm:col-span-2 xl:col-span-3">
+        <Check
+          label={
+            lossRequests.length
+              ? `Add the copper loss of the Power tab's DC drop (${[scenario?.net, lossRequests.length > 1 ? scenario?.returnNet : ''].filter(Boolean).map((n) => netLeaf(n!)).join(' and ')})`
+              : "Add the copper loss of the Power tab's DC drop (set up a DC drop on the Power tab first)"
+          }
+          checked={p.tloss && lossRequests.length > 0}
+          onChange={(v) => set({ tloss: v })}
+          hint="Heats the board with the I²R of the tracks, planes and vias of the DC drop set up on the Power tab (its net, source, loads and return net), each watt where it is lost. Usually small next to the parts, but not on a narrow track carrying amperes."
+        />
+      </div>
     </div>
   );
 
@@ -199,7 +224,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         </p>
       )}
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <button type="button" className="btn btn-primary" disabled={solving || !sources.some((x) => x.watts > 0)} onClick={() => setRun((r) => r + 1)}>
+        <button type="button" className="btn btn-primary" disabled={solving || (!sources.some((x) => x.watts > 0) && !withLoss)} onClick={() => setRun((r) => r + 1)}>
           {solving ? 'Solving…' : 'Solve'}
         </button>
         <button
@@ -270,7 +295,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
     <div aria-live="polite">
       {!solved && !now?.error && !(now?.result && !now.result.ok) && !solving ? (
         <p className="text-muted">
-          {sources.some((s) => s.watts > 0) ? 'Press Solve to work out the temperature of the board.' : 'Add the parts that dissipate power, with their power, then press Solve.'}
+          {sources.some((s) => s.watts > 0) || withLoss ? 'Press Solve to work out the temperature of the board.' : 'Add the parts that dissipate power, with their power, then press Solve.'}
         </p>
       ) : now?.error ? (
         <p className="text-[var(--err-line)]">{now.error}</p>
@@ -314,6 +339,12 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
             radiation ({num(solved.hRad)} W/m²K a face). Grid {num(solved.res, 2)} mm on {solved.layers.length} layers.
           </p>
           {solved.parts.some((x) => !x.placed) && <p className="mt-1 text-muted">A part with no pads on its side is heated at its position.</p>}
+          {solved.copperLoss.length > 0 && (
+            <p className="mt-1 text-muted">
+              Copper loss included:{' '}
+              {solved.copperLoss.map((c) => (c.error ? `${netLeaf(c.net)} not solved (${c.error})` : `${(c.w * 1000).toFixed(1)} mW on ${netLeaf(c.net)}`)).join(', ')}.
+            </p>
+          )}
           {solved.outlineUsed === 'copper' && (
             <p className="mt-1 text-[var(--accent-ink)]">
               The file has no closed board outline around the copper (Edge.Cuts), so the board is taken as the rectangle the copper fills. Close the outline in KiCad for the real shape.

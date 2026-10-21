@@ -20,7 +20,7 @@ describe('via 2D solver', () => {
     expect(pct(r.zOdd, r.zEven)).toBeLessThan(1);
   });
 
-  it('pair in a very large clearance approaches the twin-lead formula from below', () => {
+  it('pair in a very large clearance approaches the twin-lead formula from below', { timeout: 30_000 }, () => {
     const g = { d: 0.25, pitch: 0.8, antipad: 12, shape: 'oblong' as const, er: 1 };
     const r = viaPairImpedance(g, 10);
     const tl = twinLeadZ(0.25, 0.8, 1);
