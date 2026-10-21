@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { timeLimit } from './testTime';
 import { parseTouchstone, portsFromFileName, type Network } from './touchstone';
 
 /** S(i, j) at frequency point k, 1-based port numbers, as [re, im]. */
@@ -352,6 +353,6 @@ describe('performance', () => {
     expect(net.freq.length).toBe(10_000);
     expect(net.freq[9999]).toBeCloseTo(40e9, 0);
     close(s(net, 9999, 3, 2), [0.31, -10], 9);
-    expect(ms).toBeLessThan(500);
+    expect(ms).toBeLessThan(timeLimit(500));
   });
 });

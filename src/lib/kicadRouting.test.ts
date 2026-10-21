@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { describe, expect, it } from 'vitest';
+import { timeLimit } from './testTime';
 import { INTERFACES } from '../data/interfaces';
 import { designLine } from './design';
 import { solve } from './fieldsolver';
@@ -198,7 +199,7 @@ describe('pair geometry: width, gap, coupled length, lengths and skew', () => {
     expect(r.tracks).toBe(100000);
     expect(r.pairs).toHaveLength(200);
     expect(r.pairs.every((p) => Math.abs(p.layers[0].coupled - 100) < 1e-6 && Math.abs((p.layers[0].gap ?? 0) - 0.15) < 1e-9)).toBe(true);
-    expect(ms).toBeLessThan(4000);
+    expect(ms).toBeLessThan(timeLimit(4000));
   });
 });
 

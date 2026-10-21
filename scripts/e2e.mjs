@@ -3,6 +3,7 @@
 // Usage:  node scripts/e2e.mjs [outDir] [baseUrl]
 //   env ONLY=/impedance,/via   run the per-route sweep for these routes only
 //   env SKIP=sweep,special,tabs,mobile   skip whole phases
+//   env E2E_CHANNEL=chrome               the browser to drive (default msedge)
 //
 // Needs a running preview server (npm run build && npx vite preview --port 4173).
 // Uses playwright-core with the installed Microsoft Edge; no test runner.
@@ -952,7 +953,8 @@ async function main() {
     process.exit(2);
   }
   const t0 = Date.now();
-  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  // E2E_CHANNEL picks the installed browser: Edge here, Chrome on the GitHub runner
+  const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? 'msedge', headless: true });
 
   if (!SKIP.has('sweep')) {
     for (const route of ONLY ?? ROUTES) {

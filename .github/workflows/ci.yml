@@ -1,0 +1,84 @@
+# Checks every push and pull request: lint, type check and build, the unit tests, and a browser smoke test
+# of the production build (the special flows, the menus and tabs, and the field sweep of a few key pages).
+# Every night (and on demand) the full browser suite sweeps every page.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 3 * * *' # nightly full browser suite, 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the full browser suite (every page) instead of the smoke test
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the sitemap takes each page's date from the git history
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      # speed tests get three times their desktop limit on CI (src/lib/testTime.ts)
+      - run: npx vitest run --testTimeout=30000
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  browser:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.full) && 240 || 40 }}
+    env:
+      E2E_CHANNEL: chrome # Google Chrome is installed on the runner
+      # the smoke test: these pages field by field, plus the special flows and the menus; the full suite
+      # (nightly or on demand) sweeps every page
+      ONLY: ${{ (github.event_name == 'schedule' || inputs.full) && '' || '/,/impedance,/via,/units,/trace-loss,/rc-filter,/kicad-project' }}
+      SKIP: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Serve the production build
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          for i in $(seq 1 60); do curl -sf http://localhost:4173/ > /dev/null && exit 0; sleep 1; done
+          echo "preview server did not start" && exit 1
+      - name: Browser suite
+        run: |
+          if [ -z "$ONLY" ]; then unset ONLY; fi
+          node scripts/e2e.mjs e2e-out http://localhost:4173
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: e2e-out
+          retention-days: 7

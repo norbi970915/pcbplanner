@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { timeLimit } from './testTime';
 import { apertureSE, cavityModes, gridCellResonance, wavelengthMm } from './stitching';
 
 describe('stitching', () => {
@@ -17,7 +18,7 @@ describe('stitching', () => {
   it('cavity: a huge plane returns its lowest modes at once instead of enumerating every mode below fmax', () => {
     const t0 = performance.now();
     const modes = cavityModes(1e9, 80, 4.3, 1.5e10, 10);
-    expect(performance.now() - t0).toBeLessThan(200);
+    expect(performance.now() - t0).toBeLessThan(timeLimit(200));
     expect(modes).toHaveLength(10);
     // the same lowest modes a brute-force search over a wider range finds, for a board where that is cheap
     const wide = cavityModes(300, 80, 4.3, 3e10, 500).slice(0, 10);

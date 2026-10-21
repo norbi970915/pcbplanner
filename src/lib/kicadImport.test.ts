@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { timeLimit } from './testTime';
 import { designLine } from './design';
 import { EXAMPLE_FILE, EXAMPLE_PRESET_ID, EXAMPLE_PROJECT_FILE, exampleBoard, exampleProject } from './kicadExample';
 import { boardNotes, guessRoles, kicadStackup, parseKicadBoard, parseSexpr, readStackup, type SNode } from './kicadImport';
@@ -243,7 +244,7 @@ describe('large files', () => {
     expect(b.stats.tracks).toBe(120000);
     expect(b.copper[0].routedMm).toBeCloseTo(60000, 3);
     expect(b.stackup).toHaveLength(5);
-    expect(ms).toBeLessThan(4000);
+    expect(ms).toBeLessThan(timeLimit(4000));
   });
 });
 

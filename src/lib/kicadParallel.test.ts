@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { describe, expect, it } from 'vitest';
+import { timeLimit } from './testTime';
 import { exampleBoard, exampleProject, EXAMPLE_FILE, EXAMPLE_PROJECT_FILE } from './kicadExample';
 import { parseKicadBoard } from './kicadImport';
 import { indexTracks, maxCoupledGap, measureParallel, neighbours, parallelLayers, parallelRun, PARALLEL } from './kicadParallel';
@@ -153,10 +154,10 @@ describe('performance', () => {
     expect(n.map((x) => x.b).sort()).toEqual(['N499', 'N501']);
     expect(r.coupled).toBeCloseTo(100, 6);
     expect(r.gap).toBe(0.25);
-    expect(ms).toBeLessThan(3000);
+    expect(ms).toBeLessThan(timeLimit(3000));
     // a second aggressor on the same layer reuses the layer's pieces
     const t1 = performance.now();
     neighbours(ix, 'F.Cu', 'N10');
-    expect(performance.now() - t1).toBeLessThan(1500);
+    expect(performance.now() - t1).toBeLessThan(timeLimit(1500));
   });
 });
