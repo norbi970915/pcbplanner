@@ -314,6 +314,11 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
             radiation ({num(solved.hRad)} W/m²K a face). Grid {num(solved.res, 2)} mm on {solved.layers.length} layers.
           </p>
           {solved.parts.some((x) => !x.placed) && <p className="mt-1 text-muted">A part with no pads on its side is heated at its position.</p>}
+          {solved.outlineUsed === 'copper' && (
+            <p className="mt-1 text-[var(--accent-ink)]">
+              The file has no closed board outline around the copper (Edge.Cuts), so the board is taken as the rectangle the copper fills. Close the outline in KiCad for the real shape.
+            </p>
+          )}
         </>
       )}
     </div>

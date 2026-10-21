@@ -117,3 +117,31 @@ describe('against the heat-spreading tool', () => {
     expect(ratio).toBeLessThan(1.07);
   });
 });
+
+describe('which outline is the board', () => {
+  const fill = (x0: number, y0: number, x1: number, y1: number) => ({ layer: 'F.Cu', xy: rect(x0, y0, x1, y1), net: 'GND' }) as never;
+  const heat = { pads: [pad('U1', 20, 20, 2, 2)], parts: [{ ref: 'U1', x: 20, y: 20, back: false }] };
+
+  it('the largest closed shape is the board and a shape inside it is a cut-out', () => {
+    const d = board(40, 40, ['F.Cu'], { ...heat, fills: [fill(0, 0, 40, 40)] });
+    d.outline = [d.outline[0], [[30, 30], [36, 30], [36, 36], [30, 36]], [[100, 100], [110, 100], [110, 110], [100, 110]]];
+    const r = solveThermal(base(d, { sources: [{ ref: 'U1', watts: 1 }], res: 0.5 }));
+    if (!r.ok) throw new Error(r.error);
+    expect(r.outlineUsed).toBe('outline');
+    const m = r.layers[0];
+    const at = (x: number, y: number) => m.temp[Math.round((y - m.y0) / m.res) * m.nx + Math.round((x - m.x0) / m.res)];
+    expect(at(33, 33)).toBeNaN(); // the cut-out is not board
+    expect(at(10, 10)).toBeGreaterThan(25);
+    expect(r.boardAreaMm2).toBeCloseTo(40 * 40 - 6 * 6, -1); // the stray shape far away is left out
+  });
+
+  it('a small closed shape that leaves the copper out is not taken as the board', () => {
+    // only a 6 × 1 mm slot is closed in the file; the copper spans 40 × 40 mm
+    const d = board(40, 40, ['F.Cu'], { ...heat, fills: [fill(0, 0, 40, 40)] });
+    d.outline = [[[10, 30], [16, 30], [16, 31], [10, 31]]];
+    const r = solveThermal(base(d, { sources: [{ ref: 'U1', watts: 1 }], res: 0.5 }));
+    if (!r.ok) throw new Error(r.error);
+    expect(r.outlineUsed).toBe('copper');
+    expect(r.boardAreaMm2).toBeGreaterThan(1500);
+  });
+});

@@ -66,7 +66,9 @@ export type ThermalResult =
       hRad: number;
       powerW: number;
       boardAreaMm2: number;
-      balanceW: number; // heat leaving the faces in the solution (equals powerW when solved)
+      balanceW: number;
+      /** 'copper' when the file has no closed outline around the copper and its extent was used instead. */
+      outlineUsed: 'outline' | 'copper'; // heat leaving the faces in the solution (equals powerW when solved)
     }
   | { ok: false; error: string };
 
@@ -130,26 +132,42 @@ export function solveThermal(req: ThermalRequest): ThermalResult {
   if (!L) return { ok: false, error: 'The board has no copper layers.' };
   const powerW = req.sources.reduce((a, s) => a + (s.watts > 0 ? s.watts : 0), 0);
 
-  // the board: its outline, else the extent of its copper
-  let outline = d.outline.filter((l) => l.length >= 3).map((l) => l.flat());
-  let bx0 = Infinity;
-  let by0 = Infinity;
-  let bx1 = -Infinity;
-  let by1 = -Infinity;
-  const grow = (x: number, y: number) => {
-    bx0 = Math.min(bx0, x);
-    by0 = Math.min(by0, y);
-    bx1 = Math.max(bx1, x);
-    by1 = Math.max(by1, y);
+  // the board: its outline, else the extent of its copper. An outline that leaves most of the copper out
+  // (a slot or a cut-out read as the only closed shape, the real outline left open) is not the board.
+  // The largest closed shape is the board; the shapes inside it are cut-outs (even-odd), shapes outside it
+  // (a second board of a panel, a stray drawing) are left out.
+  const loops = d.outline.filter((l) => l.length >= 3);
+  const loopArea = (l: [number, number][]) => Math.abs(l.reduce((a, [x, y], i) => a + x * l[(i + 1) % l.length][1] - l[(i + 1) % l.length][0] * y, 0)) / 2;
+  const largest = loops.reduce<[number, number][] | null>((m, l) => (!m || loopArea(l) > loopArea(m) ? l : m), null);
+  const inBox = (l: [number, number][], m: [number, number][]) => {
+    const xs = m.map((p) => p[0]);
+    const ys = m.map((p) => p[1]);
+    return l.every(([x, y]) => x >= Math.min(...xs) && x <= Math.max(...xs) && y >= Math.min(...ys) && y <= Math.max(...ys));
   };
-  for (const l of outline) for (let i = 0; i < l.length; i += 2) grow(l[i], l[i + 1]);
-  if (!outline.length) {
-    for (const t of d.tracks) (grow(t.x1, t.y1), grow(t.x2, t.y2));
-    for (const p of d.pads) grow(p.x, p.y);
-    for (const f of d.fills) for (let i = 0; i < f.xy.length; i += 2) grow(f.xy[i], f.xy[i + 1]);
-    if (!Number.isFinite(bx0)) return { ok: false, error: 'The board has no outline and no copper.' };
-    outline = [[bx0, by0, bx1, by0, bx1, by1, bx0, by1]];
+  let outline = largest ? loops.filter((l) => l === largest || inBox(l, largest)).map((l) => l.flat()) : [];
+  const box = () => ({ x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+  const grow = (b: ReturnType<typeof box>, x: number, y: number) => {
+    b.x0 = Math.min(b.x0, x);
+    b.y0 = Math.min(b.y0, y);
+    b.x1 = Math.max(b.x1, x);
+    b.y1 = Math.max(b.y1, y);
+  };
+  const cu = box();
+  for (const t of d.tracks) (grow(cu, t.x1, t.y1), grow(cu, t.x2, t.y2));
+  for (const p of d.pads) grow(cu, p.x, p.y);
+  for (const f of d.fills) for (let i = 0; i < f.xy.length; i += 2) grow(cu, f.xy[i], f.xy[i + 1]);
+  const ol = box();
+  for (const l of outline) for (let i = 0; i < l.length; i += 2) grow(ol, l[i], l[i + 1]);
+  const overlap = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+  const cuArea = (cu.x1 - cu.x0) * (cu.y1 - cu.y0);
+  let outlineUsed: 'outline' | 'copper' = 'outline';
+  if (!outline.length || (cuArea > 0 && overlap(ol, cu) < 0.5 * cuArea)) {
+    if (!Number.isFinite(cu.x0)) return { ok: false, error: 'The board has no outline and no copper.' };
+    outline = [[cu.x0, cu.y0, cu.x1, cu.y0, cu.x1, cu.y1, cu.x0, cu.y1]];
+    outlineUsed = 'copper';
   }
+  const b = outlineUsed === 'copper' ? cu : ol;
+  const [bx0, by0, bx1, by1] = [b.x0, b.y0, b.x1, b.y1];
   const area = (bx1 - bx0) * (by1 - by0);
   const res = req.res ?? Math.min(2, Math.max(0.2, Math.sqrt((area * L) / (req.maxCells ?? 400_000))));
   const nx = Math.max(1, Math.ceil((bx1 - bx0) / res) + 1);
@@ -316,6 +334,7 @@ export function solveThermal(req: ThermalRequest): ThermalResult {
     powerW,
     boardAreaMm2: boardArea,
     balanceW,
+    outlineUsed,
   };
 }
 

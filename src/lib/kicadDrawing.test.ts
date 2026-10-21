@@ -75,3 +75,25 @@ describe('pads and footprints', () => {
     expect(d.copper).toEqual(['F.Cu', 'In1.Cu', 'In2.Cu', 'B.Cu']);
   });
 });
+
+describe('board outline in a footprint', () => {
+  it('Edge.Cuts lines inside a footprint are part of the outline, turned like its pads', () => {
+    // a mechanical footprint at (50, 50) turned by 90°, its outline a 20 × 10 rectangle of fp_lines
+    const fp = `(footprint "Outline" (layer "F.Cu") (at 50 50 90)
+      (property "Reference" "MK1" (at 0 0 90) (layer "F.SilkS"))
+      (fp_line (start -10 -5) (end 10 -5) (stroke (width 0.1) (type solid)) (layer "Edge.Cuts"))
+      (fp_line (start 10 -5) (end 10 5) (stroke (width 0.1) (type solid)) (layer "Edge.Cuts"))
+      (fp_line (start 10 5) (end -10 5) (stroke (width 0.1) (type solid)) (layer "Edge.Cuts"))
+      (fp_line (start -10 5) (end -10 -5) (stroke (width 0.1) (type solid)) (layer "Edge.Cuts"))
+      (fp_line (start 0 0) (end 1 1) (stroke (width 0.1) (type solid)) (layer "F.SilkS")))`;
+    const d = readBoardDrawing(board(fp));
+    // the board helper has its own 40 × 30 outline at the origin; the footprint's lies around (50, 50)
+    const big = d.outline.find((l) => l.every((p) => p[0] > 40))!;
+    const xs = big.map((p) => p[0]);
+    const ys = big.map((p) => p[1]);
+    // turned by 90°: 10 wide in x, 20 tall in y, around (50, 50)
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(10, 6);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(20, 6);
+    expect((Math.max(...xs) + Math.min(...xs)) / 2).toBeCloseTo(50, 6);
+  });
+});

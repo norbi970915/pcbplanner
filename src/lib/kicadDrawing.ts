@@ -4,7 +4,8 @@
 // Tracks, vias and fills come from the same readers as the import (kicadImport.ts), the outline from the
 // plane reader (kicadPlanes.ts). Pads are read from each (footprint …): a pad's (at x y) is in the
 // footprint's frame and is turned by the footprint's angle; the pad's own angle in the file is already
-// absolute (KiCad 6 and later write the footprint angle into it, and leave it out when it is 0). Angles are KiCad's: degrees,
+// absolute (KiCad 6 and later write the footprint angle into it, and leave it out when it is 0). Edge.Cuts
+// graphics inside footprints are part of the outline, as KiCad treats them. Angles are KiCad's: degrees,
 // counter-clockwise as seen on screen, with y pointing down.
 import { isCopperName, listEnd, parseSexpr, readFills, readTrack, readVia, scanTopLevel, type SNode } from './kicadImport';
 import { outlineLoops, type Pt } from './kicadPlanes';
@@ -69,7 +70,49 @@ export function padToBoard(fx: number, fy: number, fa: number, x: number, y: num
 const SHAPES: PadShape[] = ['circle', 'rect', 'oval', 'roundrect', 'trapezoid', 'custom'];
 
 /** The pads and reference of one (footprint …) list; net codes are left as '#code' for the caller. */
-function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part?: BoardDrawing['parts'][number] } {
+/**
+ * An Edge.Cuts graphic inside a footprint (fp_line, fp_arc, fp_rect, fp_circle, fp_poly, fp_curve) as the
+ * board graphic it stands for (gr_…), its points turned into board coordinates like a pad's. Boards often
+ * carry their outline in a mechanical footprint. A rectangle becomes a polygon, since it may be turned.
+ */
+function edgeToBoard(it: SNode[], fx: number, fy: number, fa: number): SNode[] | null {
+  const kind = head(it);
+  if (!kind?.startsWith('fp_')) return null;
+  const pt = (n: SNode[] | undefined): SNode[] | undefined => {
+    const x = num(n, 1);
+    const y = num(n, 2);
+    if (!n || x === undefined || y === undefined) return n;
+    const [bx, by] = padToBoard(fx, fy, fa, x, y);
+    return [n[0], String(bx), String(by)];
+  };
+  if (kind === 'fp_rect') {
+    const a = child(it, 'start');
+    const b = child(it, 'end');
+    const ax = num(a, 1);
+    const ay = num(a, 2);
+    const bx = num(b, 1);
+    const by = num(b, 2);
+    if (ax === undefined || ay === undefined || bx === undefined || by === undefined) return null;
+    const corners = [
+      [ax, ay],
+      [bx, ay],
+      [bx, by],
+      [ax, by],
+    ].map(([x, y]) => pt(['xy', String(x), String(y)])!);
+    return ['gr_poly', ['pts', ...corners], ['layer', 'Edge.Cuts']];
+  }
+  return [
+    'gr_' + kind.slice(3),
+    ...it.slice(1).map((c) => {
+      const h = head(c);
+      if (h === 'start' || h === 'end' || h === 'mid' || h === 'center') return pt(c as SNode[])!;
+      if (h === 'pts') return ['pts', ...(c as SNode[]).slice(1).map((p) => (head(p) === 'xy' ? pt(p as SNode[])! : p))];
+      return c;
+    }),
+  ];
+}
+
+function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part?: BoardDrawing['parts'][number]; edges: SNode[][] } {
   const at = child(node, 'at');
   const fx = num(at, 1) ?? 0;
   const fy = num(at, 2) ?? 0;
@@ -107,7 +150,13 @@ function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part
     if (drill !== undefined && type !== 'smd' && type !== 'connect') pad.drill = drill;
     pads.push(pad);
   }
-  return { pads, part: ref ? { ref, x: fx, y: fy, back } : undefined };
+  const edges: SNode[][] = [];
+  for (const c of node) {
+    if (!isList(c) || !head(c)?.startsWith('fp_') || atom(child(c, 'layer')) !== 'Edge.Cuts') continue;
+    const g = edgeToBoard(c, fx, fy, fa);
+    if (g) edges.push(g);
+  }
+  return { pads, part: ref ? { ref, x: fx, y: fy, back } : undefined, edges };
 }
 
 /** Everything the board view draws, from the text of a .kicad_pcb. */
@@ -185,6 +234,7 @@ export function readBoardDrawing(text: string): BoardDrawing {
     const r = readFootprint(node, copper);
     pads.push(...r.pads);
     if (r.part) parts.push(r.part);
+    edgeItems.push(...r.edges);
   }
   const netOf = (k: string) => (k.startsWith('#') ? (netNames.get(k) ?? '') : k);
   for (const t of tracks) t.net = netOf(t.net);
