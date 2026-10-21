@@ -229,6 +229,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   // bottom layer first, so the top layer is drawn last
   const order = useMemo(() => [...drawing.copper].reverse(), [drawing]);
   const heatCanvas = useMemo(() => (heat ? heatImage(heat) : null), [heat]);
+  const estimated = useMemo(() => drawing.fills.some((f) => f.estimated), [drawing]);
   // part bodies (Fab outline, else courtyard) per side, and a label box per part: the body, else its pads
   const bodies = useMemo(() => {
     const top = new Path2D();
@@ -456,7 +457,24 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing, bodies, tags]);
+    // zone copper estimated here, not read from the file: said on the view itself
+    if (estimated) {
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const t = 'Zone fill: estimate';
+      const w = ctx.measureText(t).width;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#101418';
+      ctx.fillRect(6, 6, w + 12, 18);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#f5a623';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(6.5, 6.5, w + 11, 17);
+      ctx.fillStyle = '#f5a623';
+      ctx.fillText(t, 12, 10);
+    }
+  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing, bodies, tags, estimated]);
 
   const schedule = useCallback(() => {
     cancelAnimationFrame(raf.current);

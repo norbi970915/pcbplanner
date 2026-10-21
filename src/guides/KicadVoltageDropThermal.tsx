@@ -103,7 +103,9 @@ export default function KicadVoltageDropThermal() {
       <ul>
         <li>
           <b>Unfilled zones.</b> KiCad writes the copper of a zone into the file only after the zones are filled (Fill All Zones, B) and the board saved. A board saved without fills
-          has no planes for any tool to see, and the drop and the temperature come out far too high. Fill, save, then load.
+          has no planes for any tool to see, and the drop and the temperature come out far too high. Fill, save, then load. For a first look at a board saved without fills, the
+          Power and Thermal tabs can estimate the fill of the nets you choose; it comes close to KiCad's on the CM5 MINIMA (within a few per cent of the drop and the rise), but it is
+          an estimate, not KiCad's fill.
         </li>
         <li>
           <b>The old trace-temperature charts.</b> The IPC-2221 curve that most track-current checks use is optimistic for outer layers (the newer IPC-2152 measurements allow about 25 %

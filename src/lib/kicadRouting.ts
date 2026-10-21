@@ -486,6 +486,7 @@ export interface NetClassDef {
   trackWidth?: number; // mm
   dpWidth?: number;
   dpGap?: number;
+  clearance?: number; // mm
 }
 
 export interface KicadProject {
@@ -496,6 +497,10 @@ export interface KicadProject {
   patterns: { pattern: string; netclass: string }[];
   assignments: Record<string, string[]>; // explicit net → class (netclass_assignments)
   members: Record<string, string>; // KiCad 6: classes[].nets, exact net names
+  /** Board design rules: the minimum copper to board edge clearance, mm. */
+  edgeClearance?: number;
+  /** Board design rules: the minimum copper to hole clearance, mm. */
+  holeClearance?: number;
 }
 
 /** KiCad release that writes a net_settings schema version (net_settings.cpp at each release tag). */
@@ -529,7 +534,7 @@ export function parseKicadProject(text: string, name: string): KicadProject {
     const isDefault = c.name === DEFAULT_CLASS;
     // before schema 4 there was no priority: KiCad's migration numbers the classes in file order
     const priority = numOr(c.priority) ?? (isDefault ? INT_MAX : i);
-    classes.push({ name: c.name, priority: isDefault ? INT_MAX : priority, trackWidth: numOr(c.track_width), dpWidth: numOr(c.diff_pair_width), dpGap: numOr(c.diff_pair_gap) });
+    classes.push({ name: c.name, priority: isDefault ? INT_MAX : priority, trackWidth: numOr(c.track_width), dpWidth: numOr(c.diff_pair_width), dpGap: numOr(c.diff_pair_gap), clearance: numOr(c.clearance) });
     if (Array.isArray(c.nets)) for (const n of c.nets) if (typeof n === 'string') members[n] = c.name;
   });
   const patterns: KicadProject['patterns'] = [];
@@ -542,7 +547,11 @@ export function parseKicadProject(text: string, name: string): KicadProject {
       const list = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x !== '') : typeof v === 'string' && v !== '' ? [v] : [];
       if (list.length) assignments[net] = list;
     }
-  return { name, schema, kicad: netSchemaRelease(schema), classes, patterns, assignments, members };
+  const board = (j as Record<string, unknown>).board as Record<string, unknown> | undefined;
+  const rules = (board?.design_settings as Record<string, unknown> | undefined)?.rules as Record<string, unknown> | undefined;
+  const edge = numOr(rules?.min_copper_edge_clearance);
+  const hole = numOr(rules?.min_hole_clearance);
+  return { name, schema, kicad: netSchemaRelease(schema), classes, patterns, assignments, members, ...(edge !== undefined ? { edgeClearance: edge } : {}), ...(hole !== undefined ? { holeClearance: hole } : {}) };
 }
 
 /** Expand a KiCad vector bus pattern NAME[0..7] into its member patterns (other patterns as they are). */
@@ -586,6 +595,7 @@ export interface ResolvedClass {
   trackWidth?: number;
   dpWidth?: number;
   dpGap?: number;
+  clearance?: number;
 }
 
 /**
@@ -605,8 +615,8 @@ export function netClassResolver(pro: KicadProject | null): (net: string) => Res
     const defs = names.map((n) => byName.get(n) ?? { name: n, priority: n === DEFAULT_CLASS ? INT_MAX : INT_MAX - 1 });
     defs.sort((a, b) => a.priority - b.priority || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     const chain = [...defs, ...(dflt && !defs.includes(dflt) ? [dflt] : [])];
-    const pick = (k: 'trackWidth' | 'dpWidth' | 'dpGap') => chain.find((c) => c[k] !== undefined)?.[k];
-    return { name: defs[0].name, all: defs.map((d) => d.name), trackWidth: pick('trackWidth'), dpWidth: pick('dpWidth'), dpGap: pick('dpGap') };
+    const pick = (k: 'trackWidth' | 'dpWidth' | 'dpGap' | 'clearance') => chain.find((c) => c[k] !== undefined)?.[k];
+    return { name: defs[0].name, all: defs.map((d) => d.name), trackWidth: pick('trackWidth'), dpWidth: pick('dpWidth'), dpGap: pick('dpGap'), clearance: pick('clearance') };
   };
   const matchers = pro.patterns.flatMap((p) => busMembers(p.pattern).map((m) => ({ test: netclassMatcher(m), netclass: p.netclass })));
   const cache = new Map<string, ResolvedClass>();

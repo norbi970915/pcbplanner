@@ -9,7 +9,7 @@
 // fabrication drawing (F.Fab or B.Fab), or its courtyard when it has none. Angles are KiCad's: degrees,
 // counter-clockwise as seen on screen, with y pointing down.
 import { isCopperName, listEnd, parseSexpr, readFills, readTrack, readVia, scanTopLevel, type SNode } from './kicadImport';
-import { footprintEdges, footprintGraphics, graphicShape, outlineLoops, type Pt } from './kicadPlanes';
+import { footprintEdges, footprintGraphics, graphicShape, outlineLoops, readZone, type Pt, type ZoneGeom } from './kicadPlanes';
 import type { RawTrack, RawVia } from './kicadRouting';
 import type { FillPoly } from './kicadVoids';
 
@@ -28,10 +28,16 @@ export interface DrawPad {
   drill?: number;
   ref: string; // footprint reference
   num: string; // pad number
+  /** How zones join the pad, when the pad or its footprint overrides the zone (KiCad's zone_connect). */
+  zoneConnect?: 'none' | 'thermal' | 'solid' | 'thtThermal';
+  /** A clearance set on the pad or its footprint, mm, in place of the net class's. */
+  clearance?: number;
 }
 
 export interface DrawFill extends FillPoly {
   net: string;
+  /** Estimated here from the zone outline (kicadZoneFill.ts), not KiCad's fill from the file. */
+  estimated?: boolean;
 }
 
 export interface BoardDrawing {
@@ -45,6 +51,8 @@ export interface BoardDrawing {
   parts: { ref: string; x: number; y: number; back: boolean; body?: { pts: Pt[]; closed: boolean }[] }[];
   /** Items read, so a caller can tell the text is the board that is loaded (as KicadBoard.stats.tracks). */
   read: number;
+  /** Zones saved without their fill, and the rule areas that keep pours out, for an estimated fill. */
+  zones?: ZoneGeom[];
 }
 
 const isList = (n: SNode | undefined): n is SNode[] => Array.isArray(n);
@@ -83,6 +91,10 @@ function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part
     else if (head(c) === 'fp_text' && atom(c as SNode[]) === 'reference') ref = atom(c as SNode[], 2) ?? ''; // KiCad 6 and older
   }
   const pads: DrawPad[] = [];
+  // KiCad's ZONE_CONNECTION: 0 none, 1 thermal relief, 2 solid, 3 thermal for through-hole pads only
+  const CONNECT = ['none', 'thermal', 'solid', 'thtThermal'] as const;
+  const fpConnect = CONNECT[num(child(node, 'zone_connect')) ?? -1];
+  const fpClearance = num(child(node, 'clearance'));
   for (const c of node) {
     if (head(c) !== 'pad') continue;
     const p = c as SNode[];
@@ -106,6 +118,10 @@ function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part
     const drill = num(child(p, 'drill'), 1) ?? (atom(child(p, 'drill'), 1) === 'oval' ? num(child(p, 'drill'), 2) : undefined);
     const pad: DrawPad = { x, y, w, h, angle: num(pat, 3) ?? 0, shape, layers: lay, net, ref, num: atom(p, 1) ?? '' };
     if (shape === 'roundrect') pad.rr = num(child(p, 'roundrect_rratio')) ?? 0.25;
+    const zc = CONNECT[num(child(p, 'zone_connect')) ?? -1] ?? fpConnect;
+    if (zc) pad.zoneConnect = zc;
+    const clr = num(child(p, 'clearance')) ?? fpClearance;
+    if (clr !== undefined && clr > 0) pad.clearance = clr;
     if (drill !== undefined && type !== 'smd' && type !== 'connect') pad.drill = drill;
     pads.push(pad);
   }
@@ -127,6 +143,7 @@ export function readBoardDrawing(text: string): BoardDrawing {
   const fills: DrawFill[] = [];
   const footprints: [number, number][] = [];
   const edgeItems: SNode[][] = [];
+  const zones: ZoneGeom[] = [];
   let copper: string[] = [];
   let read = 0;
   scanTopLevel(text, rootStart, (name, start, end) => {
@@ -161,7 +178,12 @@ export function readBoardDrawing(text: string): BoardDrawing {
       }
       case 'zone': {
         const filled = text.indexOf('(filled_polygon', start);
-        if (filled < 0 || filled >= end) break;
+        if (filled < 0 || filled >= end) {
+          // no fill saved: a zone to estimate, or a rule area that keeps pours out
+          const z = readZone(text, start, end, copper);
+          if (z) zones.push(z);
+          break;
+        }
         const hdr = text.slice(start, filled);
         if (/\(keepout/.test(hdr)) break;
         const netName = /\(net_name\s+"((?:[^"\\]|\\.)*)"/.exec(hdr)?.[1];
@@ -198,7 +220,8 @@ export function readBoardDrawing(text: string): BoardDrawing {
   for (const v of vias) v.net = netOf(v.net);
   for (const f of fills) f.net = netOf(f.net);
   for (const p of pads) p.net = netOf(p.net);
-  return { copper, outline: outlineLoops(edgeItems), tracks, vias, fills, pads, parts, read };
+  for (const z of zones) z.net = netOf(z.net);
+  return { copper, outline: outlineLoops(edgeItems), tracks, vias, fills, pads, parts, read, zones };
 }
 
 /** Outline of a pad in board coordinates. */

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NumField, Panel, Row, Segmented, SelectField } from '../ui';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
+import { encodeNets, useZoneFill, ZoneFillNote } from './useZoneFill';
 import {
   autoReturnNet,
   decodeLoads,
@@ -77,7 +78,8 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
     };
   }, [data]);
 
-  const d = drawing?.board === data.board ? drawing.d : undefined;
+  const zf = useZoneFill(data, drawing?.board === data.board ? drawing.d : undefined, p.zfill);
+  const d = zf.d;
   const nets = useMemo(() => (d ? powerNets(d) : []), [d]);
   const net = nets.some((n) => n.net === p.pnet) ? p.pnet : (nets.find((n) => n.kind === 'power')?.net ?? nets[0]?.net ?? '');
   const nc = useMemo(() => (d && net ? netCopper(d, net) : null), [d, net]);
@@ -91,7 +93,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const quick = useMemo(() => (nc && settings && mode === 'quick' ? quickCheck(nc, p.pi, settings) : null), [nc, settings, mode, p.pi]);
 
   // the DC solve, in a worker, a moment after the inputs settle
-  const dcKey = `${net}|${source}|${encodeLoads(loads)}|${p.pdt}|${p.pamb}`;
+  const dcKey = `${net}|${source}|${encodeLoads(loads)}|${p.pdt}|${p.pamb}|${zf.key}`;
   useEffect(() => {
     if (mode !== 'dc' || !nc || !settings || !source || !loads.some((l) => l.amps > 0)) return;
     let live = true;
@@ -122,7 +124,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const retNc = useMemo(() => (d && returnNet ? netCopper(d, returnNet) : null), [d, returnNet]);
   const retRefs = useMemo(() => new Set(retNc?.pads.map((q) => q.ref) ?? []), [retNc]);
   const retLoads = useMemo(() => loads.filter((l) => retRefs.has(l.ref)), [loads, retRefs]);
-  const retKey = `${returnNet}|${source}|${encodeLoads(retLoads)}|${p.pdt}|${p.pamb}`;
+  const retKey = `${returnNet}|${source}|${encodeLoads(retLoads)}|${p.pdt}|${p.pamb}|${zf.key}`;
   const retSourceOk = !!returnNet && retRefs.has(source);
   useEffect(() => {
     if (mode !== 'dc' || !retNc || !settings || !retSourceOk || !retLoads.some((l) => l.amps > 0)) return;
@@ -180,7 +182,6 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   if (!nets.length) return <Panel title="Power"><p className="p-3">This board has no nets with pads to check.</p></Panel>;
 
   const setLoads = (next: { ref: string; amps: number }[]) => set({ ploads: encodeLoads(next) });
-  const unfilled = (data.board.stats.zones ?? 0) > 0 && d.fills.length === 0;
   const others = parts.filter((x) => x.ref !== source);
   const zoomTrack = (t: TrackLoad) => {
     const tr = d.tracks[t.i];
@@ -561,12 +562,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
         <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
           {controls}
-          {unfilled && (
-            <p className="px-2.5 pb-2 text-[var(--accent-ink)]">
-              The zones of this board are not filled in the file (in KiCad: Fill All Zones, then save), so its planes and pours are left out: the DC drop counts only tracks and pads, and
-              comes out higher than it will be.
-            </p>
-          )}
+          <ZoneFillNote zf={zf} onChange={(n) => set({ zfill: encodeNets(n) })} what="the DC drop comes out higher than it will be" />
           {loadsEditor}
         </div>
         {toolbar}

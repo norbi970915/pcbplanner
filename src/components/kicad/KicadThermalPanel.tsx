@@ -7,6 +7,7 @@ import { dcScenario, type DcRequest } from '../../lib/kicadPower';
 import { netLeaf } from '../../lib/kicadRouting';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
+import { encodeNets, useZoneFill, ZoneFillNote } from './useZoneFill';
 import { decodeSources, encodeSources, type Air, type ThermalResult } from '../../lib/kicadThermal';
 import { solveThermalInWorker } from '../../lib/kicadThermalClient';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
@@ -36,7 +37,8 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
       live = false;
     };
   }, [data]);
-  const d = drawing?.board === data.board ? drawing.d : undefined;
+  const zf = useZoneFill(data, drawing?.board === data.board ? drawing.d : undefined, p.zfill);
+  const d = zf.d;
 
   // parts, the largest pad area first (the parts most likely to run hot)
   const parts = useMemo(() => {
@@ -62,7 +64,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
     return out;
   }, [scenario, d, data, p.pdt, p.tamb]);
   const withLoss = p.tloss && lossRequests.length > 0;
-  const key = `${encodeSources(sources)}|${p.tamb}|${p.tair}|${p.th}|${p.teps}|${p.tkxy}|${p.tkz}|${withLoss ? `${p.pnet}|${p.psrc}|${p.ploads}|${p.pret}|${p.pdt}` : ''}`;
+  const key = `${encodeSources(sources)}|${p.tamb}|${p.tair}|${p.th}|${p.teps}|${p.tkxy}|${p.tkz}|${withLoss ? `${p.pnet}|${p.psrc}|${p.ploads}|${p.pret}|${p.pdt}` : ''}|${zf.key}`;
   useEffect(() => {
     if (!run || !d || !settings || (!sources.some((s) => s.watts > 0) && !withLoss)) return;
     let live = true;
@@ -119,7 +121,6 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
   if (drawing.error || !d) return <Panel title="Thermal"><p className="p-3">{drawing.error}</p></Panel>;
 
   const setSources = (next: { ref: string; watts: number; psi?: number }[]) => set({ tsrc: encodeSources(next) });
-  const unfilled = (data.board.stats.zones ?? 0) > 0 && d.fills.length === 0;
   const zoomPart = (ref: string) => {
     const ps = d.pads.filter((q) => q.ref === ref);
     const part = d.parts.find((x) => x.ref === ref);
@@ -240,12 +241,9 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         </button>
         {stale && !solving && <span className="text-[var(--accent-ink)]">The inputs changed: press Solve to update the map.</span>}
       </div>
-      {unfilled && (
-        <p className="mt-1 text-[var(--accent-ink)]">
-          The zones of this board are not filled in the file (in KiCad: Fill All Zones, then save), so its planes and pours are left out and the board spreads heat only through
-          its tracks and pads: the temperatures come out higher than they will be.
-        </p>
-      )}
+      <div className="-mx-2.5 mt-1">
+        <ZoneFillNote zf={zf} onChange={(n) => set({ zfill: encodeNets(n) })} what="the board spreads heat only through its other copper: the temperatures come out higher than they will be" />
+      </div>
     </div>
   );
 

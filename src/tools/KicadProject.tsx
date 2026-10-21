@@ -323,6 +323,16 @@ const POWER_SOURCES: readonly DataSource[] = [
     note: '§5: ψJB, and eq. 9, T_J = T_PCB + ψJB × Power, the junction estimate of the Thermal tab.',
   },
   {
+    title: 'KiCad 9 PCB Editor documentation: zone and rule area properties, and the design rule checks',
+    url: 'https://docs.kicad.org/9.0/en/pcbnew/pcbnew.html#zone_and_rule_area_properties',
+    note: 'What the zone settings do (clearance, minimum width, pad connection, thermal relief gap and spoke width, island removal) and the board-level copper-to-edge clearance; the steps of the estimated fill.',
+  },
+  {
+    title: 'P. F. Felzenszwalb, D. P. Huttenlocher, "Distance Transforms of Sampled Functions", Theory of Computing 8 (2012) 415–428 (open access)',
+    url: 'https://theoryofcomputing.org/articles/v008a019/v008a019.pdf',
+    note: 'The exact Euclidean distance transform in linear time, used for the clearances, the thermal gaps and the minimum width of the estimated fill.',
+  },
+  {
     title: 'smpspowersupply.com: IPC-2221B PCB trace spacing / clearance by voltage (L. Rozenblat)',
     url: 'https://www.smpspowersupply.com/ipc2221pcbclearance.html',
     note: 'Columns B1, B2 and B4 of IPC-2221B Table 6-1, the spacings of the Clearance tab, with the per-volt formula above 500 V and worked rows to 5000 V (the standard itself is sold by IPC).',
@@ -443,6 +453,24 @@ export function Method() {
         well-spreading plate against <i>P</i> / (2<i>hA</i>), a heated copper strip against the exact fin solution, and a hot pad in a copper pour against the heat-spreading tool (within
         7 %). Not modelled: heat leaving the top of a package straight to the air (so the parts come out a little hot), enclosures, heatsinks and neighbouring boards, air that warms as
         it passes, and time (the result is the steady state). Read the temperatures to about ±20–30 %; the differences between two layouts of the same board are more reliable.
+      </p>
+      <h2>Unfilled zones: the estimated fill</h2>
+      <p>
+        KiCad writes the copper of a zone into the file only when the zones are filled; a board saved without that has only the zone outlines, and the Power and Thermal tabs leave
+        those zones out. For a first look, the fill of the nets you tick is estimated on the page instead. It is not KiCad's filler, and the view says so with <b>Zone fill: estimate</b>.
+        Each zone and layer is worked out on a raster of cells a third of the zone's clearance or minimum width across: the zone outline less its cut-outs, inside the board outline and
+        outside the rule areas that keep pours out; less the copper of other nets (tracks, vias, pads, saved fills and the zones of other nets estimated before it, higher priority
+        first) grown by the clearance, which is the larger of the zone's and the net-class clearances of both nets (or a clearance set on a pad or its footprint), the board edge grown by
+        the board's copper-to-edge clearance (0.5 mm without a .kicad_pro), and the holes of other nets grown by the board's hole clearance; less a thermal gap around the pads of the
+        zone's net that connect by thermal relief (the zone's pad connection, or the pad's or footprint's own), with four spokes of the zone's spoke width back to the fill; less copper
+        narrower than the zone's minimum width (shrunk by half of it and grown back); and less the islands that touch no pad, track or via of the net, as the zone's island removal
+        says. Distances are exact Euclidean distance transforms of the raster (Felzenszwalb and Huttenlocher), and the cells are traced back into outlines, stepped by one cell.
+      </p>
+      <p>
+        On the open-source CM5 MINIMA carrier board (6 layers, 13 zones on 18 zone layers), with its fills taken out and estimated again, the estimate had 0.3 % more copper than KiCad's
+        fill and 98.8 % of it in the same place (95–99 % layer by layer); the DC drop to the module came within 3 % of the drop on KiCad's fill, and the hottest point's rise above
+        ambient within 4 %. Not modelled: custom design rules, KiCad's spoke angle and minimum spoke count, hatched fills and pads removed from unused layers. Fill the zones in KiCad,
+        save and load the board again for the real copper.
       </p>
       <h2>Clearance view</h2>
       <p>

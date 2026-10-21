@@ -15,6 +15,7 @@
 // The .kicad_pro is a KiCad 8 project (net settings schema 3) that puts the nets into classes with
 // netclass_patterns and one explicit netclass_assignments entry.
 // kicadImport.test.ts checks that the files in public/ match this generator.
+import { EXAMPLE_FILLS } from './kicadExampleFills';
 import { toKicad } from './stackupExport';
 import { PRESETS } from './stackups';
 
@@ -51,18 +52,19 @@ export function exampleBoard(): string {
   const uuid = () => `00000000-0000-4000-8000-${(++n).toString(16).padStart(12, '0')}`;
   const nets = ['GND', '+3V3', '/PCIE_TX0_P', '/PCIE_TX0_N', '/CLK', '/SDA', '/USB_D+', '/USB_D-', '/HDMI_D0+', '/HDMI_D0-', '+5V'];
   const netNo = (name: string) => nets.indexOf(name) + 1;
-  const zone = (net: string, layer: string, pts: P[]) => `\t(zone
+  // the zones carry KiCad's own fill (kicadExampleFills.ts, from scripts/refill-example.mjs), found by uuid
+  const zone = (net: string, layer: string, pts: P[], id = uuid(), fill = EXAMPLE_FILLS[id]) => `\t(zone
 \t\t(net ${netNo(net)})
 \t\t(net_name "${net}")
 \t\t(layer "${layer}")
-\t\t(uuid "${uuid()}")
+\t\t(uuid "${id}")
 \t\t(hatch edge 0.5)
 \t\t(connect_pads
 \t\t\t(clearance 0.3)
 \t\t)
 \t\t(min_thickness 0.25)
 \t\t(filled_areas_thickness no)
-\t\t(fill
+\t\t(fill${fill ? ' yes' : ''}
 \t\t\t(thermal_gap 0.5)
 \t\t\t(thermal_bridge_width 0.5)
 \t\t)
@@ -70,7 +72,7 @@ export function exampleBoard(): string {
 \t\t\t(pts
 \t\t\t\t${pts.map(([x, y]) => `(xy ${x} ${y})`).join(' ')}
 \t\t\t)
-\t\t)
+\t\t)${fill ? `\n${fill}` : ''}
 \t)`;
   const seg = (layer: string, net: string, w: number, a: P, b: P) => `\t(segment
 \t\t(start ${a[0]} ${a[1]})

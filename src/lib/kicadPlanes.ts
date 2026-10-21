@@ -21,6 +21,21 @@ export interface ZoneGeom {
   priority: number; // KiCad zone priority: a higher number fills first and cuts lower ones of other nets
   rings: Pt[][];
   keepout: boolean; // a rule area that does not allow copper pours
+  /** The zone has (filled_polygon …) in the file. */
+  filled?: boolean;
+  /** How KiCad fills it (KiCad's defaults when the file leaves a value out), for an estimated fill (kicadZoneFill.ts). */
+  fill?: ZoneFillSettings;
+}
+
+export interface ZoneFillSettings {
+  clearance: number; // mm, to other nets
+  minThickness: number; // mm, the narrowest copper the fill keeps
+  /** Pads of the zone's net: thermal reliefs, solid, not connected, or solid for through-hole pads only (thermal for SMD). */
+  connect: 'thermal' | 'solid' | 'none' | 'thtSolid';
+  thermalGap: number; // mm
+  thermalBridge: number; // mm, spoke width
+  islands: 'remove' | 'keep' | 'belowArea'; // islands not connected to the net's pads, tracks or vias
+  islandMin: number; // mm², for 'belowArea'
 }
 
 export interface BoardGeometry {
@@ -84,8 +99,8 @@ function ptsOf(pts: SNode[] | undefined): Pt[] {
   return out;
 }
 
-/** Outline, cut-outs, layers, net, priority and keepout flag of one top-level zone (fill polygons are not read). */
-function readZone(text: string, start: number, end: number, copper: string[]): ZoneGeom | null {
+/** Outline, cut-outs, layers, net, priority, keepout flag and fill settings of one top-level zone (fill polygons are not read). */
+export function readZone(text: string, start: number, end: number, copper: string[]): ZoneGeom | null {
   const filled = text.indexOf('(filled_polygon', start);
   const stop = filled >= 0 && filled < end ? filled : end - 1;
   const polyStarts: number[] = [];
@@ -108,7 +123,21 @@ function readZone(text: string, start: number, end: number, copper: string[]): Z
     }
   }
   if (!rings.length || !layers.length) return null;
-  return { net: ko ? '' : net || '(no net)', layers, priority: num(child(hdr, 'priority')) ?? 0, rings, keepout: !!ko };
+  // KiCad's zone defaults: clearance 0.5, minimum width 0.25, thermal gap and spokes 0.5, islands removed
+  const cp = child(hdr, 'connect_pads');
+  const mode = atom(cp);
+  const fl = child(hdr, 'fill');
+  const im = num(child(fl ?? [], 'island_removal_mode')) ?? 0;
+  const fill: ZoneFillSettings = {
+    clearance: num(child(cp ?? [], 'clearance')) ?? 0.5,
+    minThickness: num(child(hdr, 'min_thickness')) ?? 0.25,
+    connect: mode === 'yes' ? 'solid' : mode === 'no' ? 'none' : mode === 'thru_hole_only' ? 'thtSolid' : 'thermal',
+    thermalGap: num(child(fl ?? [], 'thermal_gap')) ?? 0.5,
+    thermalBridge: num(child(fl ?? [], 'thermal_bridge_width')) ?? 0.5,
+    islands: im === 1 ? 'keep' : im === 2 ? 'belowArea' : 'remove',
+    islandMin: num(child(fl ?? [], 'island_area_min')) ?? 10,
+  };
+  return { net: ko ? '' : net || '(no net)', layers, priority: num(child(hdr, 'priority')) ?? 0, rings, keepout: !!ko, filled: filled >= 0 && filled < end, fill };
 }
 
 /** One board graphic (gr_line, gr_arc, gr_rect, gr_circle, gr_poly, gr_curve) as points: closed shapes as a loop, the others as an open piece. */
