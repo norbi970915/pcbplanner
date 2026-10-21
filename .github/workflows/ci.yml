@@ -75,7 +75,12 @@ jobs:
       - name: Browser suite
         run: |
           if [ -z "$ONLY" ]; then unset ONLY; fi
-          node scripts/e2e.mjs e2e-out http://localhost:4173
+          set -o pipefail
+          node scripts/e2e.mjs e2e-out http://localhost:4173 2>&1 | tee e2e-out.log
+      # each failed check as an annotation, readable on the run's page (and through the API) without the log
+      - name: Failures as annotations
+        if: failure()
+        run: grep -E '^  FAIL ' e2e-out.log | sort -u | head -50 | sed -E 's/^  FAIL /::error title=e2e::/' || true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
