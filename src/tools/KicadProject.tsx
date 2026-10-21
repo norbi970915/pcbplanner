@@ -367,7 +367,7 @@ export function Method() {
       <h2>Board view</h2>
       <p>
         The Board tab draws the board from the same file: the outline, and on each copper layer the zone fills as KiCad last filled them, the tracks and arcs, the pads of every footprint
-        in their shape and rotation, and the vias with their drill holes. A pad's position is taken from its footprint's position and angle, as KiCad does. The routing check marks
+        in their shape and rotation, and the vias with their drill holes. Over the copper it draws the body of each part, its fabrication drawing (F.Fab or B.Fab, else the courtyard), named with its reference once the part is large enough on screen. A pad's position is taken from its footprint's position and angle, as KiCad does. The routing check marks
         where it found something: a gap in a reference plane, a via stub over the guideline, a via without a ground via near it (with a dashed line to the nearest one), and the
         closest spacing to another signal. Choose a pair or net in the list, a marker on the board, or the board link in the routing check to highlight its copper and zoom to it;
         a click on a track highlights its net. Problems that belong to the whole route, such as impedance, skew or length, highlight the pair without a marker.

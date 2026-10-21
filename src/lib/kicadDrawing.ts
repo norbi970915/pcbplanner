@@ -1,14 +1,15 @@
 // What the board view of the KiCad project page draws: the board outline, the tracks, vias and zone fills of
-// every copper layer, and the pads of every footprint, read from the .kicad_pcb text in one pass.
+// every copper layer, the pads of every footprint and the body of every part, read from the .kicad_pcb text in one pass.
 //
 // Tracks, vias and fills come from the same readers as the import (kicadImport.ts), the outline from the
 // plane reader (kicadPlanes.ts). Pads are read from each (footprint …): a pad's (at x y) is in the
 // footprint's frame and is turned by the footprint's angle; the pad's own angle in the file is already
 // absolute (KiCad 6 and later write the footprint angle into it, and leave it out when it is 0). Edge.Cuts
-// graphics inside footprints are part of the outline, as KiCad treats them. Angles are KiCad's: degrees,
+// graphics inside footprints are part of the outline, as KiCad treats them. The body of a part is its
+// fabrication drawing (F.Fab or B.Fab), or its courtyard when it has none. Angles are KiCad's: degrees,
 // counter-clockwise as seen on screen, with y pointing down.
 import { isCopperName, listEnd, parseSexpr, readFills, readTrack, readVia, scanTopLevel, type SNode } from './kicadImport';
-import { footprintEdges, outlineLoops, type Pt } from './kicadPlanes';
+import { footprintEdges, footprintGraphics, graphicShape, outlineLoops, type Pt } from './kicadPlanes';
 import type { RawTrack, RawVia } from './kicadRouting';
 import type { FillPoly } from './kicadVoids';
 
@@ -40,8 +41,8 @@ export interface BoardDrawing {
   vias: RawVia[];
   fills: DrawFill[];
   pads: DrawPad[];
-  /** Footprint references and positions, for labels. */
-  parts: { ref: string; x: number; y: number; back: boolean }[];
+  /** Footprint references and positions, with the outline of the body (Fab, else courtyard) for the view. */
+  parts: { ref: string; x: number; y: number; back: boolean; body?: { pts: Pt[]; closed: boolean }[] }[];
   /** Items read, so a caller can tell the text is the board that is loaded (as KicadBoard.stats.tracks). */
   read: number;
 }
@@ -108,7 +109,11 @@ function readFootprint(node: SNode[], copper: string[]): { pads: DrawPad[]; part
     if (drill !== undefined && type !== 'smd' && type !== 'connect') pad.drill = drill;
     pads.push(pad);
   }
-  return { pads, part: ref ? { ref, x: fx, y: fy, back } : undefined, edges: footprintEdges(node) };
+  const side = back ? 'B' : 'F';
+  const shapes = (layers: string[]) => footprintGraphics(node, layers).map(graphicShape).filter((g) => !!g);
+  let body = shapes([`${side}.Fab`]);
+  if (!body.length) body = shapes([`${side}.CrtYd`]);
+  return { pads, part: ref ? { ref, x: fx, y: fy, back, body } : undefined, edges: footprintEdges(node) };
 }
 
 /** Everything the board view draws, from the text of a .kicad_pcb. */

@@ -111,40 +111,48 @@ function readZone(text: string, start: number, end: number, copper: string[]): Z
   return { net: ko ? '' : net || '(no net)', layers, priority: num(child(hdr, 'priority')) ?? 0, rings, keepout: !!ko };
 }
 
+/** One board graphic (gr_line, gr_arc, gr_rect, gr_circle, gr_poly, gr_curve) as points: closed shapes as a loop, the others as an open piece. */
+export function graphicShape(it: SNode[]): { pts: Pt[]; closed: boolean } | null {
+  const kind = head(it);
+  const s = xy(child(it, 'start'));
+  const e = xy(child(it, 'end'));
+  if (kind === 'gr_line' && s && e) return { pts: [s, e], closed: false };
+  if (kind === 'gr_arc' && s && e) {
+    const m = xy(child(it, 'mid'));
+    return { pts: m ? arcPoints(s, m, e) : [s, e], closed: false };
+  }
+  if (kind === 'gr_rect' && s && e) return { pts: [s, [e[0], s[1]], e, [s[0], e[1]]], closed: true };
+  if (kind === 'gr_circle') {
+    const c = xy(child(it, 'center'));
+    if (!c || !e) return null;
+    const r = Math.hypot(e[0] - c[0], e[1] - c[1]);
+    const n = Math.round((2 * Math.PI) / ARC_STEP);
+    return { pts: Array.from({ length: n }, (_, i): Pt => [c[0] + r * Math.cos((2 * Math.PI * i) / n), c[1] + r * Math.sin((2 * Math.PI * i) / n)]), closed: true };
+  }
+  if (kind === 'gr_poly') {
+    const p = ptsOf(child(it, 'pts'));
+    return p.length > 2 ? { pts: p, closed: true } : null;
+  }
+  if (kind === 'gr_curve') {
+    const p = ptsOf(child(it, 'pts'));
+    if (p.length !== 4) return null;
+    const bez = (t: number): Pt => {
+      const u = 1 - t;
+      const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+      return [w.reduce((a, k, i) => a + k * p[i][0], 0), w.reduce((a, k, i) => a + k * p[i][1], 0)];
+    };
+    return { pts: Array.from({ length: 17 }, (_, i) => bez(i / 16)), closed: false };
+  }
+  return null;
+}
+
 /** Closed loops of the Edge.Cuts graphics: rectangles, circles, polygons and chains of lines, arcs and curves. */
 export function outlineLoops(items: SNode[][]): Pt[][] {
   const loops: Pt[][] = [];
   const edges: Pt[][] = [];
   for (const it of items) {
-    const kind = head(it);
-    const s = xy(child(it, 'start'));
-    const e = xy(child(it, 'end'));
-    if (kind === 'gr_line' && s && e) edges.push([s, e]);
-    else if (kind === 'gr_arc' && s && e) {
-      const m = xy(child(it, 'mid'));
-      edges.push(m ? arcPoints(s, m, e) : [s, e]);
-    } else if (kind === 'gr_rect' && s && e) loops.push([s, [e[0], s[1]], e, [s[0], e[1]]]);
-    else if (kind === 'gr_circle') {
-      const c = xy(child(it, 'center'));
-      if (c && e) {
-        const r = Math.hypot(e[0] - c[0], e[1] - c[1]);
-        const n = Math.round((2 * Math.PI) / ARC_STEP);
-        loops.push(Array.from({ length: n }, (_, i): Pt => [c[0] + r * Math.cos((2 * Math.PI * i) / n), c[1] + r * Math.sin((2 * Math.PI * i) / n)]));
-      }
-    } else if (kind === 'gr_poly') {
-      const p = ptsOf(child(it, 'pts'));
-      if (p.length > 2) loops.push(p);
-    } else if (kind === 'gr_curve') {
-      const p = ptsOf(child(it, 'pts'));
-      if (p.length === 4) {
-        const bez = (t: number): Pt => {
-          const u = 1 - t;
-          const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
-          return [w.reduce((a, k, i) => a + k * p[i][0], 0), w.reduce((a, k, i) => a + k * p[i][1], 0)];
-        };
-        edges.push(Array.from({ length: 17 }, (_, i) => bez(i / 16)));
-      }
-    }
+    const g = graphicShape(it);
+    if (g) (g.closed ? loops : edges).push(g.pts);
   }
   // chain the open pieces into loops (ends matched to 1 µm, as kicadImport does)
   const key = (p: Pt) => `${Math.round(p[0] * 1000)},${Math.round(p[1] * 1000)}`;
@@ -181,12 +189,12 @@ export function outlineLoops(items: SNode[][]): Pt[][] {
 }
 
 /**
- * The Edge.Cuts graphics inside one footprint (fp_line, fp_arc, fp_rect, fp_circle, fp_poly, fp_curve) as the
- * board graphics they stand for (gr_…), turned into board coordinates like the pads: x' = fx + x·cos a + y·sin a,
- * y' = fy − x·sin a + y·cos a (KiCad's angle, counter-clockwise on screen, y down). Boards often carry their
- * outline in a mechanical footprint. A rectangle becomes a polygon, since it may be turned.
+ * The graphics on the given layers inside one footprint (fp_line, fp_arc, fp_rect, fp_circle, fp_poly, fp_curve)
+ * as the board graphics they stand for (gr_…), turned into board coordinates like the pads: x' = fx + x·cos a +
+ * y·sin a, y' = fy − x·sin a + y·cos a (KiCad's angle, counter-clockwise on screen, y down). A rectangle becomes
+ * a polygon, since it may be turned.
  */
-export function footprintEdges(node: SNode[]): SNode[][] {
+export function footprintGraphics(node: SNode[], layers: readonly string[]): SNode[][] {
   const at = child(node, 'at');
   const fx = num(at, 1) ?? 0;
   const fy = num(at, 2) ?? 0;
@@ -201,18 +209,19 @@ export function footprintEdges(node: SNode[]): SNode[][] {
   const out: SNode[][] = [];
   for (const it of node) {
     const kind = head(it);
-    if (!kind?.startsWith('fp_') || atom(child(it as SNode[], 'layer')) !== 'Edge.Cuts') continue;
+    const layer = kind?.startsWith('fp_') ? atom(child(it as SNode[], 'layer')) : undefined;
+    if (!layer || !layers.includes(layer)) continue;
     const g = it as SNode[];
     if (kind === 'fp_rect') {
       const s0 = xy(child(g, 'start'));
       const e0 = xy(child(g, 'end'));
       if (!s0 || !e0) continue;
       const corners = [s0, [e0[0], s0[1]], e0, [s0[0], e0[1]]].map(([x, y]) => pt(['xy', String(x), String(y)]));
-      out.push(['gr_poly', ['pts', ...corners], ['layer', 'Edge.Cuts']]);
+      out.push(['gr_poly', ['pts', ...corners], ['layer', layer]]);
       continue;
     }
     out.push([
-      'gr_' + kind.slice(3),
+      'gr_' + kind!.slice(3),
       ...g.slice(1).map((ch) => {
         const h = head(ch);
         if (h === 'start' || h === 'end' || h === 'mid' || h === 'center') return pt(ch as SNode[]);
@@ -223,6 +232,9 @@ export function footprintEdges(node: SNode[]): SNode[][] {
   }
   return out;
 }
+
+/** The Edge.Cuts graphics inside one footprint: boards often carry their outline in a mechanical footprint. */
+export const footprintEdges = (node: SNode[]) => footprintGraphics(node, ['Edge.Cuts']);
 
 /** The Edge.Cuts graphics of a top-level footprint item of the board text, or none (a cheap test first). */
 export function footprintEdgesAt(text: string, start: number, end: number): SNode[][] {

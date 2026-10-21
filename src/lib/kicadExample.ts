@@ -99,7 +99,8 @@ export function exampleBoard(): string {
 \t)`;
   const path = (layer: string, net: string, w: number, pts: P[]) => pts.slice(1).map((p, i) => seg(layer, net, w, pts[i], p));
   type Pad = { num: string; net: string; at: P; size: P; shape?: 'rect' | 'roundrect' | 'circle'; drill?: number };
-  const footprint = (lib: string, ref: string, value: string, at: P, pads: Pad[]) => `\t(footprint "${lib}"
+  // body: the package outline on F.Fab, w × h centred on the footprint
+  const footprint = (lib: string, ref: string, value: string, at: P, body: P, pads: Pad[]) => `\t(footprint "${lib}"
 \t\t(layer "F.Cu")
 \t\t(uuid "${uuid()}")
 \t\t(at ${at[0]} ${at[1]})
@@ -125,6 +126,7 @@ export function exampleBoard(): string {
 \t\t\t\t)
 \t\t\t)
 \t\t)
+\t\t(fp_rect (start ${-body[0] / 2} ${-body[1] / 2}) (end ${body[0] / 2} ${body[1] / 2}) (stroke (width 0.1) (type solid)) (fill none) (layer "F.Fab") (uuid "${uuid()}"))
 ${pads
   .map((p) =>
     p.drill
@@ -137,24 +139,24 @@ ${pads
 
   // the power section along the bottom edge (y 150–160, clear of the routed nets above it)
   const power = [
-    footprint('Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical', 'J1', '+5V in', [128, 155], [
+    footprint('Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical', 'J1', '+5V in', [128, 155], [2.54, 5.08], [
       { num: '1', net: '+5V', at: [0, -1.27], size: [1.7, 1.7], shape: 'rect', drill: 1 },
       { num: '2', net: 'GND', at: [0, 1.27], size: [1.7, 1.7], drill: 1 },
     ]),
-    footprint('Package_TO_SOT_SMD:SOT-223-3_TabPin2', 'U1', 'AMS1117-3.3', [140, 155], [
+    footprint('Package_TO_SOT_SMD:SOT-223-3_TabPin2', 'U1', 'AMS1117-3.3', [140, 155], [6.5, 3.5], [
       { num: '1', net: 'GND', at: [-2.3, 3.15], size: [1.2, 2] },
       { num: '2', net: '+3V3', at: [0, 3.15], size: [1.2, 2] },
       { num: '3', net: '+5V', at: [2.3, 3.15], size: [1.2, 2] },
       { num: '4', net: '+3V3', at: [0, -3.15], size: [3.3, 2] },
     ]),
-    footprint('Package_DFN_QFN:QFN-16-1EP_4x4mm_P0.65mm', 'U2', 'MCU', [165, 155], [
+    footprint('Package_DFN_QFN:QFN-16-1EP_4x4mm_P0.65mm', 'U2', 'MCU', [165, 155], [4, 4], [
       { num: '1', net: '+3V3', at: [-2, -0.5], size: [0.8, 0.3], shape: 'roundrect' },
       { num: '2', net: 'GND', at: [-2, 0.5], size: [0.8, 0.3], shape: 'roundrect' },
       { num: '3', net: '+3V3', at: [2, -0.5], size: [0.8, 0.3], shape: 'roundrect' },
       { num: '4', net: 'GND', at: [2, 0.5], size: [0.8, 0.3], shape: 'roundrect' },
       { num: '5', net: 'GND', at: [0, 0], size: [2.2, 2.2] },
     ]),
-    footprint('Capacitor_SMD:C_0603_1608Metric', 'C1', '10uF', [159.5, 154.6], [
+    footprint('Capacitor_SMD:C_0603_1608Metric', 'C1', '10uF', [159.5, 154.6], [0.8, 1.6], [
       { num: '1', net: '+3V3', at: [0, -0.8], size: [0.9, 0.8], shape: 'roundrect' },
       { num: '2', net: 'GND', at: [0, 0.8], size: [0.9, 0.8], shape: 'roundrect' },
     ]),

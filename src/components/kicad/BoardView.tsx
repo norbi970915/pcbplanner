@@ -227,6 +227,35 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   // bottom layer first, so the top layer is drawn last
   const order = useMemo(() => [...drawing.copper].reverse(), [drawing]);
   const heatCanvas = useMemo(() => (heat ? heatImage(heat) : null), [heat]);
+  // part bodies (Fab outline, else courtyard) per side, and a label box per part: the body, else its pads
+  const bodies = useMemo(() => {
+    const top = new Path2D();
+    const bottom = new Path2D();
+    const padBox = new Map<string, [number, number, number, number]>();
+    for (const p of drawing.pads) {
+      const r = Math.max(p.w, p.h) / 2;
+      const b = padBox.get(p.ref);
+      if (!b) padBox.set(p.ref, [p.x - r, p.y - r, p.x + r, p.y + r]);
+      else padBox.set(p.ref, [Math.min(b[0], p.x - r), Math.min(b[1], p.y - r), Math.max(b[2], p.x + r), Math.max(b[3], p.y + r)]);
+    }
+    const labels: { ref: string; back: boolean; x: number; y: number; w: number; h: number }[] = [];
+    for (const part of drawing.parts) {
+      const path = part.back ? bottom : top;
+      let box: [number, number, number, number] | undefined;
+      for (const g of part.body ?? []) {
+        g.pts.forEach(([x, y], i) => {
+          if (i) path.lineTo(x, y);
+          else path.moveTo(x, y);
+          box = box ? [Math.min(box[0], x), Math.min(box[1], y), Math.max(box[2], x), Math.max(box[3], y)] : [x, y, x, y];
+        });
+        if (g.closed) path.closePath();
+      }
+      box ??= padBox.get(part.ref);
+      if (box) labels.push({ ref: part.ref, back: part.back, x: (box[0] + box[2]) / 2, y: (box[1] + box[3]) / 2, w: box[2] - box[0], h: box[3] - box[1] });
+    }
+    labels.sort((a, b) => b.w * b.h - a.w * a.h);
+    return { top, bottom, labels };
+  }, [drawing]);
   // coloured tracks grouped by layer, colour and width
   const colored = useMemo(() => {
     const m = new Map<string, { layer: string; color: string; w: number; path: Path2D }>();
@@ -323,6 +352,18 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
         ctx.fill();
       }
     }
+    // part bodies over the copper and the heat map, each with its side's copper
+    const sideOn = (back: boolean) => !!visible[back ? (drawing.copper[drawing.copper.length - 1] ?? 'B.Cu') : (drawing.copper[0] ?? 'F.Cu')];
+    ctx.lineWidth = 1 / scale;
+    ctx.globalAlpha = 0.75;
+    if (sideOn(true)) {
+      ctx.strokeStyle = '#8aa4c8';
+      ctx.stroke(bodies.bottom);
+    }
+    if (sideOn(false)) {
+      ctx.strokeStyle = '#d0d7de';
+      ctx.stroke(bodies.top);
+    }
     ctx.globalAlpha = 1;
     ctx.strokeStyle = '#d6d36a';
     ctx.lineWidth = 1.2 / scale;
@@ -331,6 +372,30 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const sx = (bx: number) => (bx - x) * scale;
     const sy = (by: number) => (by - y) * scale;
+    // references, sized to fit the part (a character is about 0.6 of the font size wide), once they are readable
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    // the larger parts first; a label that would overlap one already drawn is left out
+    const drawn: [number, number, number, number][] = [];
+    for (const l of bodies.labels) {
+      if (!sideOn(l.back)) continue;
+      const fsz = Math.min(14, (l.h * scale) / 2, (l.w * scale * 0.9) / (0.6 * l.ref.length));
+      if (fsz < 8) continue;
+      const lx = sx(l.x);
+      const ly = sy(l.y);
+      if (lx < -50 || ly < -20 || lx > size.w + 50 || ly > size.h + 20) continue;
+      const hw = (0.6 * fsz * l.ref.length) / 2 + 2;
+      const hh = fsz / 2 + 1;
+      if (drawn.some((r) => lx - hw < r[2] && lx + hw > r[0] && ly - hh < r[3] && ly + hh > r[1])) continue;
+      drawn.push([lx - hw, ly - hh, lx + hw, ly + hh]);
+      ctx.font = `600 ${fsz.toFixed(1)}px system-ui, sans-serif`;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(16, 20, 24, 0.85)';
+      ctx.strokeText(l.ref, lx, ly);
+      ctx.fillStyle = l.back ? '#b4c6e0' : '#f0f3f6';
+      ctx.fillText(l.ref, lx, ly);
+    }
     const anySelected = markers.some((m) => m.selected);
     for (const m of [...markers].sort((a, b) => Number(!!a.selected) - Number(!!b.selected))) {
       const col = m.status === 'fail' ? '#ff4d4f' : '#f5a623';
@@ -363,7 +428,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing]);
+  }, [all, hl, outline, order, visible, markers, size, colored, viaColors, heat, heatCanvas, drawing, bodies]);
 
   const schedule = useCallback(() => {
     cancelAnimationFrame(raf.current);

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { padToBoard, readBoardDrawing } from './kicadDrawing';
 
@@ -27,7 +28,7 @@ describe('pads and footprints', () => {
       (pad "2" smd roundrect (at 0.51 0 90) (size 0.54 0.64) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (net 1 "GND"))
       (pad "" np_thru_hole circle (at 0 2) (size 1 1) (drill 1) (layers "*.Cu" "*.Mask")))`;
     const d = readBoardDrawing(board(fp));
-    expect(d.parts).toEqual([{ ref: 'R7', x: 20, y: 15, back: false }]);
+    expect(d.parts).toEqual([{ ref: 'R7', x: 20, y: 15, back: false, body: [] }]);
     const [p1, p2, hole] = d.pads;
     expect([p1.x, p1.y, p1.angle, p1.shape, p1.rr, p1.net, p1.ref, p1.num]).toEqual([20, expect.closeTo(15.51, 9), 90, 'roundrect', 0.25, '/SIG', 'R7', '1']);
     expect(p2.y).toBeCloseTo(14.49, 9);
@@ -73,6 +74,45 @@ describe('pads and footprints', () => {
     expect(Array.from(d.fills[0].xy)).toEqual([1, 1, 39, 1, 39, 29, 1, 29]);
     expect(d.outline).toHaveLength(1);
     expect(d.copper).toEqual(['F.Cu', 'In1.Cu', 'In2.Cu', 'B.Cu']);
+  });
+});
+
+describe('part bodies', () => {
+  it('the body is the Fab drawing on the side of the part, turned like its pads; the courtyard when there is no Fab', () => {
+    // a 2 × 1 body on F.Fab at (20, 15) turned by 90°: 1 wide in x, 2 tall in y; the silkscreen line is not body
+    const fab = `(footprint "R_0805" (layer "F.Cu") (at 20 15 90)
+      (property "Reference" "R1" (at 0 0 90) (layer "F.SilkS"))
+      (fp_rect (start -1 -0.5) (end 1 0.5) (stroke (width 0.1) (type solid)) (fill none) (layer "F.Fab"))
+      (fp_line (start -1 -1) (end 1 -1) (stroke (width 0.12) (type solid)) (layer "F.SilkS"))
+      (fp_rect (start -2 -1) (end 2 1) (stroke (width 0.05) (type solid)) (fill none) (layer "F.CrtYd"))
+      (pad "1" smd rect (at -1 0 90) (size 1 1) (layers "F.Cu") (net 1 "GND")))`;
+    // a bottom part with only a courtyard circle
+    const crt = `(footprint "TP" (layer "B.Cu") (at 10 10)
+      (property "Reference" "TP1" (at 0 0) (layer "B.SilkS"))
+      (fp_circle (center 0 0) (end 1.5 0) (stroke (width 0.05) (type solid)) (fill none) (layer "B.CrtYd"))
+      (fp_line (start -1 0) (end 1 0) (stroke (width 0.1) (type solid)) (layer "F.Fab"))
+      (pad "1" smd circle (at 0 0) (size 1 1) (layers "B.Cu") (net 1 "GND")))`;
+    const d = readBoardDrawing(board(fab + crt));
+    const [r1, tp] = d.parts;
+    expect(r1.body).toHaveLength(1);
+    const xs = r1.body![0].pts.map((p) => p[0]);
+    const ys = r1.body![0].pts.map((p) => p[1]);
+    expect(r1.body![0].closed).toBe(true);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(1, 6);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(2, 6);
+    expect((Math.max(...ys) + Math.min(...ys)) / 2).toBeCloseTo(15, 6);
+    // the F.Fab line of a bottom part is not its side; its courtyard circle (r 1.5) is the body
+    expect(tp.back).toBe(true);
+    expect(tp.body).toHaveLength(1);
+    expect(Math.max(...tp.body![0].pts.map((p) => p[0]))).toBeCloseTo(11.5, 6);
+    // the outline is still only the board's own rectangle
+    expect(d.outline).toHaveLength(1);
+  });
+
+  it('the parts of the example board carry a Fab body', () => {
+    const text = fs.readFileSync('public/examples/pcbplanner-example-6layer.kicad_pcb', 'utf8');
+    const d = readBoardDrawing(text);
+    expect(d.parts.map((p) => [p.ref, p.body?.length])).toEqual([['J1', 1], ['U1', 1], ['U2', 1], ['C1', 1]]);
   });
 });
 
