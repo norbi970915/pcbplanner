@@ -54,6 +54,11 @@ export default function KicadVoltageDropThermal() {
         </tbody>
       </table>
       <p>
+        That is cold copper. At 2.5 A this track heats itself about 50 °C above the air (IPC-2221, outer layer), and copper at 70 °C conducts about 20 % worse: 14.7 mΩ, 37 mV and
+        92 mW. <Cite n={[1, 6]} /> The Trace Width calculator works the drop out at the copper's own temperature.
+      </p>
+      <TryIt to="/trace-width?std=ipc2221&mode=temp&current=2.5&width=0.4&t=0.035&amb=20&len=10">Check this track, with its self-heating, in the Trace Width calculator</TryIt>
+      <p>
         A plane is many squares side by side, which is why it carries current so well, until the current has to squeeze through a gap between a row of vias or the four spokes of a
         thermal relief. Those few narrow squares often hold most of the drop, and they are exactly what a hand calculation leaves out.
       </p>
