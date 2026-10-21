@@ -278,9 +278,11 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
 
   return (
     <Panel title="Clearance" allowInvalid>
-      {controls}
-      {netsEditor}
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
+        <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
+          {controls}
+          {netsEditor}
+        </div>
         {toolbar}
         <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
           <div className={full ? 'min-h-0 flex-1' : undefined}>

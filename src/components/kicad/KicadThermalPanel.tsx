@@ -326,9 +326,11 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
 
   return (
     <Panel title="Thermal" allowInvalid>
-      {controls}
-      {sourcesEditor}
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
+        <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
+          {controls}
+          {sourcesEditor}
+        </div>
         {toolbar}
         <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
           <div className={full ? 'flex min-h-0 flex-1 flex-col' : undefined}>

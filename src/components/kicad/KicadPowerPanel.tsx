@@ -562,15 +562,17 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
 
   return (
     <Panel title="Power" allowInvalid>
-      {controls}
-      {unfilled && (
-        <p className="px-2.5 pb-2 text-[var(--accent-ink)]">
-          The zones of this board are not filled in the file (in KiCad: Fill All Zones, then save), so its planes and pours are left out: the DC drop counts only tracks and pads, and
-          comes out higher than it will be.
-        </p>
-      )}
-      {loadsEditor}
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
+        <div className={full ? 'max-h-[40vh] shrink-0 overflow-y-auto border-b border-line' : undefined}>
+          {controls}
+          {unfilled && (
+            <p className="px-2.5 pb-2 text-[var(--accent-ink)]">
+              The zones of this board are not filled in the file (in KiCad: Fill All Zones, then save), so its planes and pours are left out: the DC drop counts only tracks and pads, and
+              comes out higher than it will be.
+            </p>
+          )}
+          {loadsEditor}
+        </div>
         {toolbar}
         <div className={full ? 'flex min-h-0 flex-1 flex-col lg:flex-row' : undefined}>
           <div className={full ? 'flex min-h-0 flex-1 flex-col' : undefined}>
