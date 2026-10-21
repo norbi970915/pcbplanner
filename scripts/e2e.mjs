@@ -707,6 +707,13 @@ async function flowStackupTargets(page) {
   }
 }
 
+/** True once no text matching `re` is on the page, waiting up to 3 s for the page to redraw after a click. */
+const gone = (page, re) =>
+  page.getByText(re).first().waitFor({ state: 'detached', timeout: 3000 }).then(
+    () => true,
+    () => false,
+  );
+
 async function flowStackupEdit(page) {
   const route = '/stackup';
   // layer editing
@@ -768,7 +775,7 @@ async function flowStackupEdit(page) {
   await check(page, await page.getByRole('button', { name: 'Save as Copy' }).isDisabled(), route, 'lsm Save as Copy waits for a valid stack', 'Save as Copy enabled with a mask inside the stack');
   await rows.nth(3).locator('td').nth(3).click(); // the new layer goes in after the selected one, which stays selected
   await page.getByRole('button', { name: 'Delete Layer' }).click();
-  await check(page, (await page.getByText(/solder mask belongs outside the copper stack/).count()) === 0, route, 'lsm deleting the mask clears the message', 'message still shown');
+  await check(page, await gone(page, /solder mask belongs outside the copper stack/), route, 'lsm deleting the mask clears the message', 'message still shown');
 
   // the copper added above can sit against another copper layer: the page says so and saving waits;
   // removing that layer makes the stack valid again
@@ -777,7 +784,7 @@ async function flowStackupEdit(page) {
     const added = await rows.evaluateAll((rs) => rs.findIndex((r) => [...r.querySelectorAll('input')].some((i) => i.value === 'Copper layer')));
     await rows.nth(added).locator('td').nth(3).click();
     await page.getByRole('button', { name: 'Delete Layer' }).click();
-    await check(page, (await page.getByText(/copper layers need dielectric separation/).count()) === 0, route, 'lsm removing the touching copper clears the message', 'message still shown');
+    await check(page, await gone(page, /copper layers need dielectric separation/), route, 'lsm removing the touching copper clears the message', 'message still shown');
   }
 
   // save as copy, then delete it
