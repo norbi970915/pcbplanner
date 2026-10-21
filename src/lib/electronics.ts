@@ -106,16 +106,19 @@ const scale = (n: number, d: number) => (d >= 2 ? n * 10 ** (d - 2) : n / 10 ** 
 /** Largest series value ≤ x and smallest ≥ x. */
 export function eNeighbors(x: number, s: ESeries) {
   const list = E_SERIES[s];
+  // a value within a part per billion of a series value is that value: 100 nF typed in is 1.0000000000000001e-7 F
+  const lo = x * (1 - 1e-9);
+  const hi = x * (1 + 1e-9);
   let d = Math.floor(Math.log10(x));
   // guard against log10 rounding at exact decades
-  if (scale(100, d) > x) d--;
-  if (scale(100, d + 1) <= x) d++;
+  if (scale(100, d) > hi) d--;
+  if (scale(100, d + 1) <= hi) d++;
   let below = scale(list[0], d);
   let above = scale(100, d + 1);
   for (const n of list) {
     const v = scale(n, d);
-    if (v <= x) below = v;
-    if (v >= x) {
+    if (v <= hi) below = v;
+    if (v >= lo) {
       above = v;
       break;
     }

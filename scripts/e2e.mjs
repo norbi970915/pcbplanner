@@ -113,7 +113,9 @@ async function waitIdle(page, ms = 30000) {
       () => {
         const main = document.querySelector('main');
         const t = `${main?.innerText ?? ''} ${main?.parentElement?.nextElementSibling?.innerText ?? ''} ${document.querySelector('aside.order-first')?.innerText ?? ''}`;
-        return !/Solving|solving…|Loading…/.test(t);
+        // a busy message ends in "…" ("Solving 3/12 line designs…"); a cited title or a heading
+        // ("Solving the Metric Pitch BGA…", "Solving for width") is not one
+        return !/Solving[^\n…]{0,80}…|solving…|Loading…/.test(t);
       },
       null,
       { timeout: ms, polling: 100 },
@@ -262,7 +264,11 @@ async function stepFields(page, route, container) {
     await checkPage(page, route, `${tag} restore`);
     await page.waitForTimeout(300); // URL debounce
     const restored = await snapshot(page);
-    if (restored !== base) {
+    // the restored text can convert to a value a hair from the original (1.0058 oz is 0.03500015 mm, not 0.035):
+    // when every result on the page is the same, only the address differs, and that is not a failure
+    const sameResults = restored.split('\n').slice(1).join('\n') === base.split('\n').slice(1).join('\n');
+    if (restored !== base && sameResults) warn(route, tag, `restore changed only the address: ${restored.split('\n')[0]}`);
+    else if (restored !== base) {
       const a = base.split('\n');
       const b = restored.split('\n');
       const d = a.findIndex((x, k) => x !== b[k]);
@@ -282,7 +288,9 @@ async function stepSelects(page, route, container) {
     if (!(await s.isVisible()) || (await s.isDisabled())) continue;
     const label = await labelOf(s);
     const orig = await s.inputValue();
-    const opts = await s.evaluate((el) => [...el.options].map((o) => o.value));
+    const all = await s.evaluate((el) => [...el.options].map((o) => o.value));
+    // a long list (184 stackups) is sampled: the first, the last and a dozen spread between, each one solved
+    const opts = all.length > 16 ? [...new Set([0, ...Array.from({ length: 12 }, (_, k) => Math.round(((k + 1) * (all.length - 1)) / 13)), all.length - 1].map((k) => all[k]))] : all;
     for (const v of opts) {
       const cur = page.locator(`${container} select`).nth(i);
       if (!(await cur.count())) break;

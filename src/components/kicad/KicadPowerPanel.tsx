@@ -184,6 +184,7 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   if (!nets.length) return <Panel title="Power"><p className="p-3">This board has no nets with pads to check.</p></Panel>;
 
   const setLoads = (next: { ref: string; amps: number }[]) => set({ ploads: encodeLoads(next) });
+  const unfilled = (data.board.stats.zones ?? 0) > 0 && d.fills.length === 0;
   const others = parts.filter((x) => x.ref !== source);
   const zoomTrack = (t: TrackLoad) => {
     const tr = d.tracks[t.i];
@@ -562,6 +563,12 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   return (
     <Panel title="Power" allowInvalid>
       {controls}
+      {unfilled && (
+        <p className="px-2.5 pb-2 text-[var(--accent-ink)]">
+          The zones of this board are not filled in the file (in KiCad: Fill All Zones, then save), so its planes and pours are left out: the DC drop counts only tracks and pads, and
+          comes out higher than it will be.
+        </p>
+      )}
       {loadsEditor}
       <div ref={box} className={full ? `flex h-full flex-col bg-[var(--panel)] text-ink${full === 'overlay' ? ' fixed inset-0 z-[200]' : ''}` : undefined}>
         {toolbar}

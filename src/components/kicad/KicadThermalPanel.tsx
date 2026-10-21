@@ -19,7 +19,8 @@ const PLATING_MM = 0.025;
 export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p: KicadAnalysisInputs; set: SetKicadInputs }) {
   const [drawing, setDrawing] = useState<{ board: object; d?: BoardDrawing; error?: string } | null>(null);
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
-  const [sol, setSol] = useState<{ key: string; result?: ThermalResult; error?: string } | null>(null);
+  const [sol, setSol] = useState<{ key: string; result?: ThermalResult; error?: string; solving?: boolean } | null>(null);
+  const [run, setRun] = useState(0); // pressing Solve counts up; a solve runs only then
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -51,10 +52,10 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
 
   const key = `${encodeSources(sources)}|${p.tamb}|${p.tair}|${p.th}|${p.teps}|${p.tkxy}|${p.tkz}`;
   useEffect(() => {
-    if (!d || !settings || !sources.some((s) => s.watts > 0)) return;
+    if (!run || !d || !settings || !sources.some((s) => s.watts > 0)) return;
     let live = true;
     const t = setTimeout(() => {
-      setSol({ key });
+      setSol((prev) => ({ key, result: prev?.result, solving: true }));
       solveThermalInWorker({
         d: { copper: d.copper, outline: d.outline, tracks: d.tracks, vias: d.vias, fills: d.fills, pads: d.pads, parts: d.parts },
         thickness: settings.thickness,
@@ -71,15 +72,18 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         (result) => live && setSol({ key, result }),
         (e: unknown) => live && setSol({ key, error: e instanceof Error ? e.message : String(e) }),
       );
-    }, 300);
+    }, 0);
     return () => {
       live = false;
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, settings, key]);
-  const now = sol?.key === key ? sol : null;
+  }, [run]);
+  // the last solve stays on the board until the next one; it is marked out of date when the inputs change
+  const now = sol;
+  const solving = !!sol?.solving;
   const solved = now?.result?.ok ? now.result : null;
+  const stale = !!solved && sol?.key !== key;
 
   const mapLayer = solved?.layers.some((l) => l.layer === p.tlayer) ? p.tlayer : (solved?.hottest.layer ?? '');
   const heat = useMemo((): BoardHeat | null => {
@@ -102,6 +106,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
   if (drawing.error || !d) return <Panel title="Thermal"><p className="p-3">{drawing.error}</p></Panel>;
 
   const setSources = (next: { ref: string; watts: number; psi?: number }[]) => set({ tsrc: encodeSources(next) });
+  const unfilled = (data.board.stats.zones ?? 0) > 0 && d.fills.length === 0;
   const zoomPart = (ref: string) => {
     const ps = d.pads.filter((q) => q.ref === ref);
     const part = d.parts.find((x) => x.ref === ref);
@@ -188,7 +193,15 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
           </li>
         ))}
       </ul>
-      <div className="mt-1.5 flex flex-wrap gap-2">
+      {parts.length === 0 && (
+        <p className="mb-1 text-[var(--err-line)]">
+          This board has no footprints, so it has no parts to heat. Load the board with its parts placed; the site's example has four.
+        </p>
+      )}
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <button type="button" className="btn btn-primary" disabled={solving || !sources.some((x) => x.watts > 0)} onClick={() => setRun((r) => r + 1)}>
+          {solving ? 'Solving…' : 'Solve'}
+        </button>
         <button
           type="button"
           className="btn"
@@ -200,7 +213,14 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         >
           Add part
         </button>
+        {stale && !solving && <span className="text-[var(--accent-ink)]">The inputs changed: press Solve to update the map.</span>}
       </div>
+      {unfilled && (
+        <p className="mt-1 text-[var(--accent-ink)]">
+          The zones of this board are not filled in the file (in KiCad: Fill All Zones, then save), so its planes and pours are left out and the board spreads heat only through
+          its tracks and pads: the temperatures come out higher than they will be.
+        </p>
+      )}
     </div>
   );
 
@@ -248,8 +268,10 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
 
   const summary = (
     <div aria-live="polite">
-      {!sources.some((s) => s.watts > 0) ? (
-        <p className="text-muted">Add a part with its power to solve the temperature of the board.</p>
+      {!solved && !now?.error && !(now?.result && !now.result.ok) && !solving ? (
+        <p className="text-muted">
+          {sources.some((s) => s.watts > 0) ? 'Press Solve to work out the temperature of the board.' : 'Add the parts that dissipate power, with their power, then press Solve.'}
+        </p>
       ) : now?.error ? (
         <p className="text-[var(--err-line)]">{now.error}</p>
       ) : now?.result && !now.result.ok ? (

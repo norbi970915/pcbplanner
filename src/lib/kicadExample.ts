@@ -9,6 +9,9 @@
 //   /HDMI_D0±   100 Ω pair on F.Cu with an uncompensated 90° arc bend: 0.38 mm intra-pair skew
 //   /PCIE_TX0±  85 Ω pair on F.Cu, routed right
 //   /CLK        single-ended 50 Ω net (class 50R) on F.Cu and In2.Cu, each layer at its own width
+// Along the bottom edge a small power section gives the Power, Thermal and Clearance views parts to work on:
+// a 2-pin +5V connector J1, a SOT-223 3.3 V regulator U1 (tab on +3V3), a 4 × 4 mm IC U2 with an exposed
+// ground pad and five thermal vias, its decoupling capacitor C1, and the +5V, +3V3 and GND tracks between them.
 // The .kicad_pro is a KiCad 8 project (net settings schema 3) that puts the nets into classes with
 // netclass_patterns and one explicit netclass_assignments entry.
 // kicadImport.test.ts checks that the files in public/ match this generator.
@@ -46,7 +49,7 @@ export function exampleBoard(): string {
   const pcb = toKicad(signalOnly)[0].content;
   let n = 0;
   const uuid = () => `00000000-0000-4000-8000-${(++n).toString(16).padStart(12, '0')}`;
-  const nets = ['GND', '+3V3', '/PCIE_TX0_P', '/PCIE_TX0_N', '/CLK', '/SDA', '/USB_D+', '/USB_D-', '/HDMI_D0+', '/HDMI_D0-'];
+  const nets = ['GND', '+3V3', '/PCIE_TX0_P', '/PCIE_TX0_N', '/CLK', '/SDA', '/USB_D+', '/USB_D-', '/HDMI_D0+', '/HDMI_D0-', '+5V'];
   const netNo = (name: string) => nets.indexOf(name) + 1;
   const zone = (net: string, layer: string, pts: P[]) => `\t(zone
 \t\t(net ${netNo(net)})
@@ -95,6 +98,86 @@ export function exampleBoard(): string {
 \t\t(uuid "${uuid()}")
 \t)`;
   const path = (layer: string, net: string, w: number, pts: P[]) => pts.slice(1).map((p, i) => seg(layer, net, w, pts[i], p));
+  type Pad = { num: string; net: string; at: P; size: P; shape?: 'rect' | 'roundrect' | 'circle'; drill?: number };
+  const footprint = (lib: string, ref: string, value: string, at: P, pads: Pad[]) => `\t(footprint "${lib}"
+\t\t(layer "F.Cu")
+\t\t(uuid "${uuid()}")
+\t\t(at ${at[0]} ${at[1]})
+\t\t(property "Reference" "${ref}"
+\t\t\t(at 0 -3 0)
+\t\t\t(layer "F.SilkS")
+\t\t\t(uuid "${uuid()}")
+\t\t\t(effects
+\t\t\t\t(font
+\t\t\t\t\t(size 1 1)
+\t\t\t\t\t(thickness 0.15)
+\t\t\t\t)
+\t\t\t)
+\t\t)
+\t\t(property "Value" "${value}"
+\t\t\t(at 0 3 0)
+\t\t\t(layer "F.Fab")
+\t\t\t(uuid "${uuid()}")
+\t\t\t(effects
+\t\t\t\t(font
+\t\t\t\t\t(size 1 1)
+\t\t\t\t\t(thickness 0.15)
+\t\t\t\t)
+\t\t\t)
+\t\t)
+${pads
+  .map((p) =>
+    p.drill
+      ? `\t\t(pad "${p.num}" thru_hole ${p.shape ?? 'circle'} (at ${p.at[0]} ${p.at[1]}) (size ${p.size[0]} ${p.size[1]}) (drill ${p.drill}) (layers "*.Cu" "*.Mask") (net ${netNo(p.net)} "${p.net}") (uuid "${uuid()}"))`
+      : `\t\t(pad "${p.num}" smd ${p.shape ?? 'rect'} (at ${p.at[0]} ${p.at[1]}) (size ${p.size[0]} ${p.size[1]}) (layers "F.Cu" "F.Paste" "F.Mask")${p.shape === 'roundrect' ? ' (roundrect_rratio 0.25)' : ''} (net ${netNo(p.net)} "${p.net}") (uuid "${uuid()}"))`,
+  )
+  .join('\n')}
+\t)`;
+  const viaAt = (net: string, at: P, layers = '"F.Cu" "B.Cu"') => via(net, at).replace('(layers "F.Cu" "B.Cu")', `(layers ${layers})`);
+
+  // the power section along the bottom edge (y 150–160, clear of the routed nets above it)
+  const power = [
+    footprint('Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical', 'J1', '+5V in', [128, 155], [
+      { num: '1', net: '+5V', at: [0, -1.27], size: [1.7, 1.7], shape: 'rect', drill: 1 },
+      { num: '2', net: 'GND', at: [0, 1.27], size: [1.7, 1.7], drill: 1 },
+    ]),
+    footprint('Package_TO_SOT_SMD:SOT-223-3_TabPin2', 'U1', 'AMS1117-3.3', [140, 155], [
+      { num: '1', net: 'GND', at: [-2.3, 3.15], size: [1.2, 2] },
+      { num: '2', net: '+3V3', at: [0, 3.15], size: [1.2, 2] },
+      { num: '3', net: '+5V', at: [2.3, 3.15], size: [1.2, 2] },
+      { num: '4', net: '+3V3', at: [0, -3.15], size: [3.3, 2] },
+    ]),
+    footprint('Package_DFN_QFN:QFN-16-1EP_4x4mm_P0.65mm', 'U2', 'MCU', [165, 155], [
+      { num: '1', net: '+3V3', at: [-2, -0.5], size: [0.8, 0.3], shape: 'roundrect' },
+      { num: '2', net: 'GND', at: [-2, 0.5], size: [0.8, 0.3], shape: 'roundrect' },
+      { num: '3', net: '+3V3', at: [2, -0.5], size: [0.8, 0.3], shape: 'roundrect' },
+      { num: '4', net: 'GND', at: [2, 0.5], size: [0.8, 0.3], shape: 'roundrect' },
+      { num: '5', net: 'GND', at: [0, 0], size: [2.2, 2.2] },
+    ]),
+    footprint('Capacitor_SMD:C_0603_1608Metric', 'C1', '10uF', [159.5, 154.6], [
+      { num: '1', net: '+3V3', at: [0, -0.8], size: [0.9, 0.8], shape: 'roundrect' },
+      { num: '2', net: 'GND', at: [0, 0.8], size: [0.9, 0.8], shape: 'roundrect' },
+    ]),
+    // +5V: J1 along B.Cu to a via next to U1 pin 3
+    ...path('B.Cu', '+5V', 1, [[128, 153.73], [142.3, 153.73], [142.3, 156]]),
+    viaAt('+5V', [142.3, 156]),
+    seg('F.Cu', '+5V', 1, [142.3, 156], [142.3, 158.15]),
+    // +3V3: from the regulator tab to C1 and both sides of U2
+    seg('F.Cu', '+3V3', 0.8, [141.65, 151.85], [168.5, 151.85]),
+    seg('F.Cu', '+3V3', 0.8, [159.5, 151.85], [159.5, 153.8]),
+    ...path('F.Cu', '+3V3', 0.5, [[162, 151.85], [162, 154.5], [163, 154.5]]),
+    ...path('F.Cu', '+3V3', 0.5, [[168.5, 151.85], [168.5, 154.5], [167, 154.5]]),
+    // GND: J1 to U1 pin 1 on F.Cu, then along B.Cu to C1 and the thermal vias under U2
+    ...path('F.Cu', 'GND', 1, [[128, 156.27], [129.88, 158.15], [137.7, 158.15]]),
+    viaAt('GND', [135.5, 158.15]),
+    ...path('B.Cu', 'GND', 1, [[135.5, 158.15], [165, 158.15], [165, 155]]),
+    seg('B.Cu', 'GND', 0.5, [159.5, 158.15], [159.5, 156.6]),
+    viaAt('GND', [159.5, 156.6]),
+    seg('F.Cu', 'GND', 0.5, [159.5, 156.6], [159.5, 155.4]),
+    seg('F.Cu', 'GND', 0.3, [163, 155.5], [163.9, 155.5]),
+    seg('F.Cu', 'GND', 0.3, [167, 155.5], [166.1, 155.5]),
+    ...[[165, 155], [164.4, 154.4], [165.6, 154.4], [164.4, 155.6], [165.6, 155.6]].map((at) => viaAt('GND', at as P)),
+  ];
 
   // USB: 0.117/0.15 mm on F.Cu with a 45° jog, two vias, 0.20/0.15 mm on In2.Cu
   const usbF: P[] = [[130, 108], [140, 108], [142, 110], [150, 110]];
@@ -146,6 +229,7 @@ export function exampleBoard(): string {
     seg('In2.Cu', '/SDA', 0.2, [110, 140], [170, 140]),
     seg('In2.Cu', '/CLK', 0.121, [110, 145], [170, 145]),
     seg('B.Cu', '/SDA', 0.2, [110, 150], [160, 150]),
+    ...power,
   ];
   return pcb
     .replace('(title "PCBPlanner example 6-layer stackup")', '(title "PCBPlanner example 6-layer board")')

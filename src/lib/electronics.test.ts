@@ -125,6 +125,12 @@ describe('E-series (IEC 60063)', () => {
     expect(eNearest(26e-12, 'E24')).toBeCloseTo(27e-12, 20);
     expect(eNeighbors(1000, 'E12')).toEqual({ below: 1000, above: 1000 });
     expect(eNeighbors(950, 'E12')).toEqual({ below: 820, above: 1000 });
+    // a series value typed in a scaled unit carries a rounding error: 100 nF is 1.0000000000000001e-7 F
+    const c = 100 * 1e-9;
+    expect(c).not.toBe(1e-7);
+    const n = eNeighbors(c, 'E12');
+    expect(n.below).toBe(n.above);
+    expect(n.below).toBeCloseTo(1e-7, 20);
   });
   it('values in range', () => {
     expect(eValuesInRange(1000, 10000, 'E12')).toEqual([1000, 1200, 1500, 1800, 2200, 2700, 3300, 3900, 4700, 5600, 6800, 8200, 10000]);

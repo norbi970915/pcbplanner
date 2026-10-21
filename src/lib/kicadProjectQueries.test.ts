@@ -82,13 +82,13 @@ describe('layers and cross-sections of the example project', () => {
 describe('net classes, nets and pairs', () => {
   it('classes of the .kicad_pro with routed nets and pairs; Default only without one', () => {
     expect(netClasses(data).map((c) => [c.name, c.trackWidth, c.dpWidth, c.dpGap, c.nets, c.pairs])).toEqual([
-      ['Default', 0.2, 0.2, 0.25, 1, 0], // /SDA
+      ['Default', 0.2, 0.2, 0.25, 4, 0], // /SDA and the power section's +3V3, +5V and GND
       ['50R', 0.12, 0.12, 0.25, 1, 0],
       ['HDMI', 0.09, 0.09, 0.15, 2, 1],
       ['PCIe', 0.133, 0.133, 0.15, 2, 1],
       ['USB', 0.117, 0.117, 0.15, 2, 1],
     ]);
-    expect(netClasses({ ...data, project: null }).map((c) => [c.name, c.nets, c.pairs])).toEqual([['Default', 8, 3]]);
+    expect(netClasses({ ...data, project: null }).map((c) => [c.name, c.nets, c.pairs])).toEqual([['Default', 11, 3]]);
   });
   it('nets and pairs lists', () => {
     expect(nets(data).find((n) => n.name === '/USB_D+')).toMatchObject({ cls: 'USB', pair: '/USB_D', layers: ['In2.Cu', 'F.Cu'] });

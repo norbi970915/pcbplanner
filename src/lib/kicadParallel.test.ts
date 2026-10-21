@@ -131,7 +131,8 @@ describe('the example project', () => {
     };
     expect(neighbours(ix, 'F.Cu', '/PCIE_TX0_P', 8, partner).map((r) => [r.b, !!r.partner])).toEqual([['/PCIE_TX0_N', true]]);
     expect(neighbours(ix, 'F.Cu', '/HDMI_D0-').map((r) => r.b)).toEqual(['/HDMI_D0+']);
-    expect(neighbours(ix, 'F.Cu', '/CLK')).toEqual([]);
+    // /CLK's only neighbour on F.Cu is the +3V3 rail of the power section, 1.4 mm below it
+    expect(neighbours(ix, 'F.Cu', '/CLK').map((r) => r.b)).toEqual(['+3V3']);
   });
 });
 
