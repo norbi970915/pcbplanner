@@ -14,6 +14,15 @@ describe('junction temperature', () => {
     expect(r.nodes!.sink).toBeCloseTo(65, 6);
     expect(r.thetaSARequired).toBeCloseTo(12.5 - 2, 6);
   });
+  it('ψJB from the board temperature and ψJT from the case top: T_J = T_ref + ψ · P (TI SPRA953 eqs. 8, 9)', () => {
+    // the guide's example: 1 W, ψJB 15 °C/W, board at 77.2 °C
+    const jb = junction({ powerW: 1, ambientC: 25, mode: 'psijb', refC: 77.2, psi: 15, thetaJA: 0, thetaJC: 0, thetaCS: 0, thetaSA: 0, tjMaxC: 125 });
+    expect(jb.tj).toBeCloseTo(92.2, 9);
+    expect(jb.margin).toBeCloseTo(32.8, 9);
+    expect(jb.maxPower).toBeNaN();
+    const jt = junction({ powerW: 2, ambientC: 25, mode: 'psijt', refC: 60, psi: 1.5, thetaJA: 0, thetaJC: 0, thetaCS: 0, thetaSA: 0, tjMaxC: 125 });
+    expect(jt.tj).toBeCloseTo(63, 9);
+  });
 });
 
 describe('thermal via array', () => {

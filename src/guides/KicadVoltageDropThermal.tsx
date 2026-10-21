@@ -96,6 +96,7 @@ export default function KicadVoltageDropThermal() {
         ψJB is measured with the part on a board, from the junction to the board at the package (its centre pin), so it belongs in this formula. θJB is a different measurement, taken between
         cold plates, and does not. <Cite n={5} /> On the CM5 MINIMA, a regulator dissipating 1 W with ψJB = 15 °C/W sits on board copper at 77.2 °C, so its junction is near 92 °C.
       </p>
+      <TryIt to="/junction-temperature?mode=psijb&p=1&tref=77.2&psi=15">Work out this junction temperature in the Junction Temperature calculator</TryIt>
       <TryIt to="/kicad-project?view=thermal">Open the Thermal tab (load your board or press Try an example)</TryIt>
 
       <h2>Two traps</h2>

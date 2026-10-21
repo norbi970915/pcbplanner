@@ -4,7 +4,13 @@ import { K_CU } from './copper';
 export interface JunctionInput {
   powerW: number;
   ambientC: number;
-  mode: 'ja' | 'chain';
+  /**
+   * ja: θJA to the ambient; chain: θJC + θCS + θSA to the ambient; psijb / psijt: from a measured (or solved)
+   * board or case-top temperature with the package's ψJB / ψJT (TI SPRA953 eqs. 8 and 9).
+   */
+  mode: 'ja' | 'chain' | 'psijb' | 'psijt';
+  refC?: number; // psijb: the board at the package, psijt: the top of the package, °C
+  psi?: number; // ψJB or ψJT, °C/W
   thetaJA: number; // °C/W
   thetaJC: number;
   thetaCS: number; // case to sink (interface material)
@@ -13,6 +19,13 @@ export interface JunctionInput {
 }
 
 export function junction(i: JunctionInput) {
+  if (i.mode === 'psijb' || i.mode === 'psijt') {
+    // T_J = T_ref + ψ · P. The reference temperature itself depends on the power, so there is no maximum
+    // power to give from it alone.
+    const psi = i.psi ?? 0;
+    const tj = (i.refC ?? 0) + i.powerW * psi;
+    return { theta: psi, tj, maxPower: NaN, margin: i.tjMaxC - tj, nodes: null, thetaSARequired: NaN };
+  }
   const theta = i.mode === 'ja' ? i.thetaJA : i.thetaJC + i.thetaCS + i.thetaSA;
   const tj = i.ambientC + i.powerW * theta;
   const maxPower = (i.tjMaxC - i.ambientC) / theta;
