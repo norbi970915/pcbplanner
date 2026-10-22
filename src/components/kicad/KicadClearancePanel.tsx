@@ -7,7 +7,7 @@ import { Panel, Row, Segmented } from '../ui';
 import { parseNumericInput } from '../../lib/numericInput';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
-import { decodeVolts, encodeVolts, type ClearanceFinding, type ClearanceResult, type OuterCoating } from '../../lib/kicadClearance';
+import { decodeVolts, encodeVolts, type ClearanceFinding, type OuterCoating } from '../../lib/kicadClearance';
 import { checkClearanceInWorker } from '../../lib/kicadClearanceClient';
 import { netVoltage } from '../../lib/kicadPower';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
@@ -16,6 +16,7 @@ import { BoardView, layerColor, type BoardMarker, type BoardViewApi } from './Bo
 import { useFullScreen } from './useFullScreen';
 import { KicadPanelSettings } from './KicadPanelSettings';
 import type { KicadAnalysisInputs, SetKicadInputs } from './useKicadAnalysis';
+import { reviewInputKey, useKicadReviewState } from '../../state/kicadReviewState';
 
 const mm = (v: number) => (Number.isFinite(v) ? v.toFixed(v < 1 ? 3 : 2) : '–');
 const findingKey = (f: ClearanceFinding) => `${f.net}|${f.other}|${f.layer}`;
@@ -26,7 +27,8 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
   const [selected, setSelected] = useState('');
-  const [res, setRes] = useState<{ board: object; key: string; result?: ClearanceResult; error?: string } | null>(null);
+  const reviewKey = reviewInputKey('clearance', p);
+  const [res, setRes, inputsCurrent] = useKicadReviewState(data.board, 'clearance', reviewKey);
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -61,20 +63,19 @@ export function KicadClearancePanel({ data, p, set }: { data: KicadProjectData; 
   const key = `${encodeVolts(volts)}|${outer}`;
   useEffect(() => {
     if (!d || !volts.length) return;
-    let live = true;
+    if (inputsCurrent && res?.board === data.board && res.key === key) return;
     const t = setTimeout(() => {
       setRes({ board: data.board, key });
       checkClearanceInWorker({ d: { copper: d.copper, tracks: d.tracks, vias: d.vias, pads: d.pads, fills: d.fills }, volts, outer }).then(
-        (result) => live && setRes({ board: data.board, key, result }),
-        (e: unknown) => live && setRes({ board: data.board, key, error: e instanceof Error ? e.message : String(e) }),
+        (result) => setRes(prev => prev?.key === key ? { board: data.board, key, result } : prev),
+        (e: unknown) => setRes(prev => prev?.key === key ? { board: data.board, key, error: e instanceof Error ? e.message : String(e) } : prev),
       );
     }, 300);
     return () => {
-      live = false;
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, key]);
+  }, [d, key, reviewKey]);
   const now = res?.board === data.board && res.key === key ? res : null;
   const result = now?.result;
 

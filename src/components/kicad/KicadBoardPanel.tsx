@@ -8,6 +8,8 @@ import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
 import { itemReasons, netLeaf } from '../../lib/kicadRouting';
+import { routingReviewSteps } from '../../lib/kicadReview';
+import { Link } from 'react-router-dom';
 import { statusLabel, type CheckedItem } from '../../lib/kicadRoutingSolve';
 import { BoardView, layerColor, type BoardMarker, type BoardViewApi } from './BoardView';
 import { useFullScreen } from './useFullScreen';
@@ -31,7 +33,7 @@ export function findingMarkers(checked: CheckedItem[]): BoardMarker[] {
 
 const tone = (s: string) => (s === 'fail' ? 'text-[var(--err-line)]' : s === 'warn' ? 'text-[var(--accent-ink)]' : 'text-ok');
 
-export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: { data: KicadProjectData; checked: CheckedItem[]; selected: string; onSelect: (key: string) => void; solving: boolean }) {
+export function KicadBoardPanel({ data, checked, selected, onSelect, solving, onReloadBoard }: { data: KicadProjectData; checked: CheckedItem[]; selected: string; onSelect: (key: string) => void; solving: boolean; onReloadBoard: () => void }) {
   const [drawing, setDrawing] = useState<{ board: object; d?: BoardDrawing; error?: string } | null>(null);
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [net, setNet] = useState('');
@@ -63,6 +65,8 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
   );
   const markers = useMemo(() => findingMarkers(checked).map((m) => ({ ...m, selected: m.item === selected })), [checked, selected]);
   const current = checked.find((c) => itemKey(c) === selected);
+  const findingIndex = problems.findIndex(c => itemKey(c) === selected);
+  const selectFinding = (index: number) => { onSelect(itemKey(problems[index])); setNet(''); setNote(''); };
   const highlight = useMemo(() => new Set(current ? itemNets(current) : net ? [net] : []), [current, net]);
 
   // the area of the selected pair: its copper and its markers, with a millimetre around it
@@ -142,6 +146,11 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
         }
       >
         <div>
+          {problems.length > 0 && <nav aria-label="Routing findings" className="mb-2 flex flex-wrap items-center gap-2">
+            <span>{findingIndex < 0 ? `${problems.length} findings` : `Finding ${findingIndex + 1} of ${problems.length}`}</span>
+            <button type="button" className="btn" disabled={findingIndex <= 0} onClick={() => selectFinding(findingIndex - 1)}>Previous finding</button>
+            <button type="button" className="btn" disabled={findingIndex === problems.length - 1} onClick={() => selectFinding(findingIndex + 1)}>{findingIndex < 0 ? 'First finding' : 'Next finding'}</button>
+          </nav>}
           <p className="mb-1 font-semibold">
             Findings:{' '}
             {problems.length
@@ -184,6 +193,12 @@ export function KicadBoardPanel({ data, checked, selected, onSelect, solving }: 
                   <li key={i}>{r}</li>
                 ))}
               </ul>
+              {(current.res.overall === 'warn' || current.res.overall === 'fail') && <div className="mt-3 space-y-2 border-t border-line pt-3">
+                <h3 className="font-semibold">Suggested next steps</h3>
+                <ol className="list-decimal space-y-1 pl-5 text-muted">{routingReviewSteps(current.res).map(step => <li key={step}>{step}</li>)}</ol>
+                <p className="text-muted">Use <Link to="/impedance">Impedance</Link>, <Link to="/timing">Delay &amp; timing</Link> or <Link to="/trace-loss">Trace loss</Link> with the active project to compare a proposed change. Edit the routing in KiCad, save, then recheck the corrected board here.</p>
+                <button type="button" className="btn" onClick={onReloadBoard}>Load corrected board</button>
+              </div>}
             </>
           ) : net ? (
             <p>

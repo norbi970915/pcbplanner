@@ -8,6 +8,7 @@ import { mixedIndex, toMixedMode, type MixedNetwork, type PairConvention } from 
 import { decimateMinMax, groupDelay, lowerIndex, magnitudeDb, phaseDeg, svgPath, term, unwrappedPhase, valueAt, type Trace } from '../lib/sparamTrace';
 import { impedanceFromRho, lowPassStep, stepRiseTime } from '../lib/tdr';
 import { MAX_FILE_CHARS, MAX_PORTS, parseTouchstone, portsFromFileName, type Matrices, type Network } from '../lib/touchstone';
+import { SPARAMETER_EXAMPLES, sparameterExampleText, type SParameterExampleId } from '../lib/sparameterExamples';
 import { fmt } from '../lib/units';
 import { useLocation } from 'react-router-dom';
 import { useTrackedState } from '../state/useTrackedState';
@@ -342,6 +343,7 @@ function TraceGrid({ params, ports, selected, onToggle, labels }: { params: Para
 interface Loaded {
   net: Network;
   name: string;
+  example?: SParameterExampleId;
 }
 
 export default function SParameterViewer() {
@@ -354,7 +356,7 @@ export default function SParameterViewer() {
   const fileInput = useRef<HTMLInputElement>(null);
   const readSeq = useRef(0);
 
-  const importFile = async (file: File) => {
+  const importFile = async (file: File, example?: SParameterExampleId) => {
     const id = ++readSeq.current;
     setError(null);
     setBusy(true);
@@ -364,7 +366,8 @@ export default function SParameterViewer() {
       if (id !== readSeq.current) return;
       const net = parseTouchstone(text, { ports: portsFromFileName(file.name) });
       if (id !== readSeq.current) return;
-      replaceData({ net, name: file.name });
+      replaceData({ net, name: file.name, example });
+      if (example) set({ ...DEFAULTS, view: example === 'differential' ? 'mm' : 'se', tr: '2.1,1.1', mt: 'dd21,dd11,cd21', gd: example === 'differential' ? 'dd21' : '2.1', tdr: example === 'differential' ? 'dd11' : '1.1' });
     } catch (e) {
       if (id === readSeq.current) {
         replaceData(null);
@@ -695,6 +698,10 @@ export default function SParameterViewer() {
             <span className="min-w-0 break-all text-muted">{busy ? 'Reading…' : data?.name || 'or drop a file anywhere on this page'}</span>
           </div>
           <p className="text-muted">The file stays in this browser tab. Touchstone 1.0, 1.1, 2.0 and 2.1; S-, Y- and Z-parameters in RI, MA or DB; 1 to {MAX_PORTS} ports; up to {MAX_FILE_CHARS / 1e6} MB.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted">Explore with an example:</span>
+            {(['two-port', 'differential'] as const).map(id => <button type="button" key={id} className="btn" disabled={busy} onClick={() => void importFile(new File([sparameterExampleText(id)], SPARAMETER_EXAMPLES[id].name, { type: 'text/plain' }), id)}>{id === 'two-port' ? 'Try 2-port example' : 'Try differential example'}</button>)}
+          </div>
           {net && (
             <p className="text-faint break-all">
               {net.ports}-port · {fmtFreq(fMin)}–{fmtFreq(fMax)} · {net.freq.length.toLocaleString('en-US')} points · version {net.version} · {net.parameter}-parameters, {net.format} · {net.matrix} matrix
@@ -706,6 +713,15 @@ export default function SParameterViewer() {
       </Panel>
       <Notes kind="error" items={error ? [error] : []} />
       <Notes items={notes} />
+      {data?.example && <Panel title={SPARAMETER_EXAMPLES[data.example].title}>
+        <div className="space-y-3 px-3 py-3">
+          <p className="text-muted">{SPARAMETER_EXAMPLES[data.example].description}</p>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {(['transmission', 'reflection', 'delay', 'tdr'] as const).map(key => <div key={key}><dt className="font-semibold">{key === 'tdr' ? 'Time-domain impedance' : key === 'delay' ? 'Group delay' : key === 'transmission' ? 'Transmission' : 'Reflection'}</dt><dd className="text-muted">{SPARAMETER_EXAMPLES[data.example!][key]}</dd></div>)}
+          </dl>
+          <p className="text-faint">These notes describe the supplied example settings. Change the marker and traces to explore; click the example button again to restore its settings.</p>
+        </div>
+      </Panel>}
       {net && src && (
         <>
           {selected.length > 0 && (

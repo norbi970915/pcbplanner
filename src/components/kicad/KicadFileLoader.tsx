@@ -136,5 +136,5 @@ export function useKicadFileLoader(onExampleLoaded?: () => void) {
   );
 
   const errors = [kp.error, dropError].filter((x): x is string => !!x);
-  return { kp, dropZone, inputs, busy, errors };
+  return { kp, dropZone, inputs, busy, errors, chooseBoard: () => fileInput.current?.click() };
 }

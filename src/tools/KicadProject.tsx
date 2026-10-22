@@ -5,6 +5,7 @@ import { ToolPage } from '../components/ToolPage';
 import { Notes, Panel, Section } from '../components/ui';
 import { AnalysisMethod } from '../components/kicad/AnalysisMethod';
 import { KicadBoardPanel } from '../components/kicad/KicadBoardPanel';
+import { KicadCheckOverview } from '../components/kicad/KicadCheckOverview';
 import { KicadPowerPanel } from '../components/kicad/KicadPowerPanel';
 import { KicadThermalPanel } from '../components/kicad/KicadThermalPanel';
 import { KicadClearancePanel } from '../components/kicad/KicadClearancePanel';
@@ -182,7 +183,7 @@ function UseInPanel() {
 
 export default function KicadProject() {
   const [p, set, reset] = useUrlState(KICAD_ANALYSIS_DEFAULTS);
-  const { kp, dropZone, inputs, busy, errors: loadErrors } = useKicadFileLoader(() => set(EXAMPLE_SCENARIO));
+  const { kp, dropZone, inputs, busy, errors: loadErrors, chooseBoard } = useKicadFileLoader(() => set(EXAMPLE_SCENARIO));
   const data = kp.data;
   const a = useKicadAnalysis(data, p, set);
   const { calc, unit, L } = a;
@@ -266,7 +267,7 @@ export default function KicadProject() {
         </nav>
       )}
       {data && p.view === 'board' && calc && (
-        <KicadBoardPanel data={data} checked={a.routingCheck.checked} solving={a.routingCheck.progress.done < a.routingCheck.progress.total} selected={p.item} onSelect={(item) => set({ item })} />
+        <KicadBoardPanel data={data} checked={a.routingCheck.checked} solving={a.routingCheck.progress.done < a.routingCheck.progress.total} selected={p.item} onSelect={(item) => set({ item })} onReloadBoard={chooseBoard} />
       )}
       {data && p.view === 'board' && !calc && <Notes items={['The board view needs the stackup of the board: load a board saved with KiCad 6 or later.']} />}
       {data && p.view === 'power' && <KicadPowerPanel data={data} p={p} set={set} />}
@@ -274,14 +275,7 @@ export default function KicadProject() {
       {data && p.view === 'clearance' && <KicadClearancePanel data={data} p={p} set={set} />}
       {data && !['board', 'power', 'thermal', 'clearance'].includes(p.view) && (
         <>
-          <Panel title="Check summary" allowInvalid>
-            <div className="flex flex-wrap items-center gap-3 px-3 py-2">
-              <b>{a.routingCheck.checked.filter(c => c.res.overall === 'fail').length} routing failures · {a.routingCheck.checked.filter(c => c.res.overall === 'warn').length} warnings</b>
-              <span className="text-muted">{a.solving || a.routingCheck.progress.done < a.routingCheck.progress.total ? 'Checks are still running…' : `${a.routingCheck.checked.filter(c => c.res.overall === 'ok').length} routed items pass the checks performed.`}</span>
-              <button type="button" className="btn" onClick={() => { const first = a.routingCheck.checked.find(c => c.res.overall === 'fail') ?? a.routingCheck.checked.find(c => c.res.overall === 'warn'); set({ view: 'board', item: first ? `${first.group.key}|${first.item.name}` : '' }); }}>Review on board</button>
-            </div>
-            <p className="px-3 pb-2 text-faint">Power, Thermal and Clearance use the operating conditions you enter in their tabs. An unconfigured check is not a pass.</p>
-          </Panel>
+          <KicadCheckOverview data={data} a={a} p={p} set={set} />
           <Panel title="Project" allowInvalid>
             <ProjectHeader data={data} persisted={kp.persisted} storageNote={kp.storageNote} onClose={close} />
             <div className="hidden px-3 pb-3 lg:block">{dropZone(true)}</div>

@@ -9,7 +9,7 @@ import { netLeaf } from '../../lib/kicadRouting';
 import type { BoardDrawing } from '../../lib/kicadDrawing';
 import { projectDrawing } from '../../lib/kicadDrawingClient';
 import { encodeNets, useZoneFill, ZoneFillNote } from './useZoneFill';
-import { decodeSources, encodeSources, type Air, type ThermalResult } from '../../lib/kicadThermal';
+import { decodeSources, encodeSources, type Air } from '../../lib/kicadThermal';
 import { solveThermalInWorker } from '../../lib/kicadThermalClient';
 import type { KicadProjectData } from '../../lib/kicadProjectQueries';
 import { BoardView, HEAT_GRADIENT, type BoardHeat, type BoardViewApi } from './BoardView';
@@ -17,6 +17,7 @@ import { settingsFor } from '../../lib/kicadPowerSettings';
 import { useFullScreen } from './useFullScreen';
 import { KicadPanelSettings } from './KicadPanelSettings';
 import type { KicadAnalysisInputs, SetKicadInputs } from './useKicadAnalysis';
+import { reviewInputKey, useKicadReviewState } from '../../state/kicadReviewState';
 
 const num = (v: number, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 const PLATING_MM = 0.025;
@@ -24,8 +25,7 @@ const PLATING_MM = 0.025;
 export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p: KicadAnalysisInputs; set: SetKicadInputs }) {
   const [drawing, setDrawing] = useState<{ board: object; d?: BoardDrawing; error?: string } | null>(null);
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
-  const [sol, setSol] = useState<{ board: object; key: string; ambient: number; result?: ThermalResult; error?: string; solving?: boolean } | null>(null);
-  const [run, setRun] = useState(0); // pressing Solve counts up; a solve runs only then
+  const [sol, setSol] = useKicadReviewState(data.board, 'thermal', reviewInputKey('thermal', p));
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -67,35 +67,27 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
   }, [scenario, d, data, p.pdt, p.tamb]);
   const withLoss = p.tloss && lossRequests.length > 0;
   const key = `${encodeSources(sources)}|${p.tamb}|${p.tair}|${p.th}|${p.teps}|${p.tkxy}|${p.tkz}|${withLoss ? `${p.pnet}|${p.psrc}|${p.ploads}|${p.pret}|${p.pdt}` : ''}|${zf.key}`;
-  useEffect(() => {
-    if (!run || !d || !settings || (!sources.some((s) => s.watts > 0) && !withLoss)) return;
-    let live = true;
-    const t = setTimeout(() => {
-      setSol((prev) => ({ board: data.board, key, ambient: p.tamb, result: prev?.board === data.board ? prev.result : undefined, solving: true }));
-      solveThermalInWorker({
-        d: { copper: d.copper, outline: d.outline, tracks: d.tracks, vias: d.vias, fills: d.fills, pads: d.pads, parts: d.parts },
-        thickness: settings.thickness,
-        layerZ: settings.layerZ,
-        boardThickness: data.board.thickness ?? 1.6,
-        sources: sources.map((s) => ({ ref: s.ref, watts: s.watts })),
-        copperLoss: withLoss ? lossRequests : undefined,
-        ambientC: p.tamb,
-        air,
-        emissivity: p.teps,
-        kXY: p.tkxy,
-        kZ: p.tkz,
-        platingMm: PLATING_MM,
-      }).then(
-        (result) => live && setSol({ board: data.board, key, ambient: p.tamb, result }),
-        (e: unknown) => live && setSol({ board: data.board, key, ambient: p.tamb, error: e instanceof Error ? e.message : String(e) }),
-      );
-    }, 0);
-    return () => {
-      live = false;
-      clearTimeout(t);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run]);
+  const solve = () => {
+    if (!d || !settings || (!sources.some((s) => s.watts > 0) && !withLoss)) return;
+    setSol((prev) => ({ board: data.board, key, ambient: p.tamb, result: prev?.board === data.board ? prev.result : undefined, solving: true }));
+    solveThermalInWorker({
+      d: { copper: d.copper, outline: d.outline, tracks: d.tracks, vias: d.vias, fills: d.fills, pads: d.pads, parts: d.parts },
+      thickness: settings.thickness,
+      layerZ: settings.layerZ,
+      boardThickness: data.board.thickness ?? 1.6,
+      sources: sources.map((s) => ({ ref: s.ref, watts: s.watts })),
+      copperLoss: withLoss ? lossRequests : undefined,
+      ambientC: p.tamb,
+      air,
+      emissivity: p.teps,
+      kXY: p.tkxy,
+      kZ: p.tkz,
+      platingMm: PLATING_MM,
+    }).then(
+      (result) => setSol(prev => prev?.key === key ? { board: data.board, key, ambient: p.tamb, result } : prev),
+      (e: unknown) => setSol(prev => prev?.key === key ? { board: data.board, key, ambient: p.tamb, error: e instanceof Error ? e.message : String(e) } : prev),
+    );
+  };
   // the last solve stays on the board until the next one; it is marked out of date when the inputs change
   const now = sol?.board === data.board ? sol : null;
   const solving = !!now?.solving;
@@ -227,7 +219,7 @@ export function KicadThermalPanel({ data, p, set }: { data: KicadProjectData; p:
         </p>
       )}
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <button type="button" className="btn btn-primary" disabled={solving || zf.busy || (!sources.some((x) => x.watts > 0) && !withLoss)} onClick={() => { setSol(prev => ({ board: data.board, key, ambient: p.tamb, result: prev?.board === data.board ? prev.result : undefined, solving: true })); setRun(r => r + 1); }}>
+        <button type="button" className="btn btn-primary" disabled={solving || zf.busy || (!sources.some((x) => x.watts > 0) && !withLoss)} onClick={solve}>
           {solving ? 'Solving…' : 'Solve'}
         </button>
         <button

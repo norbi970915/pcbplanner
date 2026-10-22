@@ -21,7 +21,6 @@ import {
   powerNets,
   quickCheck,
   requiredWidth,
-  type DcResult,
   type TrackLoad,
   type ViaLoad,
 } from '../../lib/kicadPower';
@@ -34,6 +33,7 @@ import { useFullScreen } from './useFullScreen';
 import { preferredLoads, spreadSelectedLoads } from '../../lib/kicadLoadSelection';
 import { KicadPanelSettings } from './KicadPanelSettings';
 import type { KicadAnalysisInputs, SetKicadInputs } from './useKicadAnalysis';
+import { reviewInputKey, useKicadReviewState } from '../../state/kicadReviewState';
 
 /** Green within half the allowed rise, amber up to it, red above it. */
 const riseColor = (dT: number, limit: number) => (dT > limit ? '#f85149' : dT > limit / 2 ? '#d29922' : '#3fb950');
@@ -44,8 +44,10 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const [drawing, setDrawing] = useState<{ board: object; d?: BoardDrawing; error?: string } | null>(null);
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const [focus, setFocus] = useState<[number, number, number, number] | null>(null);
-  const [dc, setDc] = useState<{ board: object; key: string; result?: DcResult; error?: string } | null>(null);
-  const [ret, setRet] = useState<{ board: object; key: string; result?: DcResult; error?: string } | null>(null);
+  const reviewKey = reviewInputKey('power', p);
+  const [dc, setDc, dcInputsCurrent] = useKicadReviewState(data.board, 'supply', reviewKey);
+  const [ret, setRet, retInputsCurrent] = useKicadReviewState(data.board, 'return', reviewKey);
+  const [, setQuick] = useKicadReviewState(data.board, 'quick', reviewKey);
   const view = useRef<BoardViewApi>(null);
   const { box, full, toggle: toggleFull } = useFullScreen();
 
@@ -77,25 +79,26 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const volts = p.pv > 0 ? p.pv : netVoltage(net);
 
   const quick = useMemo(() => (nc && settings && mode === 'quick' ? quickCheck(nc, p.pi, settings) : null), [nc, settings, mode, p.pi]);
+  useEffect(() => { if (quick) setQuick({ net, result: quick }); }, [quick, net, setQuick]);
 
   // the DC solve, in a worker, a moment after the inputs settle
   const dcKey = `${net}|${source}|${encodeLoads(loads)}|${p.pdt}|${p.pamb}|${zf.key}`;
+  const returnRequired = p.pret !== 'none' && nets.find(n => n.net === net)?.kind !== 'ground';
   useEffect(() => {
     if (mode !== 'dc' || !nc || !settings || !source || !loads.some((l) => l.amps > 0)) return;
-    let live = true;
+    if (dcInputsCurrent && dc?.board === data.board && dc.key === dcKey) return;
     const t = setTimeout(() => {
-      setDc({ board: data.board, key: dcKey });
+      setDc({ board: data.board, key: dcKey, returnRequired });
       solveDcInWorker({ nc, source, loads, s: settings }).then(
-        (result) => live && setDc({ board: data.board, key: dcKey, result }),
-        (e: unknown) => live && setDc({ board: data.board, key: dcKey, error: e instanceof Error ? e.message : String(e) }),
+        (result) => setDc(prev => prev?.key === dcKey ? { board: data.board, key: dcKey, result, returnRequired } : prev),
+        (e: unknown) => setDc(prev => prev?.key === dcKey ? { board: data.board, key: dcKey, error: e instanceof Error ? e.message : String(e), returnRequired } : prev),
       );
     }, 300);
     return () => {
-      live = false;
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, nc, settings, dcKey]);
+  }, [mode, nc, settings, dcKey, reviewKey]);
   const dcNow = dc?.board === data.board && dc.key === dcKey ? dc : null;
   const solved = dcNow?.result?.ok ? dcNow.result : null;
 
@@ -114,20 +117,19 @@ export function KicadPowerPanel({ data, p, set }: { data: KicadProjectData; p: K
   const retSourceOk = !!returnNet && retRefs.has(source);
   useEffect(() => {
     if (mode !== 'dc' || !retNc || !settings || !retSourceOk || !retLoads.some((l) => l.amps > 0)) return;
-    let live = true;
+    if (retInputsCurrent && ret?.board === data.board && ret.key === retKey) return;
     const t = setTimeout(() => {
       setRet({ board: data.board, key: retKey });
       solveDcInWorker({ nc: retNc, source, loads: retLoads, s: settings }, 'return').then(
-        (result) => live && setRet({ board: data.board, key: retKey, result }),
-        (e: unknown) => live && setRet({ board: data.board, key: retKey, error: e instanceof Error ? e.message : String(e) }),
+        (result) => setRet(prev => prev?.key === retKey ? { board: data.board, key: retKey, result } : prev),
+        (e: unknown) => setRet(prev => prev?.key === retKey ? { board: data.board, key: retKey, error: e instanceof Error ? e.message : String(e) } : prev),
       );
     }, 300);
     return () => {
-      live = false;
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, retNc, settings, retKey, retSourceOk]);
+  }, [mode, retNc, settings, retKey, retSourceOk, reviewKey]);
   const retNow = returnNet && ret?.board === data.board && ret.key === retKey ? ret : null;
   const retSolved = retNow?.result?.ok ? retNow.result : null;
 

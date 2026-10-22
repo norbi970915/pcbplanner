@@ -36,7 +36,7 @@ try {
   await page.getByRole('button', { name: 'Try an example', exact: true }).click();
   await page.getByTestId('example-scenario').waitFor();
   await page.waitForFunction(() => document.body.textContent.includes('routing check done'));
-  check(await page.getByText('1 routing failures', { exact: false }).count() > 0 || (await page.getByRole('heading', { name: 'Check summary' }).locator('..').locator('..').innerText()).includes('1'), 'Example presents a routing summary');
+  check((await page.getByRole('region', { name: 'Routing check', exact: true }).innerText()).includes('1 routing failure'), 'Example presents a routing summary');
   await view('Power'); await idle();
   await rejectBlankNumber('Current of U2, A');
   const power = page.getByTestId('power-summary');
