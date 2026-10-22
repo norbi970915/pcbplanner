@@ -16,6 +16,7 @@ const idle = async () => page.waitForFunction(() => !document.querySelector('[da
 const card = name => page.getByRole('region', { name: name + ' check', exact: true });
 const status = name => card(name).getByRole('status');
 const noOverflow = async label => check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), label + ' has no horizontal overflow');
+const resumeWorker = async route => { try { await route.continue(); } catch (error) { if (!String(error).includes('Route is already handled')) throw error; } };
 try {
   await page.goto(base + '/kicad-project');
   await page.getByRole('button', { name: 'Try an example', exact: true }).click();
@@ -34,8 +35,13 @@ try {
   await view('Power'); await idle(); await view('Overview');
   check(['Estimate ready', 'Needs review'].includes(await status('Power').innerText()), 'Power overview reflects the actual completed solve');
   await view('Power'); await idle();
+  // Hold the new worker so a fast runner cannot finish before the stale-state assertion.
+  let releasePower; const powerGate = new Promise(resolve => { releasePower = resolve; });
+  const powerRoute = async route => { await powerGate; await resumeWorker(route); };
+  await context.route(/kicadPower\.worker/, powerRoute);
   const current = page.getByRole('textbox', { name: 'Current of U2, A', exact: true }); await current.fill('0.3'); await current.press('Tab');
-  await view('Overview'); check(await status('Power').innerText() === 'Out of date', 'Changed load current invalidates the saved Power estimate');
+  try { await view('Overview'); check(['Out of date', 'Running'].includes(await status('Power').innerText()), 'Changed load current invalidates the saved Power estimate'); }
+  finally { releasePower(); await context.unroute(/kicadPower\.worker/, powerRoute); }
   await card('Power').getByRole('button', { name: 'Open Power', exact: true }).click(); await idle(); await view('Overview');
   check(await status('Power').innerText() === 'Estimate ready', 'Opening Power refreshes an outdated estimate');
   await view('Thermal'); await page.getByRole('button', { name: 'Solve', exact: true }).click(); await idle();
@@ -45,8 +51,12 @@ try {
   check(await page.getByTestId('thermal-summary').innerText() === thermal, 'Thermal map and results survive a round trip between tabs');
   const ambient = page.getByRole('textbox', { name: 'Ambient', exact: true }); await ambient.fill('35'); await ambient.press('Tab');
   await view('Overview'); check(await status('Thermal').innerText() === 'Out of date', 'Changed thermal inputs mark the saved result out of date');
+  let releaseThermal; const thermalGate = new Promise(resolve => { releaseThermal = resolve; });
+  const thermalRoute = async route => { await thermalGate; await resumeWorker(route); };
+  await context.route(/kicadThermal\.worker/, thermalRoute);
   await view('Thermal'); await page.getByRole('button', { name: 'Solve', exact: true }).click();
-  await page.locator('[data-result-busy="true"]').first().waitFor({ state: 'attached' }); await view('Overview');
+  try { await page.locator('[data-result-busy="true"]').first().waitFor({ state: 'attached' }); await view('Overview'); check(await status('Thermal').innerText() === 'Running', 'Overview shows a running Thermal solve while its worker is pending'); }
+  finally { releaseThermal(); await context.unroute(/kicadThermal\.worker/, thermalRoute); }
   await status('Thermal').filter({ hasText: 'Estimate ready' }).waitFor({ timeout: 90000 });
   check(true, 'Thermal solve finishes and updates the overview after leaving its tab');
   await view('Clearance'); await idle(); await view('Overview');
@@ -75,6 +85,7 @@ try {
   check((await main().innerText()).includes('100 ps'), '2-port example explains its 100 ps delay');
   const marker = page.getByRole('slider', { name: 'Transmission magnitude against frequency', exact: true });
   await marker.focus(); await marker.press('ArrowRight');
+  await page.waitForFunction(() => Number(document.querySelector('[role="slider"][aria-label="Transmission magnitude against frequency"]')?.getAttribute('aria-valuenow')) > 4e9);
   check(await page.getByRole('textbox', { name: 'Frequency', exact: true }).inputValue() !== '4', 'Example plots support keyboard marker movement');
   await noOverflow('Desktop 2-port example'); await page.screenshot({ path: out + '/two-port-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Try differential example', exact: true }).click();
@@ -85,6 +96,7 @@ try {
   await page.getByRole('button', { name: 'Switch to light theme', exact: true }).click(); await noOverflow('Light differential example');
   await page.screenshot({ path: out + '/differential-light.png' }); await page.getByRole('button', { name: 'Switch to dark theme', exact: true }).click();
   await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  await page.getByRole('heading', { name: 'Differential: see what skew does', exact: true }).waitFor({ state: 'detached' });
   check(await page.getByRole('heading', { name: 'Differential: see what skew does', exact: true }).count() === 0, 'Reset clears the loaded example and annotations');
   await page.getByRole('button', { name: /^Undo/ }).click();
   await page.getByRole('heading', { name: 'Differential: see what skew does', exact: true }).waitFor();
