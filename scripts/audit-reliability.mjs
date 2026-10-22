@@ -125,6 +125,15 @@ try {
     await page.getByRole('button', { name: 'Reset', exact: true }).click();
     check(!await page.locator('main [role="alert"]').count(), 'BGA routing recovers after Reset');
   }
+  await open('/bga-land');
+  const diameter = page.getByLabel('Nominal ball diameter', { exact: true });
+  await diameter.selectOption('custom');
+  check(await diameter.inputValue() === 'custom', 'BGA Other diameter remains selected for custom entry');
+  await page.getByRole('textbox', { name: 'Ball diameter', exact: true }).fill('0.41');
+  await page.keyboard.press('Tab'); await idle();
+  check(await diameter.inputValue() === 'custom', 'Custom BGA entry keeps its explicit selection');
+  await diameter.selectOption('0.5');
+  check(await page.getByRole('textbox', { name: 'Ball diameter', exact: true }).inputValue() === '0.5', 'BGA preset selection replaces the custom diameter');
   for (const route of ['/wire-gauge?t=-250', '/wire-gauge?metal=aluminium&t=-250', '/skin-effect?temp=-250', '/trace-width?amb=-250', '/via?amb=-250', '/trace-loss?temp=-250']) {
     await open(route);
     check((await page.locator('main [role="alert"]').innerText()).includes('positive-resistivity'), route + ' rejects a nonphysical material temperature');

@@ -19,6 +19,7 @@ Audit started on production `f588aa353ea54d74e0c4427aa02c3a611c1ea667`. Fixes an
 - Resistor searches reject unbounded ranges before enumerating E-series values. Feedback Divider reports a numerical-range error instead of exhausting the array limit.
 - VSWR reflection, admittance, delivered power and mismatch/cascade bounds use stable forms of the existing equations at extreme impedances and standing-wave ratios.
 - BGA land and escape-routing results reject nonfinite dimensions and counts beyond exact integer representation, with normal Reset recovery.
+- BGA's “Other…” ball diameter selection remains selected during custom entry; choosing a preset restores its diameter. This mode participates in saved inputs, Undo/Redo and Reset.
 
 ## Verification
 
@@ -29,7 +30,7 @@ The expanded verification adds every individual dropdown option, discovered cond
 Completed regression runs include:
 
 - 37,286 field/state checks across all 63 tools and Home on the production build, with no failed checks.
-- 121 targeted reliability checks plus 139 malformed string parameters, with no browser runtime errors.
+- 121 targeted reliability checks plus 139 malformed string parameters passed before the final BGA selector correction; its three added checks are included in the release handoff's final result.
 - 54 KiCad workflow checks and 430 explicit project handoff checks across all eight receiving tools.
 - 1,629 default action checks, including 569 copy and 205 help actions; the folder chooser's directory-fixture correction passed its separate rerun.
 - 227 additional conditional actions and 814 checks, including mode-specific help, copy, component selection, ply editing and file exports.

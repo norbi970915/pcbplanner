@@ -6,7 +6,7 @@ import { fmt, fromMm } from '../lib/units';
 import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
 
-const DEFAULTS = { ball: 0.4, kind: 'collapsing', pitch: 0.8, w: 0.1, s: 0.1 };
+const DEFAULTS = { ball: 0.4, custom: false, kind: 'collapsing', pitch: 0.8, w: 0.1, s: 0.1 };
 
 export default function BgaLand() {
   const [p, set, reset] = useUrlState(DEFAULTS);
@@ -54,8 +54,8 @@ export default function BgaLand() {
         />
         <SelectField
           label="Nominal ball diameter"
-          value={row ? String(row.ball) : 'custom'}
-          onChange={(v) => v !== 'custom' && set({ ball: Number(v) })}
+          value={p.custom || !row ? 'custom' : String(row.ball)}
+          onChange={(v) => set(v === 'custom' ? { custom: true } : { custom: false, ball: Number(v) })}
           options={[...table.map((r) => ({ value: String(r.ball), label: `${r.ball} mm` })), { value: 'custom', label: 'Other…' }]}
           width={100}
         />
