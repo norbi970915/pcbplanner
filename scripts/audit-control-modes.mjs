@@ -198,7 +198,8 @@ if (process.env.ACTION_REPORTS) {
         await replay(route, actions); items = await inventory();
         for (const item of items.filter(c => ['select','radio','checkbox','view','toggle'].includes(c.kind))) {
           const values = item.kind === 'select' ? item.options : item.kind === 'checkbox' || item.kind === 'toggle' ? [!item.checked] : item.checked ? [] : [true];
-          const library = item.kind === 'select' && (item.options.length > 8 || item.label === 'unit' || /Stackup|Material|^Layer$/.test(item.label));
+          const membership = route === '/stackup' && item.kind === 'checkbox';
+          const library = membership || item.kind === 'select' && (item.options.length > 8 || item.label === 'unit' || /Stackup|Material|^Layer$/.test(item.label));
           const actionKey = value => (library ? '' : schema(items)) + '|' + item.key + '|' + item.options?.join(',') + '|' + value;
           const pendingValues = values.filter(value => !testedActions.has(actionKey(value)));
           if (!pendingValues.length) continue;
@@ -214,11 +215,14 @@ if (process.env.ACTION_REPORTS) {
             await inventory(); const target = control(item.key);
             if (item.kind === 'select') await target.selectOption(optionIndex === undefined ? value : { index: optionIndex }); else if (item.kind === 'checkbox') await target.setChecked(value); else await target.click();
             await idle(); await expand(); await clean(errors, item.label + '=' + value);
+            if (item.kind === 'checkbox') check(await target.isChecked() === value, item.label + ' accepts its checked state');
             const next = await inventory(), signature = schema(next);
             if (item.kind === 'select') { const selected=await target.inputValue(); check(optionIndex !== undefined ? await target.evaluate((el, i) => el.selectedIndex === i, optionIndex) : selected === value || (item.label.startsWith('Apply ') && selected===''), item.label + ' accepts option ' + value); }
             entry.selections.push({ state, label: item.label, kind: item.kind, value });
             if (entry.selections.length % 10 === 0) console.log('    ' + entry.selections.length + ' options checked');
-            if (!discovered.has(signature)) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
+            // Membership toggles are checked individually. Active-region selection exposes each
+            // region's editable cells; enumerating every subset would duplicate those field types.
+            if (!membership && !discovered.has(signature)) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
           }
         }
         writeFileSync(out + '/progress.json', JSON.stringify(report, null, 2));
