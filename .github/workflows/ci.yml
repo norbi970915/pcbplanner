@@ -72,6 +72,8 @@ jobs:
           npx vite preview --port 4173 --strictPort &
           for i in $(seq 1 60); do curl -sf http://localhost:4173/ > /dev/null && exit 0; sleep 1; done
           echo "preview server did not start" && exit 1
+      - name: Review and example regressions
+        run: node scripts/audit-review-examples.mjs http://localhost:4173
       - name: Browser suite
         run: |
           if [ -z "$ONLY" ]; then unset ONLY; fi
@@ -82,8 +84,6 @@ jobs:
         run: node scripts/audit-kicad-workflow.mjs http://localhost:4173
       - name: Reliability regressions
         run: node scripts/audit-reliability.mjs http://localhost:4173
-      - name: Review and example regressions
-        run: node scripts/audit-review-examples.mjs http://localhost:4173
       - name: Full conditional input coverage
         if: github.event_name == 'schedule' || inputs.full
         run: node scripts/audit-control-modes.mjs http://localhost:4173

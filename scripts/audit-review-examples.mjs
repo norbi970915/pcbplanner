@@ -111,4 +111,6 @@ try {
   await page.screenshot({ path: out + '/failure.png', fullPage: true }).catch(() => {});
   writeFileSync(out + '/report.json', JSON.stringify({ base, url: page.url(), passed: false, checks, errors, error: String(error) }, null, 2));
   console.error(error); process.exitCode = 1;
+  const diagnostic = `${String(error)} | Last passed: ${checks.at(-1) ?? 'none'} | URL: ${page.url()}`;
+  console.error('::error title=Review and example regression::' + diagnostic.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'));
 } finally { await browser.close(); }
