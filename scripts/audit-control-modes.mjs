@@ -68,7 +68,7 @@ async function replay(route, actions) {
     if (await reset.count()) {
       await reset.click();
       const close = page.getByRole('button', { name: 'Close project', exact: true });
-      if (await close.count()) { await close.click(); await close.waitFor({ state: 'hidden' }); }
+      if (await close.count()) { page.once('dialog', dialog => dialog.accept()); await close.click(); await close.waitFor({ state: 'hidden' }); }
       reusedProjectPage = true;
     }
   }
