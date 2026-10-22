@@ -88,6 +88,11 @@ jobs:
       - name: All tool actions
         if: github.event_name == 'schedule' || inputs.full
         run: node scripts/audit-actions.mjs http://localhost:4173
+      - name: Conditional tool actions
+        if: github.event_name == 'schedule' || inputs.full
+        env:
+          ACTION_REPORTS: dist-check/control-modes/report.json
+        run: node scripts/audit-control-modes.mjs http://localhost:4173 dist-check/conditional-actions
       - name: Active project handoffs
         if: github.event_name == 'schedule' || inputs.full
         run: node scripts/audit-project-handoffs.mjs http://localhost:4173
@@ -104,5 +109,6 @@ jobs:
             dist-check/reliability
             dist-check/control-modes
             dist-check/actions
+            dist-check/conditional-actions
             dist-check/project-handoffs
           retention-days: 7

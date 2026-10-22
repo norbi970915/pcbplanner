@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const base = (process.argv[2] ?? 'http://127.0.0.1:5186').replace(/\/$/, '');
 const out = process.argv[3] ?? 'dist-check/control-modes'; mkdirSync(out, { recursive: true });
@@ -54,7 +55,9 @@ async function clean(errors, step) {
   check(!/\bNaN\b|\bInfinity\b|\bundefined\b|\[object Object\]/.test(text), step + ': nonfinite or internal text');
 }
 async function replay(route, actions) {
-  await page.evaluate(path => { sessionStorage.removeItem('pcbplanner:tool:' + path); sessionStorage.removeItem('pcbplanner:comparison:' + path); }, route);
+  // Each replay uses an isolated test context. Clear tool-specific view/draft keys too:
+  // the stack manager persists its selected tab independently of its input URL.
+  if (page.url().startsWith(base)) await page.evaluate(() => sessionStorage.clear());
   await page.goto(base + route, { waitUntil: 'networkidle' }); await idle(); await expand();
   if (route === '/kicad-project') {
     const example = page.getByRole('button', { name: 'Try an example', exact: true });
@@ -76,13 +79,79 @@ async function replay(route, actions) {
   }
   for (const action of actions) {
     await inventory(); const target = control(action.key);
-    if (action.kind === 'select') await target.selectOption(action.value);
+    if (action.kind === 'select') await target.selectOption(action.optionIndex === undefined ? action.value : { index: action.optionIndex });
     else if (action.kind === 'checkbox') await target.setChecked(action.value);
     else await target.click();
     await idle(); await expand();
   }
 }
-try {
+// Reuse recorded reachable layouts to exercise buttons absent from the default page.
+if (process.env.ACTION_REPORTS) {
+  const byRoute = new Map();
+  for (const filename of process.env.ACTION_REPORTS.split(';')) {
+    for (const entry of JSON.parse(readFileSync(filename, 'utf8')).routes) {
+      const layouts = byRoute.get(entry.route) ?? []; layouts.push(...entry.layouts); byRoute.set(entry.route, layouts);
+    }
+  }
+  try {
+    for (const [route, layouts] of byRoute) {
+      if (process.env.ONLY && !routes.includes(route)) continue;
+      current = route;
+      const initial = new Set(layouts[0]?.controls.filter(c => c.kind === 'button').map(c => c.key));
+      const seen = new Set(), plans = [];
+      for (const layout of layouts) for (const item of layout.controls.filter(c => c.kind === 'button')) {
+        if (seen.has(item.key) || /^(Undo |Redo |▼|Go to input|Reset$|Report$|Favorite$|Compare$)/.test(item.label)) continue;
+        if (initial.has(item.key) && !['/gerber-viewer', '/kicad-project', '/s-parameter-viewer'].includes(route)) continue;
+        seen.add(item.key); plans.push({ actions: layout.actions, item });
+      }
+      if (!plans.length) continue;
+      console.log('ACTIONS ' + route + ': ' + plans.length);
+      const entry = { route, actions: [], failures: [] }; report.routes.push(entry);
+      const context = await browser.newContext({ viewport: { width: 1600, height: 1050 }, serviceWorkers: 'block', acceptDownloads: true });
+      await context.addInitScript(() => localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', version: 2, updatedAt: new Date().toISOString() })));
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+      page = await context.newPage(); page.setDefaultTimeout(15000); const errors = [];
+      page.on('pageerror', e => errors.push(e.message)); page.on('dialog', d => d.accept());
+      try {
+        for (const plan of plans) {
+          try {
+            await replay(route, plan.actions); await inventory(); const target = control(plan.item.key);
+            if (!await target.count()) throw new Error('Recorded button is absent: ' + plan.item.label);
+            const isHelp = await target.evaluate(el => el.classList.contains('field-help-trigger'));
+            const isCopy = await target.evaluate(el => el.classList.contains('copy-result'));
+            if (isCopy) {
+              const expected = await target.evaluate(el => {
+                const row = el.closest('[data-copy-result]'), text = selector => (row.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+                const unit = text('[data-copy-unit]'); return text('[data-copy-label]') + ': ' + text('[data-copy-value]') + (unit ? ' ' + unit : '');
+              });
+              await target.click(); await page.waitForFunction(expected => navigator.clipboard.readText().then(value => value === expected), expected);
+              check(true, plan.item.label + ' copies the current conditional result');
+            } else if (isHelp) {
+              await target.click(); const popup = page.locator('.field-help-popover:visible'); await popup.waitFor();
+              check((await popup.innerText()).length > 15, plan.item.label + ' explains the conditional field');
+              await page.keyboard.press('Escape'); await popup.waitFor({ state: 'hidden' });
+            } else {
+              const chooser = page.waitForEvent('filechooser', { timeout: 400 }).catch(() => null);
+              const download = page.waitForEvent('download', { timeout: 1000 }).catch(() => null);
+              await target.click(); const picker = await chooser;
+              if (picker) await picker.setFiles(await picker.element().getAttribute('webkitdirectory') !== null ? resolve('public/examples') : []);
+              const saved = await download; if (saved) check(readFileSync(await saved.path()).length > 0, plan.item.label + ' saves a nonempty file');
+              await idle(); if (await page.getByRole('dialog').count()) await page.keyboard.press('Escape');
+            }
+            await clean(errors, plan.item.label); entry.actions.push(plan.item.label); console.log('  PASS ' + plan.item.label);
+          } catch (error) {
+            const failure = { route, action: plan.item.label, error: error.stack }; entry.failures.push(failure); report.failures.push(failure);
+            console.error('FAIL ' + route + ': ' + plan.item.label + ': ' + error.message);
+            await page.screenshot({ path: out + '/' + route.slice(1) + '-action-failure.png' }).catch(() => {});
+          }
+        }
+      } finally { await context.close(); writeFileSync(out + '/report.json', JSON.stringify(report, null, 2)); }
+    }
+  } finally { await browser.close(); }
+  report.finished = new Date().toISOString(); writeFileSync(out + '/report.json', JSON.stringify(report, null, 2));
+  console.log(JSON.stringify({ routes: report.routes.length, actions: report.routes.reduce((n, r) => n + r.actions.length, 0), checks: report.checks, failures: report.failures.length }));
+  process.exitCode = report.failures.length ? 1 : 0;
+} else try {
   for (const route of routes) {
     current = route; console.log('ROUTE ' + route);
     const context = await browser.newContext({ viewport: { width: 1600, height: 1050 }, serviceWorkers: 'block', acceptDownloads: true });
@@ -104,6 +173,7 @@ try {
         for (const item of items.filter(c => ['text','number','range','textarea','color'].includes(c.kind))) {
           // Check repeated fields separately; the same named field in a distinct layout is checked again.
           const fieldKey = state + '|' + item.key; if (testedFields.has(fieldKey)) continue; testedFields.add(fieldKey);
+          await inventory();
           const input = control(item.key), original = await input.inputValue();
           if (item.kind === 'range' || item.kind === 'color') {
             if (item.kind === 'range') { await input.focus(); await input.press('Home'); await idle(); await clean(errors,item.label+' minimum'); await input.press('End'); await idle(); await clean(errors,item.label+' maximum'); }
@@ -137,14 +207,18 @@ try {
             // Library lists and unit prefixes are tested exhaustively once per option set;
             // small mode selectors are revisited for each distinct exposed input layout.
             testedActions.add(actionKey(value));
+            // Selecting a KiCad layer can rename that very control. Start each option from the recorded layout.
+            if (route === '/kicad-project') await replay(route, actions);
+            // Gerber layer IDs belong to the imported file instance and change on replay.
+            const optionIndex = route === '/gerber-viewer' && item.kind === 'select' ? item.options.indexOf(value) : undefined;
             await inventory(); const target = control(item.key);
-            if (item.kind === 'select') await target.selectOption(value); else if (item.kind === 'checkbox') await target.setChecked(value); else await target.click();
+            if (item.kind === 'select') await target.selectOption(optionIndex === undefined ? value : { index: optionIndex }); else if (item.kind === 'checkbox') await target.setChecked(value); else await target.click();
             await idle(); await expand(); await clean(errors, item.label + '=' + value);
-            if (item.kind === 'select') check(await target.inputValue() === value, item.label + ' accepts option ' + value);
             const next = await inventory(), signature = schema(next);
+            if (item.kind === 'select') { const selected=await target.inputValue(); check(optionIndex !== undefined ? await target.evaluate((el, i) => el.selectedIndex === i, optionIndex) : selected === value || (item.label.startsWith('Apply ') && selected===''), item.label + ' accepts option ' + value); }
             entry.selections.push({ state, label: item.label, kind: item.kind, value });
             if (entry.selections.length % 10 === 0) console.log('    ' + entry.selections.length + ' options checked');
-            if (!discovered.has(signature)) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value }]); }
+            if (!discovered.has(signature)) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
           }
         }
         writeFileSync(out + '/progress.json', JSON.stringify(report, null, 2));
@@ -153,7 +227,8 @@ try {
       await replay(route, []); const first = (await inventory()).find(c => c.numeric && c.kind === 'text');
       if (first) {
         const input = control(first.key), original = await input.inputValue(), num = Number(original);
-        const value = String(Number.isFinite(num) && num !== 0 ? Number((num * 1.1).toPrecision(6)) : 1);
+        // The first field can be an integer count (vias, signal layers); use a whole-step edit.
+        const value = String(Number.isFinite(num) ? Number((num + 1).toPrecision(6)) : 1);
         await input.fill(value); await input.press('Tab'); await idle(); await page.waitForTimeout(400);
         const edited = page.url();
         // Click a different tool's link in the same application, return with the browser Back command.
@@ -182,6 +257,8 @@ try {
     } finally { await context.close(); writeFileSync(out + '/report.json', JSON.stringify(report, null, 2)); }
   }
 } finally { await browser.close(); }
+if (!process.env.ACTION_REPORTS) {
 report.finished = new Date().toISOString(); writeFileSync(out + '/report.json', JSON.stringify(report, null, 2));
 console.log(JSON.stringify({ routes: report.routes.length, layouts: report.routes.reduce((n,r) => n + r.layouts.length,0), fields: report.routes.reduce((n,r) => n + r.fields.length,0), selections: report.routes.reduce((n,r) => n + r.selections.length,0), checks: report.checks, failures: report.failures.length }));
 process.exitCode = report.failures.length ? 1 : 0;
+}
