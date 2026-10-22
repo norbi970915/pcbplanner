@@ -34,8 +34,10 @@ async function expand() {
 async function inventory() {
   return page.locator(scope).evaluateAll(roots => {
     const controls = roots.flatMap(root => [...root.querySelectorAll('input,select,textarea,[role="radio"],button')]);
+    // Fullscreen leaves the underlying form laid out, but users cannot interact with it.
+    const activeRoot = document.fullscreenElement || document.querySelector('.fixed.inset-0[class~="z-[200]"]');
     const counts = new Map();
-    return controls.filter(el => el.getClientRects().length && el.checkVisibility() && !el.disabled && !el.closest('.design-comparison')).map(el => {
+    return controls.filter(el => (!activeRoot || activeRoot.contains(el)) && el.getClientRects().length && el.checkVisibility() && !el.disabled && !el.closest('.design-comparison')).map(el => {
       const label = (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || el.textContent || el.title || el.name || '?').replace(/\s+/g, ' ').trim();
       const group = el.closest('[role="radiogroup"]')?.getAttribute('aria-label') || '';
       const kind = el.getAttribute('role') === 'radio' ? 'radio' : el.closest('nav[aria-label="Project views"]') ? 'view' : el.hasAttribute('aria-pressed') && !el.classList.contains('favorite-button') ? 'toggle' : el.tagName === 'SELECT' ? 'select' : el.tagName === 'BUTTON' ? 'button' : el.type;
