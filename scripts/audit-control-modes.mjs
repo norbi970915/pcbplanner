@@ -39,7 +39,7 @@ async function inventory() {
       const label = (el.getAttribute('aria-label') || el.labels?.[0]?.innerText || el.textContent || el.title || el.name || '?').replace(/\s+/g, ' ').trim();
       const group = el.closest('[role="radiogroup"]')?.getAttribute('aria-label') || '';
       const kind = el.getAttribute('role') === 'radio' ? 'radio' : el.closest('nav[aria-label="Project views"]') ? 'view' : el.hasAttribute('aria-pressed') && !el.classList.contains('favorite-button') ? 'toggle' : el.tagName === 'SELECT' ? 'select' : el.tagName === 'BUTTON' ? 'button' : el.type;
-      const stem = [kind, label, group].join('|'), n = counts.get(stem) || 0; counts.set(stem, n + 1);
+      const stem = [kind, label.replace(/\s*\(changed\)/g, ''), group].join('|'), n = counts.get(stem) || 0; counts.set(stem, n + 1);
       const key = stem + '|' + n; el.setAttribute('data-audit-control', key);
       return { key, label, group, kind, value: el.value, checked: el.checked ?? (el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-current') === 'page'), numeric: el.inputMode === 'decimal', code: el.getAttribute('data-field') === 'code', invalid: el.getAttribute('aria-invalid'), options: el.tagName === 'SELECT' ? [...el.options].filter(o => !o.disabled).map(o => o.value) : undefined };
     });
@@ -212,8 +212,6 @@ if (process.env.ACTION_REPORTS) {
             // Library lists and unit prefixes are tested exhaustively once per option set;
             // small mode selectors are revisited for each distinct exposed input layout.
             testedActions.add(actionKey(value));
-            // Selecting a KiCad layer can rename that very control. Start each option from the recorded layout.
-            if (route === '/kicad-project') await replay(route, actions);
             // Gerber layer IDs belong to the imported file instance and change on replay.
             const optionIndex = route === '/gerber-viewer' && item.kind === 'select' ? item.options.indexOf(value) : undefined;
             await inventory(); const target = control(item.key);
