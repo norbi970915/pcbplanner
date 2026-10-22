@@ -131,6 +131,7 @@ export function feedbackPairs(vfb: number, vout: number, iDiv: number, series: E
       const v = vfb * (1 + r1 / r2) + ifb * r1;
       return { r1, r2, vout: v, error: v / vout - 1, iDivider: vfb / r2 };
     })
+    .filter(pair => pair.vout > 0 && [pair.r1, pair.r2, pair.vout, pair.error, pair.iDivider].every(Number.isFinite))
     .sort((a, b) => Math.abs(a.error) - Math.abs(b.error))
     .slice(0, count);
 }

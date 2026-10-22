@@ -18,10 +18,13 @@ export default function FeedbackDivider() {
   if (!(p.idiv > 0)) errors.push('Divider current must be greater than 0.');
   if (p.tol < 0 || p.tol > 20) errors.push('Tolerance must be between 0 and 20 %.');
   const ifb = p.ifb * 1e-9;
+  const dividerCurrent = p.idiv * 1e-6;
+  const r2Ideal = p.vfb / dividerCurrent;
+  const r1Ideal = (p.vout - p.vfb) / dividerCurrent;
+  if (!errors.length && ![r1Ideal, r2Ideal, p.vout / dividerCurrent, p.vfb / p.vout].every(value => Number.isFinite(value) && value > 0)) errors.push('The resistor search is outside the supported numerical range. Adjust the voltages or divider current.');
   const pairs = errors.length ? [] : feedbackPairs(p.vfb, p.vout, p.idiv * 1e-6, p.series as ESeries, ifb, 10);
   const best = pairs[0];
-  const r2Ideal = p.vfb / (p.idiv * 1e-6);
-  const r1Ideal = r2Ideal * (p.vout / p.vfb - 1);
+  if (!errors.length && !best) errors.push('No finite, positive resistor pair was found in the supported numerical range. Adjust the inputs.');
   // worst-case Vout from resistor tolerance (R1 high/R2 low and vice versa)
   const tol = p.tol / 100;
   const worst = best
@@ -30,6 +33,7 @@ export default function FeedbackDivider() {
         lo: p.vfb * (1 + (best.r1 * (1 - tol)) / (best.r2 * (1 + tol))) + ifb * best.r1 * (1 - tol),
       }
     : null;
+  if (worst && ![worst.hi,worst.lo].every(Number.isFinite)) errors.push('The tolerance result is outside the supported numerical range. Adjust the inputs.');
   const notes: string[] = [];
   if (ifb > 0 && p.idiv * 1e-6 < 100 * ifb) notes.push('The divider current is less than 100 × the FB bias current (TI guideline). The bias current then shifts Vout noticeably.');
   notes.push('Vref tolerance of the IC adds to the resistor error. Check the datasheet VFB accuracy.');
@@ -65,12 +69,12 @@ export default function FeedbackDivider() {
       description="Standard-value feedback resistors for adjustable regulators and DC/DC converters: Vout = VFB·(1 + R1/R2), the best E12/E24/E96 pairs, the output-voltage error, the FB bias-current effect and the worst case with resistor tolerance."
       onReset={reset}
       properties={properties}
-      status={best ? `R1 = ${si(best.r1, 'Ω', 3)}, R2 = ${si(best.r2, 'Ω', 3)} → ${fmt(best.vout, 5)} V (${fmt(100 * best.error, 3)} %)` : 'Check the inputs'}
+      status={best && !errors.length ? `R1 = ${si(best.r1, 'Ω', 3)}, R2 = ${si(best.r2, 'Ω', 3)} → ${fmt(best.vout, 5)} V (${fmt(100 * best.error, 3)} %)` : 'Check the inputs'}
       method={<Method />}
     >
       <Notes kind="error" items={errors} />
       <Notes items={errors.length ? [] : notes} />
-      {best && worst && (
+      {best && worst && !errors.length && (
         <div className="grid gap-3 xl:grid-cols-2">
           <Panel title="Best Pair">
             <div className="flex flex-wrap gap-8 px-2.5 py-2">

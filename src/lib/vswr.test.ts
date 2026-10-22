@@ -5,6 +5,28 @@ const near = (a: number, b: number, rel = 1e-12) => expect(Math.abs(a - b)).toBe
 const m = (q: Quantity, v: number) => matchFrom(q, v)!;
 const QUANTITIES: Quantity[] = ['vswr', 'gamma', 'rl', 'ml', 'reflected', 'transmitted'];
 
+describe('extreme finite impedance scales', () => {
+  it.each([1e200,1e-200])('preserves reflection under a common %s impedance scale', scale => {
+    const expected=fromImpedance(75,25,50)!,actual=fromImpedance(75*scale,25*scale,50*scale)!;
+    for(const key of ['re','im','gamma','transmitted','vswr','ml'] as const) near(actual[key],expected[key]);
+  });
+  it('retains the tiny transmitted fraction of a very large resistive load', () => {
+    const result=fromImpedance(1e308,25,50)!;
+    expect(result.gamma).toBe(1); expect(result.transmitted).toBeGreaterThan(0);
+    expect(result.g).toBeGreaterThan(0);
+    for(const value of Object.values(result)) expect(Number.isNaN(value)).toBe(false);
+    near(result.vswr,2e306); near(result.g,1e-308);
+  });
+  it('keeps high-VSWR mismatch and cascade bounds free of cancellation', () => {
+    const result=matchFrom('vswr',1e308)!;
+    expect(result.transmitted).toBeGreaterThan(0);expect(Number.isFinite(result.ml)).toBe(true);
+    const bounds=mismatchBounds(result,result),cascade=cascadeBounds(result,result);
+    for(const value of [...Object.values(bounds),...Object.values(cascade)]) expect(Number.isNaN(value)).toBe(false);
+    expect(Number.isFinite(bounds.powerMaxDb)).toBe(true);expect(bounds.lossMinDb).toBeCloseTo(0,8);
+    expect(cascade.gammaMin).toBe(0);expect(cascade.vswrMin).toBe(1);
+  });
+});
+
 describe('match quantities', () => {
   it('VSWR 2:1 matches the NAWCWD EW/radar handbook example (|Γ| 0.333, RL 9.54 dB, ML 0.51 dB, 11 % reflected)', () => {
     const r = m('vswr', 2);

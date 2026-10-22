@@ -108,6 +108,23 @@ try {
   await page.getByRole('button',{name:'Reset',exact:true}).click();
   await page.getByRole('img',{name:'PDN impedance magnitude versus frequency, log-log',exact:true}).waitFor();
   check(!await page.locator('main [role="alert"]').count(),'PDN resumes normally after Reset');
+  await open('/feedback-divider?vout=1e308');
+  check((await page.locator('main [role="alert"]').innerText()).includes('supported numerical range'),'Extreme feedback voltage fails fast with a numerical-range error');
+  check(!await page.getByRole('button',{name:'Reset this tool',exact:true}).count(),'An overflowing resistor search keeps the calculator usable');
+  await page.getByRole('button',{name:'Reset',exact:true}).click();
+  await page.getByRole('heading',{name:'Best Pair',exact:true}).waitFor();
+  check(!await page.locator('main [role="alert"]').count(),'Feedback divider resumes after Reset');
+  for(const route of ['/vswr-calculator?mode=z&r=1e308','/vswr-calculator?mode=z&x=1e308','/vswr-calculator?val=1e308&s1=1e308&s2=1e308']) {
+    await open(route);check(!/\bNaN\b|\bInfinity\b/.test(await page.locator('main').innerText()),route+' retains stable reflection and mismatch results');
+    check(!await page.getByRole('button',{name:'Reset this tool',exact:true}).count(),route+' keeps the tool usable');
+  }
+  for (const route of ['/bga-land?pitch=1e308', '/bga-land?ball=1e308', '/bga-land?w=1e-308&s=1e-308']) {
+    await open(route);
+    check((await page.locator('main [role="alert"]').innerText()).includes('supported numerical range'), route + ' rejects an unrepresentable routing result');
+    check(!/\bNaN\b|\bInfinity\b/.test(await page.locator('main').innerText()), route + ' exposes no nonfinite counts');
+    await page.getByRole('button', { name: 'Reset', exact: true }).click();
+    check(!await page.locator('main [role="alert"]').count(), 'BGA routing recovers after Reset');
+  }
   for (const route of ['/wire-gauge?t=-250', '/wire-gauge?metal=aluminium&t=-250', '/skin-effect?temp=-250', '/trace-width?amb=-250', '/via?amb=-250', '/trace-loss?temp=-250']) {
     await open(route);
     check((await page.locator('main [role="alert"]').innerText()).includes('positive-resistivity'), route + ' rejects a nonphysical material temperature');

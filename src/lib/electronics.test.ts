@@ -101,6 +101,9 @@ describe('crystal', () => {
 });
 
 describe('E-series (IEC 60063)', () => {
+  it.each([[0,1],[-1,1],[Infinity,Infinity],[1,Infinity],[NaN,1],[2,1]])('does not enumerate an invalid or unbounded range %s to %s', (lo,hi) => {
+    expect(eValuesInRange(lo,hi,'E96')).toEqual([]);
+  });
   it('has 12, 24 and 96 ascending values; E12 ⊂ E24', () => {
     expect(E_SERIES.E12).toHaveLength(12);
     expect(E_SERIES.E24).toHaveLength(24);

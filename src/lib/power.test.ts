@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { E_SERIES } from './electronics';
 import { boost, buck, feedbackPairs, ldo } from './power';
 
+it('feedback search rejects overflowing resistor ranges without unbounded enumeration', () => {
+  expect(feedbackPairs(.8,1e308,100e-6,'E96')).toEqual([]);
+});
+
 describe('buck (TI SLVA477B)', () => {
   // 12 V → 3.3 V, 2 A, 500 kHz, η 90 %, ripple 30 %
   const r = buck({ vinMin: 10, vinNom: 12, vinMax: 14, vout: 3.3, iout: 2, fs: 500e3, eff: 0.9, rippleRatio: 0.3, dvout: 0.02, esr: 0.005, ilim: 3, dvin: 0.1, vf: 0.4 });

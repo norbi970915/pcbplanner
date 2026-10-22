@@ -61,7 +61,7 @@ export function matchFrom(q: Quantity, v: number): Match | null {
   if (quantityError(q, v)) return null;
   switch (q) {
     case 'vswr':
-      return build((v - 1) / (v + 1), (4 * v) / (v + 1) / (v + 1), { vswr: v });
+      return build((v - 1) / (v + 1), (4 / (v + 1)) * (v / (v + 1)), { vswr: v });
     case 'gamma':
       return build(v, (1 - v) * (1 + v));
     case 'rl':
@@ -100,13 +100,15 @@ export interface LoadMatch extends Match {
  */
 export function fromImpedance(r: number, x: number, z0: number): LoadMatch | null {
   if (!(Number.isFinite(r) && Number.isFinite(x) && z0 > 0 && Number.isFinite(z0) && r >= 0)) return null;
-  const den = (r + z0) * (r + z0) + x * x;
-  const re = (r * r - z0 * z0 + x * x) / den;
-  const im = (2 * x * z0) / den;
+  // Normalize before squaring: the reflection coefficient is unchanged by a common impedance scale.
+  const scale = Math.max(r, Math.abs(x), z0), R = r / scale, X = x / scale, Z = z0 / scale;
+  const den = (R + Z) * (R + Z) + X * X;
+  const re = (R * R - Z * Z + X * X) / den;
+  const im = (2 * X * Z) / den;
   const gamma = Math.min(1, Math.hypot(re, im));
-  const t = (4 * r * z0) / den;
-  const mag2 = r * r + x * x;
-  const y = mag2 > 0 ? { g: r / mag2, b: -x / mag2 } : { g: Infinity, b: Infinity };
+  const t = (4 * R * Z) / den;
+  const loadScale = Math.max(r,Math.abs(x)), ar = r / loadScale, ax = x / loadScale, mag2 = ar * ar + ax * ax;
+  const y = loadScale > 0 ? { g: (ar / mag2) / loadScale, b: (-ax / mag2) / loadScale } : { g: Infinity, b: Infinity };
   return { ...build(gamma, t), re, im, angleDeg: gamma > 0 ? (Math.atan2(im, re) * 180) / Math.PI : NaN, ...y };
 }
 
@@ -127,11 +129,12 @@ export interface MismatchBounds {
  */
 export function mismatchBounds(source: Match, load: Match): MismatchBounds {
   const p = source.gamma * load.gamma;
+  const gap = (source.transmitted + load.transmitted - source.transmitted * load.transmitted) / (1 + p);
   const powerMinDb = -20 * Math.log10(1 + p);
-  const powerMaxDb = p < 1 ? -20 * Math.log10(1 - p) : Infinity;
+  const powerMaxDb = gap > 0 ? -20 * Math.log10(gap) : Infinity;
   const base = source.ml + load.ml; // −10 log((1 − |Γs|²)(1 − |Γl|²))
   if (!Number.isFinite(base)) return { product: p, powerMinDb, powerMaxDb, lossMinDb: Infinity, lossMaxDb: Infinity };
-  return { product: p, powerMinDb, powerMaxDb, lossMinDb: base + 20 * Math.log10(1 - p), lossMaxDb: base + 20 * Math.log10(1 + p) };
+  return { product: p, powerMinDb, powerMaxDb, lossMinDb: Math.max(0,base + 20 * Math.log10(gap)), lossMaxDb: base + 20 * Math.log10(1 + p) };
 }
 
 export interface CascadeBounds {
@@ -150,8 +153,8 @@ export function cascadeBounds(a: Match, b: Match): CascadeBounds {
   const hi = Math.max(a.vswr, b.vswr);
   const lo = Math.min(a.vswr, b.vswr);
   if (hi === Infinity) return { vswrMin: Infinity, vswrMax: Infinity, gammaMin: 1, gammaMax: 1 };
-  const g1 = a.gamma, g2 = b.gamma;
-  return { vswrMin: hi / lo, vswrMax: hi * lo, gammaMin: Math.abs(g1 - g2) / (1 - g1 * g2), gammaMax: (g1 + g2) / (1 + g1 * g2) };
+  const vswrMin = hi / lo, vswrMax = hi * lo;
+  return { vswrMin, vswrMax, gammaMin: (vswrMin - 1) / (vswrMin + 1), gammaMax: vswrMax === Infinity ? 1 : (vswrMax - 1) / (vswrMax + 1) };
 }
 
 /** VSWR values for the quick-reference table. */

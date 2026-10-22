@@ -134,6 +134,7 @@ export function eNearest(x: number, s: ESeries): number {
 
 /** All series values in [lo, hi]. */
 export function eValuesInRange(lo: number, hi: number, s: ESeries): number[] {
+  if (!(lo > 0) || !Number.isFinite(lo) || !Number.isFinite(hi) || hi < lo || !Object.hasOwn(E_SERIES, s)) return [];
   const out: number[] = [];
   for (let d = Math.floor(Math.log10(lo)) - 1; d <= Math.ceil(Math.log10(hi)); d++) {
     for (const n of E_SERIES[s]) {

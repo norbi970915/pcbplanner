@@ -15,18 +15,22 @@ export default function BgaLand() {
   const table = kind === 'collapsing' ? BGA_COLLAPSING : BGA_NON_COLLAPSING;
   const row = table.find((r) => Math.abs(r.ball - p.ball) < 1e-6);
   const errors: string[] = [];
+  if (!['collapsing', 'nonCollapsing'].includes(p.kind)) errors.push('Choose a supported ball type.');
   if (!(p.ball > 0)) errors.push('Ball diameter must be greater than 0.');
   if (!(p.pitch > 0)) errors.push('Pitch must be greater than 0.');
   if (!(p.w > 0 && p.s > 0)) errors.push('Trace width and spacing must be greater than 0.');
-  const ok = errors.length === 0;
   const level = bgaLevelForBall(p.ball);
   const land = row ? row.land : bgaLandByRule(p.ball, kind);
   const L = (mm: number) => `${fmt(fromMm(mm, unit), 4)} ${unit}`;
   // routing between two adjacent lands on the same row
   const gap = p.pitch - land;
-  const traces = ok ? Math.max(0, Math.floor((gap - p.s) / (p.w + p.s) + 1e-9)) : 0;
+  const traces = Math.max(0, Math.floor((gap - p.s) / (p.w + p.s) + 1e-9));
   const diagGap = p.pitch * Math.SQRT2 - land;
-  const diagTraces = ok ? Math.max(0, Math.floor((diagGap - p.s) / (p.w + p.s) + 1e-9)) : 0;
+  const diagTraces = Math.max(0, Math.floor((diagGap - p.s) / (p.w + p.s) + 1e-9));
+  if (errors.length === 0 && (!(land > 0) || ![land, gap, diagGap, p.w + p.s].every(Number.isFinite) || !Number.isSafeInteger(traces) || !Number.isSafeInteger(diagTraces))) {
+    errors.push('The land or escape-routing result exceeds the supported numerical range. Use less extreme dimensions.');
+  }
+  const ok = errors.length === 0;
   const notes: string[] = [];
   if (!row && ok) notes.push(`Ball ${fmt(p.ball, 3)} mm is not in the IPC table; the land uses the IPC-7351A percentage rule (${kind === 'collapsing' ? '−' : '+'}${Math.abs(kind === 'collapsing' ? { A: 25, B: 20, C: 15 }[level] : { A: 15, B: 10, C: 5 }[level])} %, rounded to 0.05 mm).`);
   if (row && 'singleSource' in row) {

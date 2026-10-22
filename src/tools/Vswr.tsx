@@ -67,7 +67,7 @@ export default function Vswr() {
     }
   }
   if (match && match.gamma === 0) notes.push('Perfect match: nothing is reflected, so the return loss is infinite (∞) and the mismatch loss is 0 dB.');
-  if (match && match.gamma >= 1) notes.push('Total reflection (|Γ| = 1): no power reaches the load, so VSWR and mismatch loss are infinite and the return loss is 0 dB.');
+  if (match && match.transmitted === 0) notes.push('Total reflection (|Γ| = 1): no power reaches the load, so VSWR and mismatch loss are infinite and the return loss is 0 dB.');
 
   // --- mismatch between a source and a load
   const e1 = quantityError(um, p.s1);
@@ -172,7 +172,7 @@ export default function Vswr() {
                 <Result label="Mismatch loss ML" value={num(match.ml, 6)} unit="dB" sub="−10 log₁₀(1 − |Γ|²), with a matched source" />
                 <Result label="Reflected power" value={pct(match.reflected)} unit="%" sub="|Γ|²" />
                 <Result label="Power delivered to the load" value={pct(match.transmitted)} unit="%" sub="1 − |Γ|²" />
-                <Result label="Standing-wave maximum / minimum" value={`${fmt(1 + match.gamma, 5)} / ${fmt(1 - match.gamma, 5)}`} unit="× |V⁺|" sub="1 ± |Γ| times the incident voltage" />
+                <Result label="Standing-wave maximum / minimum" value={`${fmt(1 + match.gamma, 5)} / ${fmt(match.transmitted / (1 + match.gamma), 5)}`} unit="× |V⁺|" sub="1 ± |Γ| times the incident voltage" />
                 {load && (
                   <>
                     <Result label="Normalised load z = ZL / Z0" value={complex(p.r / p.z0, p.x / p.z0, 5)} />
