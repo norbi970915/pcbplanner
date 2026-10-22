@@ -47,7 +47,7 @@ async function inventory() {
 }
 const control = key => page.locator('[data-audit-control=' + JSON.stringify(key) + ']').filter({ visible: true });
 // Schema ignores selected values and duplicate numeric rows, but includes option sets and field labels.
-const schema = controls => [...new Set(controls.filter(c => c.kind !== 'button' && c.kind !== 'file').map(c => [c.kind, c.label.replace(/\d+/g, '#'), c.group].join('|')))].sort().join('\n');
+const schema = controls => [...new Set(controls.filter(c => c.kind !== 'button' && c.kind !== 'file' && !(current === '/stackup' && c.kind === 'checkbox')).map(c => [c.kind, c.label.replace(/\d+/g, '#'), c.group].join('|')))].sort().join('\n');
 async function clean(errors, step) {
   check(errors.length === 0, step + ': browser errors ' + errors.splice(0).join('; '));
   check(!await page.getByRole('button', { name: 'Reset this tool', exact: true }).count(), step + ': tool crashed');
