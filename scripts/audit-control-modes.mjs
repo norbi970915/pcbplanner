@@ -64,6 +64,8 @@ async function replay(route, actions) {
   // Cold page loading is covered on entry/reload; resetting and closing clears all project overrides.
   let reusedProjectPage = false;
   if (route === '/kicad-project' && !process.env.ACTION_REPORTS && page.url().startsWith(base + route)) {
+    const exitFullScreen = page.getByRole('button', { name: 'Exit full screen', exact: true });
+    if (await exitFullScreen.count()) { await exitFullScreen.click(); await exitFullScreen.waitFor({ state: 'hidden' }); }
     const reset = page.getByRole('button', { name: 'Reset', exact: true });
     if (await reset.count()) {
       await reset.click();
