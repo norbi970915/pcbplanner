@@ -60,7 +60,20 @@ async function replay(route, actions) {
   // Each replay uses an isolated test context. Clear tool-specific view/draft keys too:
   // the stack manager persists its selected tab independently of its input URL.
   if (page.url().startsWith(base)) await page.evaluate(() => sessionStorage.clear());
-  await page.goto(base + route, { waitUntil: 'networkidle' }); await idle(); await expand();
+  // Reload the fixture through its UI while retaining the worker pool between mode cases.
+  // Cold page loading is covered on entry/reload; resetting and closing clears all project overrides.
+  let reusedProjectPage = false;
+  if (route === '/kicad-project' && !process.env.ACTION_REPORTS && page.url().startsWith(base + route)) {
+    const reset = page.getByRole('button', { name: 'Reset', exact: true });
+    if (await reset.count()) {
+      await reset.click();
+      const close = page.getByRole('button', { name: 'Close project', exact: true });
+      if (await close.count()) { await close.click(); await close.waitFor({ state: 'hidden' }); }
+      reusedProjectPage = true;
+    }
+  }
+  if (!reusedProjectPage) await page.goto(base + route, { waitUntil: 'networkidle' });
+  await idle(); await expand();
   if (route === '/kicad-project') {
     const example = page.getByRole('button', { name: 'Try an example', exact: true });
     if (await example.count()) { await example.click(); await page.getByTestId('example-scenario').waitFor(); }
@@ -219,9 +232,9 @@ if (process.env.ACTION_REPORTS) {
             if (item.kind === 'select') await target.selectOption(optionIndex === undefined ? value : { index: optionIndex }); else if (item.kind === 'checkbox') await target.setChecked(value); else await target.click();
             await idle(); await expand(); await clean(errors, item.label + '=' + value);
             if (item.kind === 'checkbox') check(await target.isChecked() === value, item.label + ' accepts its checked state');
-            // Check the selection before inventory reassigns keys to renamed KiCad role labels.
-            if (item.kind === 'select') { const selected=await target.inputValue(); check(optionIndex !== undefined ? await target.evaluate((el, i) => el.selectedIndex === i, optionIndex) : selected === value || (item.label.startsWith('Apply ') && selected===''), item.label + ' accepts option ' + value); }
             const next = await inventory(), signature = schema(next);
+            // Rows may remount when their selected component changes. Inventory restores stable keys.
+            if (item.kind === 'select') { const selected=await target.inputValue(); check(optionIndex !== undefined ? await target.evaluate((el, i) => el.selectedIndex === i, optionIndex) : selected === value || (item.label.startsWith('Apply ') && selected===''), item.label + ' accepts option ' + value); }
             entry.selections.push({ state, label: item.label, kind: item.kind, value });
             if (entry.selections.length % 10 === 0) console.log('    ' + entry.selections.length + ' options checked');
             // Membership toggles are checked individually. Active-region selection exposes each
