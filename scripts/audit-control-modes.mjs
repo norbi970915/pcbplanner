@@ -41,7 +41,7 @@ async function inventory() {
       const kind = el.getAttribute('role') === 'radio' ? 'radio' : el.closest('nav[aria-label="Project views"]') ? 'view' : el.hasAttribute('aria-pressed') && !el.classList.contains('favorite-button') ? 'toggle' : el.tagName === 'SELECT' ? 'select' : el.tagName === 'BUTTON' ? 'button' : el.type;
       const stem = [kind, label.replace(/\s*\(changed\)/g, ''), group].join('|'), n = counts.get(stem) || 0; counts.set(stem, n + 1);
       const key = stem + '|' + n; el.setAttribute('data-audit-control', key);
-      return { key, label, group, kind, value: el.value, checked: el.checked ?? (el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-current') === 'page'), numeric: el.inputMode === 'decimal', code: el.getAttribute('data-field') === 'code', invalid: el.getAttribute('aria-invalid'), options: el.tagName === 'SELECT' ? [...el.options].filter(o => !o.disabled).map(o => o.value) : undefined };
+      return { key, label, group, kind, value: el.value, checked: el.checked ?? (el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-current') === 'page'), numeric: el.inputMode === 'decimal', optional: /\boptional\b/i.test(label), code: el.getAttribute('data-field') === 'code', invalid: el.getAttribute('aria-invalid'), options: el.tagName === 'SELECT' ? [...el.options].filter(o => !o.disabled).map(o => o.value) : undefined };
     });
   });
 }
@@ -190,9 +190,10 @@ if (process.env.ACTION_REPORTS) {
           const values = item.numeric ? repeated ? [probe, '0', '1e308'] : [probe, '', '-', 'abc', '0', '-5', '1e9', '1e308'] : item.invalid !== null ? ['', 'abc', '1e308'] : ['', '<audit & "input">', original + ' audit'];
           for (const value of values) {
             if (process.env.VERBOSE) console.log('      fill ' + value);
+            const before = await input.inputValue();
             await input.fill(value); if (process.env.VERBOSE) console.log('      blur'); await input.press('Tab'); if (process.env.VERBOSE) console.log('      idle'); await idle(); await inventory();
             await clean(errors, 'layout ' + state + ' ' + item.label + '=' + value);
-            if (item.numeric && ['', '-', 'abc'].includes(value)) check(await input.getAttribute('aria-invalid') === 'true' || !!await page.locator('main [role="alert"],.inputs-paused').count() || await input.inputValue()===original, item.label + ' flags or rejects incomplete input');
+            if (item.numeric && ['', '-', 'abc'].includes(value)) check(await input.getAttribute('aria-invalid') === 'true' || !!await page.locator('main [role="alert"],.inputs-paused').count() || await input.inputValue()===before || (value === '' && item.optional && await input.inputValue() === ''), item.label + ' flags, rejects or explicitly permits incomplete input');
             entry.fields.push({ state, label: item.label, value });
           }
           if (item.kind !== 'range') { await input.fill(original); await input.press('Tab'); await idle(); await clean(errors, item.label + ' restored'); }
