@@ -181,6 +181,9 @@ if (process.env.ACTION_REPORTS) {
       await page.goto(base + route, { waitUntil: 'networkidle' }); await idle(); await expand();
       const initial = await inventory();
       const queue = [[]], discovered = new Set(); discovered.add(schema(initial));
+      // Project and stack editors expose independent rows. Discover new controls rather
+      // than every subset of layer roles, highlighted nets or reference editors.
+      const distinctEditor = ['/stackup', '/kicad-project'].includes(route);
       const stackupControls = new Set(initial.filter(discoversStackupControl).map(stackupControlKey));
       const testedFields = new Set(), fullyTestedFields = new Set(), testedActions = new Set();
       for (let state = 0; state < queue.length; state++) {
@@ -219,7 +222,7 @@ if (process.env.ACTION_REPORTS) {
         for (const item of items.filter(c => ['select','radio','checkbox','view','toggle'].includes(c.kind))) {
           const values = item.kind === 'select' ? item.options : item.kind === 'checkbox' || item.kind === 'toggle' ? [!item.checked] : item.checked ? [] : [true];
           const membership = route === '/stackup' && item.kind === 'checkbox';
-          const library = membership || item.kind === 'select' && (item.options.length > 8 || item.label === 'unit' || /Stackup|Material|^Layer$/.test(item.label));
+          const library = membership || route === '/kicad-project' && ['select', 'checkbox', 'toggle'].includes(item.kind) || item.kind === 'select' && (item.options.length > 8 || item.label === 'unit' || /Stackup|Material|^Layer$/.test(item.label));
           const actionKey = value => (library ? '' : schema(items)) + '|' + item.key + '|' + item.options?.join(',') + '|' + value;
           const pendingValues = values.filter(value => !testedActions.has(actionKey(value)));
           if (!pendingValues.length) continue;
@@ -244,9 +247,9 @@ if (process.env.ACTION_REPORTS) {
             // Independent per-layer reference-frequency editors produce many subsets of the
             // same controls. Cover each distinct editor/action, including repeated row ordinals,
             // rather than every subset of editors being present simultaneously.
-            const revealsStackupControl = route === '/stackup' && next.filter(discoversStackupControl).some(c => !stackupControls.has(stackupControlKey(c)));
-            if (route === '/stackup') for (const c of next.filter(discoversStackupControl)) stackupControls.add(stackupControlKey(c));
-            if (!membership && (route === '/stackup' ? revealsStackupControl : !discovered.has(signature))) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
+            const revealsStackupControl = distinctEditor && next.filter(discoversStackupControl).some(c => !stackupControls.has(stackupControlKey(c)));
+            if (distinctEditor) for (const c of next.filter(discoversStackupControl)) stackupControls.add(stackupControlKey(c));
+            if (!membership && (distinctEditor ? revealsStackupControl : !discovered.has(signature))) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
           }
         }
         writeFileSync(out + '/progress.json', JSON.stringify(report, null, 2));
