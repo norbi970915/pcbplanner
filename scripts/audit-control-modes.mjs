@@ -48,6 +48,8 @@ async function inventory() {
 const control = key => page.locator('[data-audit-control=' + JSON.stringify(key) + ']').filter({ visible: true });
 // Schema ignores selected values and duplicate numeric rows, but includes option sets and field labels.
 const schema = controls => [...new Set(controls.filter(c => c.kind !== 'button' && c.kind !== 'file' && !(current === '/stackup' && c.kind === 'checkbox')).map(c => [c.kind, c.label.replace(/\d+/g, '#'), c.group].join('|')))].sort().join('\n');
+const stackupControlKey = c => [c.kind, c.label.replace(/\d+/g, '#'), c.group, c.key.split('|').at(-1)].join('|');
+const discoversStackupControl = c => !['checkbox', 'file'].includes(c.kind) && !/^(Copy result|Undo |Redo )/.test(c.label);
 async function clean(errors, step) {
   check(errors.length === 0, step + ': browser errors ' + errors.splice(0).join('; '));
   check(!await page.getByRole('button', { name: 'Reset this tool', exact: true }).count(), step + ': tool crashed');
@@ -162,7 +164,9 @@ if (process.env.ACTION_REPORTS) {
     const entry = { route, layouts: [], fields: [], selections: [], buttons: [], navigation: [], failures: [] }; report.routes.push(entry);
     try {
       await page.goto(base + route, { waitUntil: 'networkidle' }); await idle(); await expand();
-      const queue = [[]], discovered = new Set(); discovered.add(schema(await inventory()));
+      const initial = await inventory();
+      const queue = [[]], discovered = new Set(); discovered.add(schema(initial));
+      const stackupControls = new Set(initial.filter(discoversStackupControl).map(stackupControlKey));
       const testedFields = new Set(), fullyTestedFields = new Set(), testedActions = new Set();
       for (let state = 0; state < queue.length; state++) {
         const actions = queue[state]; await replay(route, actions); let items = await inventory();
@@ -222,7 +226,12 @@ if (process.env.ACTION_REPORTS) {
             if (entry.selections.length % 10 === 0) console.log('    ' + entry.selections.length + ' options checked');
             // Membership toggles are checked individually. Active-region selection exposes each
             // region's editable cells; enumerating every subset would duplicate those field types.
-            if (!membership && !discovered.has(signature)) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
+            // Independent per-layer reference-frequency editors produce many subsets of the
+            // same controls. Cover each distinct editor/action, including repeated row ordinals,
+            // rather than every subset of editors being present simultaneously.
+            const revealsStackupControl = route === '/stackup' && next.filter(discoversStackupControl).some(c => !stackupControls.has(stackupControlKey(c)));
+            if (route === '/stackup') for (const c of next.filter(discoversStackupControl)) stackupControls.add(stackupControlKey(c));
+            if (!membership && (route === '/stackup' ? revealsStackupControl : !discovered.has(signature))) { discovered.add(signature); queue.push([...actions, { key: item.key, kind: item.kind, value, ...(optionIndex === undefined ? {} : { optionIndex }) }]); }
           }
         }
         writeFileSync(out + '/progress.json', JSON.stringify(report, null, 2));
