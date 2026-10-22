@@ -47,7 +47,7 @@ async function inventory() {
 }
 const control = key => page.locator('[data-audit-control=' + JSON.stringify(key) + ']').filter({ visible: true });
 // Schema ignores selected values and duplicate numeric rows, but includes option sets and field labels.
-const schema = controls => [...new Set(controls.filter(c => c.kind !== 'button' && c.kind !== 'file' && !(current === '/stackup' && c.kind === 'checkbox')).map(c => [c.kind, c.label.replace(/\d+/g, '#'), c.group].join('|')))].sort().join('\n');
+const schema = controls => [...new Set(controls.filter(c => c.kind !== 'button' && c.kind !== 'file' && !(current === '/stackup' && c.kind === 'checkbox')).map(c => [c.kind, c.label.replace(/\s*\(changed\)/g, '').replace(/\d+/g, '#'), c.group].join('|')))].sort().join('\n');
 const stackupControlKey = c => [c.kind, c.label.replace(/\d+/g, '#'), c.group, c.key.split('|').at(-1)].join('|');
 const discoversStackupControl = c => !['checkbox', 'file'].includes(c.kind) && !/^(Copy result|Undo |Redo )/.test(c.label);
 async function clean(errors, step) {
@@ -220,8 +220,9 @@ if (process.env.ACTION_REPORTS) {
             if (item.kind === 'select') await target.selectOption(optionIndex === undefined ? value : { index: optionIndex }); else if (item.kind === 'checkbox') await target.setChecked(value); else await target.click();
             await idle(); await expand(); await clean(errors, item.label + '=' + value);
             if (item.kind === 'checkbox') check(await target.isChecked() === value, item.label + ' accepts its checked state');
-            const next = await inventory(), signature = schema(next);
+            // Check the selection before inventory reassigns keys to renamed KiCad role labels.
             if (item.kind === 'select') { const selected=await target.inputValue(); check(optionIndex !== undefined ? await target.evaluate((el, i) => el.selectedIndex === i, optionIndex) : selected === value || (item.label.startsWith('Apply ') && selected===''), item.label + ' accepts option ' + value); }
+            const next = await inventory(), signature = schema(next);
             entry.selections.push({ state, label: item.label, kind: item.kind, value });
             if (entry.selections.length % 10 === 0) console.log('    ' + entry.selections.length + ' options checked');
             // Membership toggles are checked individually. Active-region selection exposes each
