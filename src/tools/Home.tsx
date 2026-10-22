@@ -14,6 +14,10 @@ import {
   ExternalLink,
   ChevronRight,
   Compass,
+  CircuitBoard,
+  Layers,
+  Files,
+  Calculator,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/shadcn/card';
 import { Button } from '../components/shadcn/button';
@@ -29,6 +33,12 @@ const RECENT_GUIDES = [...GUIDES]
   .sort((a, b) => b.date.localeCompare(a.date))
   .slice(0, 3);
 const HOME_SEARCH_KEY = 'pcbplanner:home-search';
+const HOME_TASKS = [
+  { title: 'Check a KiCad board', to: '/kicad-project', description: 'Review routing, voltage drop, temperature and clearance.', icon: CircuitBoard, group: 'Stackup' },
+  { title: 'Design a stackup', to: '/stackup', description: 'Choose layers, materials and impedance targets.', icon: Layers, group: 'Stackup' },
+  { title: 'Inspect Gerbers', to: '/gerber-viewer', description: 'Inspect copper layers and compare board revisions.', icon: Files, group: 'Utilities' },
+  { title: 'Find a calculator', to: '/tools', description: 'Browse tools for signals, power and components.', icon: Calculator, group: 'Electronics' },
+] as const;
 const newsDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -113,94 +123,73 @@ export default function Home() {
             Home
           </Heading>
           <CardContent className="welcome-content">
-            <div className="welcome-top">
+            <div className="home-start-header">
               <div>
                 <div className="eyebrow">YOUR PCB DESIGN WORKBENCH</div>
                 <h1>
                   {APP_NAME}
                   <span className="title-dot">.</span>
                 </h1>
+                <p className="intro">Plan a stackup, review your board, or find the calculation you need.</p>
               </div>
-            </div>
-            <p className="intro">
-              PCB design calculators for stackups, signals, power and
-              components. Share a calculation by link.{' '}
-              <Link to="/about">
-                About PCB Planner <ExternalLink size={11} />
-              </Link>
-            </p>
-            <div className="search-label">
-              <label htmlFor="home-search">Find a tool or guide</label>
-              <span>
-                Press <kbd>/</kbd> to search
-              </span>
-            </div>
-            <div className="search-box">
-              <Search size={18} />
-              <Input
-                id="home-search"
-                ref={searchRef}
-                type="search"
-                autoComplete="off"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    setQuery('');
-                    e.currentTarget.blur();
-                  }
-                }}
-                placeholder="Try impedance, via current, USB, buck…"
-                aria-controls={words.length ? 'search-results' : undefined}
-              />
-              {query && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="clear-search"
-                  aria-label="Clear search"
-                  onClick={() => {
-                    setQuery('');
-                    searchRef.current?.focus();
-                  }}
-                >
-                  <X size={14} />
-                </Button>
-              )}
-            </div>
-            <div className="home-guidance-invitation"><span>Not sure where to start?</span><Button type="button" variant="link" size="sm" onClick={openGuidance}><Compass size={15} aria-hidden="true" />Help me choose<ArrowRight size={13} aria-hidden="true" /></Button></div>
-          </CardContent>
-          {!words.length && (
-            <section className="welcome-news" aria-labelledby="home-news-heading">
-              <div className="welcome-news-heading">
-                <h2 id="home-news-heading">What's new</h2>
-                <span className="section-meta">Latest update</span>
-              </div>
-              {NEWS.slice(0, 2).map((item) => (
-                <div className="news-item" key={item.title}>
-                  <div className="news-icon">
-                    <Check size={17} />
-                  </div>
-                  <div>
-                    <div className="news-title">
-                      <h3>{item.title}</h3>
-                      <time dateTime={item.date}>{newsDate(item.date)}</time>
-                    </div>
-                    <p>
-                      {item.text}
-                      {'links' in item &&
-                        item.links?.map((link) => (
-                          <Fragment key={link.to}>
-                            {' '}
-                            <Link to={link.to}>{link.label}</Link>
-                          </Fragment>
-                        ))}
-                    </p>
-                  </div>
+              <div className="home-find">
+                <div className="search-label">
+                  <label htmlFor="home-search">Find a tool or guide</label>
+                  <span>Press <kbd>/</kbd> to search</span>
                 </div>
-              ))}
-            </section>
-          )}
+                <div className="search-box">
+                  <Search size={18} />
+                  <Input
+                    id="home-search"
+                    ref={searchRef}
+                    type="search"
+                    autoComplete="off"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setQuery('');
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="Try impedance, via current, USB, buck…"
+                    aria-controls={words.length ? 'search-results' : undefined}
+                  />
+                  {query && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="clear-search"
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setQuery('');
+                        searchRef.current?.focus();
+                      }}
+                    >
+                      <X size={14} />
+                    </Button>
+                  )}
+                </div>
+                <div className="home-guidance-invitation">
+                  <span>Not sure where to start?</span>
+                  <Button type="button" variant="link" size="sm" onClick={openGuidance}>
+                    <Compass size={15} aria-hidden="true" />Help me choose<ArrowRight size={13} aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {!words.length && <>
+              <nav className="home-task-grid" aria-label="Start a PCB task">
+                {HOME_TASKS.map(task => <Link className="home-task" to={task.to} key={task.to}>
+                  <task.icon size={22} aria-hidden="true" style={{ color: GROUP_COLORS[task.group] }} />
+                  <h3>{task.title}</h3>
+                  <p>{task.description}</p>
+                  <span className="home-task-action">Get started <ArrowRight size={14} aria-hidden="true" /></span>
+                </Link>)}
+              </nav>
+              <p className="home-local-note">KiCad and Gerber files stay in your browser. Both tools include an example to try.</p>
+            </>}
+          </CardContent>
         </Card>
         {words.length ? (
           <Card id="search-results">
@@ -268,17 +257,6 @@ export default function Home() {
           </Card>
         ) : (
           <>
-            <Card>
-              <Heading>Check a KiCad board</Heading>
-              <div className="guide-grid">
-                {[
-                  { title: 'Routing and impedance', to: '/kicad-project', text: 'Read your stackup and check routed widths, pair impedance, skew and reference planes.' },
-                  { title: 'Power and voltage drop', to: '/kicad-project?view=power&pmode=dc', text: 'Follow the supply and return copper from the source to your loads, with a voltage-drop map.' },
-                  { title: 'Board temperature', to: '/kicad-project?view=thermal', text: 'Enter part dissipation and inspect how the copper spreads heat across the board.' },
-                ].map(task => <Link className="guide-card" key={task.to} to={task.to}><h3>{task.title}</h3><p>{task.text}</p><span className="guide-footer">Open KiCad Project <ArrowRight size={15} /></span></Link>)}
-              </div>
-              <p className="px-4 pb-3 text-faint">Files stay in your browser. No board at hand? Try the demonstration project on the KiCad page. Same-layer clearance checks are available there too.</p>
-            </Card>
             <FeaturedTools />
             <section
               className="categories-section"
@@ -347,6 +325,16 @@ export default function Home() {
                   </Link>
                 ))}
               </div>
+            </Card>
+            <Card className="welcome-news home-news" aria-labelledby="home-news-heading">
+              <Heading action={<span className="section-meta">Latest updates</span>}><span id="home-news-heading">What's new</span></Heading>
+              {NEWS.slice(0, 2).map(item => <div className="news-item" key={item.title}>
+                <div className="news-icon"><Check size={17} aria-hidden="true" /></div>
+                <div>
+                  <div className="news-title"><h3>{item.title}</h3><time dateTime={item.date}>{newsDate(item.date)}</time></div>
+                  <p>{item.text}{'links' in item && item.links?.map(link => <Fragment key={link.to}>{' '}<Link to={link.to}>{link.label}</Link></Fragment>)}</p>
+                </div>
+              </div>)}
             </Card>
           </>
         )}

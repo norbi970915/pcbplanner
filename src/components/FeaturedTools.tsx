@@ -5,6 +5,8 @@ import { Card } from './shadcn/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, type CarouselApi } from './shadcn/carousel';
 
 const FEATURES = [
+ { path: '/kicad-project', title: 'KiCad project', description: 'Check routing, voltage drop, temperature and clearance from your board files.', category: 'Board review', color: '#c9a227', kind: 'kicad', action: 'Check a board' },
+ { path: '/gerber-viewer', title: 'Gerber viewer', description: 'Inspect copper layers, compare two revisions and export the comparison view.', category: 'Fabrication', color: '#6cc28c', kind: 'gerber', action: 'Inspect Gerbers' },
  { path: '/impedance', title: 'Trace impedance', description: 'Find the right geometry for single-ended and differential traces.', category: 'Signal integrity', color: '#3d8fe0', kind: 'impedance' },
  { path: '/stackup', title: 'PCB stackup', description: 'Build your layer stack, choose materials and plan reference planes.', category: 'Stackup', color: '#c9a227', kind: 'stackup' },
  { path: '/s-parameter-viewer', title: 'S-parameter viewer', description: 'Explore return loss, insertion loss and your channel response.', category: 'RF & measurement', color: '#5fb0d8', kind: 'response' },
@@ -26,6 +28,29 @@ function Illustration({ kind }: { kind: typeof FEATURES[number]['kind'] }) {
   </defs>
   <rect width="400" height="180" fill={'url(#'+kind+'-grid)'} />
   <ellipse cx="205" cy="110" rx="165" ry="110" fill={'url(#'+kind+'-glow)'} />
+  {kind === 'kicad' && <>
+   <rect x="64" y="46" width="190" height="108" rx="9" fill="var(--art-slab)" stroke="currentColor" strokeOpacity=".7"/>
+   <path d="M83 73h43l20 20h39l23-23h27M83 81h39l20 20h47l23-23h23" stroke="#d17d74" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+   <path d="M84 134h42l20-20h55l19 19h16" stroke="#6cc28c" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+   <rect x="148" y="109" width="26" height="26" rx="3" fill="var(--art-bg)" stroke="var(--art-axis)"/>
+   <g stroke="var(--art-axis)" strokeWidth="2"><path d="M153 105v-5m8 5v-5m8 5v-5M153 139v5m8-5v5m8-5v5"/></g>
+   {[{x:83,y:73},{x:83,y:81},{x:235,y:70},{x:235,y:78},{x:84,y:134},{x:236,y:133}].map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="4" fill="var(--art-bg)" stroke="currentColor" strokeWidth="2"/>)}
+   <circle cx="209" cy="73" r="13" stroke="#d17d74" strokeWidth="1.5" strokeDasharray="3 3"/>
+   {[{y:62,label:'ROUTING',color:'#d17d74'},{y:85,label:'POWER',color:'#6cc28c'},{y:108,label:'THERMAL',color:'#d08a3c'},{y:131,label:'CLEARANCE',color:'#c9a227'}].map(row=><g key={row.label}><circle cx="278" cy={row.y} r="3" fill={row.color}/><text x="289" y={row.y+3} className="art-note">{row.label}</text></g>)}
+   <text x="158" y="170" className="art-note" textAnchor="middle">REVIEW YOUR BOARD</text>
+  </>}
+  {kind === 'gerber' && <>
+   {[{x:56,label:'REV A'},{x:214,label:'REV B'}].map(board=><g key={board.label}>
+    <rect x={board.x} y="48" width="130" height="100" rx="8" fill="var(--art-slab)" stroke="var(--art-outline)"/>
+    <path d={`M${board.x+17} 70h34l24 24h36M${board.x+17} 128h27l25-25h42`} stroke="var(--art-axis)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+    {[{x:17,y:70},{x:111,y:94},{x:17,y:128},{x:111,y:103}].map((pad,i)=><circle key={i} cx={board.x+pad.x} cy={pad.y} r="6" fill="var(--art-bg)" stroke="var(--art-axis)" strokeWidth="3"/>)}
+    <text x={board.x+65} y="166" className="art-note" textAnchor="middle">{board.label}</text>
+   </g>)}
+   <path d="M104 128v-32h38" stroke="#d17d74" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4"/>
+   <path d="M262 128h31v-20h28" stroke="#6cc28c" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+   <rect x="249" y="97" width="79" height="39" rx="5" stroke="#6cc28c" strokeOpacity=".7" fill="#6cc28c" fillOpacity=".08"/>
+   <path d="M192 97h16m-5-5 5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </>}
   {kind === 'impedance' && <>
    <path d="M62 106 201 63 341 106 201 150Z" fill="var(--art-slab)" stroke="var(--art-outline)"/>
    <path d="M62 106v17l139 44v-17M201 150l140-44v17l-140 44" fill="var(--art-edge)" stroke="var(--art-outline)"/>
@@ -226,7 +251,7 @@ export function FeaturedTools() {
          <div className="featured-copy">
           <h3>{feature.title}</h3>
           <p>{feature.description}</p>
-          <span className="featured-action">Open tool <ArrowRight size={14} /></span>
+          <span className="featured-action">{'action' in feature ? feature.action : 'Open tool'} <ArrowRight size={14} /></span>
          </div>
         </Link>
        </Card>

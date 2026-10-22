@@ -24,11 +24,13 @@ async function layout(route){
 try {
  await visit('/');
  assert.equal(await page.locator('.welcome-news .news-item').count(),2);
+ assert.equal(await page.locator('.welcome-card .welcome-news').count(),0);
+ assert.equal(await page.locator('.home-task').count(),4);
  assert.ok((await page.locator('.welcome-card').boundingBox()).height<400);
  assert.equal(await page.getByRole('heading',{name:'Check a KiCad board',exact:true}).count(),1);
  await page.getByLabel('Find a tool or guide',{exact:true}).and(page.locator('input')).fill('boost');await page.locator('#search-results').waitFor();
  assert.equal(await page.locator('.welcome-news').count(),0);await page.getByRole('button',{name:'Clear search',exact:true}).click();
- checks.push('Compact desktop Home preserves both announcements and search');
+ checks.push('Compact desktop Home leads with four tasks, preserves announcements below and retains search');
  await visit('/buck-converter');
  const handle=page.getByRole('separator',{name:'Resize Properties panel'}),panel=page.locator('.properties-panel');
  const before=(await panel.boundingBox()).width,h=await handle.boundingBox();

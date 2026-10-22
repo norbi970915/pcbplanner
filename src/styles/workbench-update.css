@@ -1,17 +1,31 @@
-/* Compact welcome card; announcements retain their existing order. */
+/* Start with a task; search stays in place when its results replace the browse content. */
 .welcome-card .welcome-content { padding: 16px 20px; }
 .welcome-card .intro { margin-top: 7px; line-height: 1.6; }
 .welcome-card .search-label { margin-top: 13px; }
-.welcome-card .welcome-news-heading { padding: 11px 20px 0; }
-.welcome-card .welcome-news .news-item { padding: 10px 20px 12px; gap: 10px; }
-.welcome-card .news-item p { line-height: 1.55; }
-.welcome-card .news-icon { width: 24px; height: 24px; }
-@media (min-width: 1280px) {
-  .welcome-card:has(.welcome-news) { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
-  .welcome-card > .section-heading { grid-column: 1 / -1; }
-  .welcome-card .welcome-news { border-top: 0; border-left: 1px solid var(--line); }
-  .welcome-card .welcome-news-heading { padding-top: 15px; }
-  .welcome-card .news-title { gap: 4px 10px; }
+.home-start-header, .home-find { min-width: 0; }
+.home-task-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 17px; }
+.home-task { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 15px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--field); color: var(--ink); }
+.home-task:hover { background: var(--hover); border-color: var(--accent-ink); }
+.home-task:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+.home-task h3 { margin: 10px 0 5px; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.home-task p { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.home-task-action { display: flex; align-items: center; gap: 7px; margin-top: auto; color: var(--accent-ink); font-size: 11px; font-weight: 500; }
+.home-local-note { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.home-news .news-item { padding: 13px 20px 15px; }
+@media (min-width: 1100px) {
+  .home-start-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: 28px; }
+  .welcome-card .search-label { margin-top: 0; }
+}
+@media (max-width: 1199px) {
+  .home-task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .home-task-grid { gap: 9px; margin-top: 13px; }
+  .home-task { padding: 12px; }
+  .home-task h3 { font-size: 13px; }
+  .home-task p { font-size: 12px; margin-bottom: 12px; }
+  .home-task-action { min-height: 24px; }
+  .home-local-note { font-size: 10px; }
 }
 .property-field { gap: 7px 10px; padding: 3px 0; }
 .property-field-label { white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
@@ -40,8 +54,6 @@
 }
 @media (max-width: 480px) {
   .welcome-card .welcome-content { padding: 14px 16px; }
-  .welcome-card .welcome-news-heading { padding: 10px 16px 0; }
-  .welcome-card .welcome-news .news-item { padding: 9px 16px 11px; }
   .property-field { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 }
 @media print { .properties-resizer, .mobile-workbench-bar { display: none !important; } }

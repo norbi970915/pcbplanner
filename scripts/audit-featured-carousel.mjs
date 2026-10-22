@@ -5,9 +5,10 @@ import { resolve } from 'node:path';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:4173';
 const release = process.argv[3] ?? 'local';
-const out = resolve('dist-check/carousel');
+const out = resolve(process.argv[4] ?? 'dist-check/carousel');
 mkdirSync(out, { recursive: true });
 const paths = [
+ '/kicad-project', '/gerber-viewer',
  '/impedance', '/stackup', '/s-parameter-viewer', '/stackup-advisor',
  '/trace-width', '/via', '/pdn', '/power-tree', '/buck-converter',
  '/copper-heat-spreading',
@@ -44,13 +45,15 @@ async function visible(page, expected) {
 }
 async function settled(page) {
  await page.evaluate(() => new Promise(resolve => {
-  const track = document.querySelector('.featured-track');
+  // Looping translates individual slides as well as the track. Wait for the
+  // actual link hitboxes before tapping; the track alone can appear stationary.
+  const links = [...document.querySelectorAll('.featured-link')];
   let previous = null;
   let stable = 0;
   const frame = () => {
-   const x = new DOMMatrixReadOnly(getComputedStyle(track).transform).m41;
-   stable = previous !== null && Math.abs(x - previous) < .02 ? stable + 1 : 0;
-   previous = x;
+   const positions = links.map(link => { const r = link.getBoundingClientRect(); return [r.left, r.top]; }).flat();
+   stable = previous !== null && positions.every((value, index) => Math.abs(value - previous[index]) < .02) ? stable + 1 : 0;
+   previous = positions;
    if (stable >= 6) resolve();
    else requestAnimationFrame(frame);
   };
@@ -72,7 +75,7 @@ async function context(options) {
  const ctx = await browser.newContext({ serviceWorkers: 'block', ...options });
  await ctx.addInitScript(() => {
   sessionStorage.setItem('pcbtk-settings', JSON.stringify({ theme: 'dark', unit: 'mm' }));
-  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', updatedAt: new Date().toISOString() }));
+  localStorage.setItem('pcbplanner:analytics-consent', JSON.stringify({ choice: 'declined', version: 2, updatedAt: new Date().toISOString() }));
  });
  const page = await ctx.newPage();
  page.on('pageerror', error => errors.push(error.message));
@@ -82,28 +85,41 @@ try {
  const { page } = await context({ viewport: { width: 1600, height: 1050 } });
  await visit(page);
  assert.deepEqual(await page.locator('.featured-link').evaluateAll(links => links.map(a => new URL(a.href).pathname)), paths);
- assert.equal(await page.locator('.featured-art > svg').count(), 10);
+ assert.equal(await page.locator('.featured-art > svg').count(), paths.length);
  const illustrations = await page.locator('.featured-art > svg').evaluateAll(svgs => svgs.map(svg => svg.innerHTML));
- assert.equal(new Set(illustrations).size, 10);
- assert.equal(await page.locator('.welcome-card .welcome-news').count(), 1);
+ assert.equal(new Set(illustrations).size, paths.length);
+ assert.equal(await page.locator('.welcome-card .welcome-news').count(), 0);
+ assert.equal(await page.locator('.home-news .news-item').count(), 2);
+ await page.screenshot({ path: resolve(out, 'homepage-desktop.png') });
+ const tasks = ['/kicad-project', '/stackup', '/gerber-viewer', '/tools'];
+ assert.deepEqual(await page.locator('.home-task').evaluateAll(links => links.map(link => new URL(link.href).pathname)), tasks);
+ assert.ok(await page.locator('.home-news').evaluate(news => !!(document.querySelector('.categories-section').compareDocumentPosition(news) & Node.DOCUMENT_POSITION_FOLLOWING)));
+ for (const path of tasks) {
+  await page.locator('.home-task[href="' + path + '"]').click();
+  await page.waitForURL(url => url.pathname === path);
+  await page.locator('main h1').waitFor();
+  await page.goBack({ waitUntil: 'networkidle' });
+  await visible(page, paths.slice(0, 3));
+ }
+ checks.push('Four task choices open the correct tools and browser Back restores Home; announcements follow the main tasks and categories');
  assert.doesNotMatch(await page.locator('main').innerText(), /Quick access|A closer look at your design|\d+\s+disciplines/);
  const next = page.getByRole('button', { name: 'Next featured tool', exact: true });
  const previous = page.getByRole('button', { name: 'Previous featured tool', exact: true });
  await previous.click();
- await visible(page, [paths[9], paths[0], paths[1]]);
+ await visible(page, [paths.at(-1), paths[0], paths[1]]);
  await next.click();
  await visible(page, paths.slice(0, 3));
  const seen = new Set(paths.slice(0, 3));
  await page.locator('.featured-section').screenshot({ path: resolve(out, 'desktop-0.png') });
- for (let step = 1; step <= 10; step++) {
+ for (let step = 1; step <= paths.length; step++) {
   await next.click();
   const expected = [0, 1, 2].map(offset => paths[(step + offset) % paths.length]);
   await visible(page, expected);
   expected.forEach(path => seen.add(path));
   if ([3, 6, 9].includes(step)) await page.locator('.featured-section').screenshot({ path: resolve(out, 'desktop-' + step + '.png') });
  }
- assert.equal(seen.size, 10);
- checks.push('Ten unique illustrated tools; next/previous, continuous wrapping and synchronized position indicator');
+ assert.equal(seen.size, paths.length);
+ checks.push('Twelve unique illustrated tools, led by KiCad and Gerber; next/previous, continuous wrapping and synchronized position indicator');
  await next.focus();
  await page.keyboard.press('ArrowRight');
  await visible(page, paths.slice(1, 4));
@@ -137,7 +153,7 @@ try {
  await visit(page);
  await page.locator('.featured-link').last().focus();
  await visible(page);
- assert.ok((await page.evaluate(visibleCards)).includes(paths[9]));
+ assert.ok((await page.evaluate(visibleCards)).includes(paths.at(-1)));
  checks.push('Keyboard focus brings offscreen tools into view');
  await visit(page);
  for (const theme of ['dark', 'light']) {
@@ -146,7 +162,7 @@ try {
    await page.setViewportSize({ width, height: 1050 });
    await visible(page, paths.slice(0, 3));
    await previous.click();
-   await visible(page, [paths[9], paths[0], paths[1]]);
+   await visible(page, [paths.at(-1), paths[0], paths[1]]);
    await next.click();
    await visible(page, paths.slice(0, 3));
    const layout = await page.evaluate(() => {
@@ -160,26 +176,32 @@ try {
      pageOverflow: document.documentElement.scrollWidth > innerWidth + 1,
      mainOverflow: main.scrollWidth > main.clientWidth + 1,
      titles: [...document.querySelectorAll('.featured-copy h3')].every(el => el.scrollWidth <= el.clientWidth + 1),
+     tasks: [...document.querySelectorAll('.home-task')].length === 4 && [...document.querySelectorAll('.home-task')].every(el => el.scrollWidth <= el.clientWidth + 1 && el.getBoundingClientRect().height >= 44),
     };
    });
-   assert.deepEqual(layout, { controlsInside: true, pageOverflow: false, mainOverflow: false, titles: true }, theme + ' ' + width);
+   assert.deepEqual(layout, { controlsInside: true, pageOverflow: false, mainOverflow: false, titles: true, tasks: true }, theme + ' ' + width);
    if (width === 1600 || width === 390 || width === 320) {
     await page.locator('.featured-section').screenshot({ path: resolve(out, theme + '-' + width + '.png') });
+    await page.locator('.welcome-card').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(out, 'homepage-' + theme + '-' + width + '.png') });
    }
   }
  }
  checks.push('Exactly three complete cards at five widths in both themes');
  await page.emulateMedia({ reducedMotion: 'reduce' });
  await previous.click();
- await visible(page, [paths[9], paths[0], paths[1]]);
+ await visible(page, [paths.at(-1), paths[0], paths[1]]);
  await next.click();
  await visible(page, paths.slice(0, 3));
  checks.push('Reduced-motion preference');
  await page.locator('#home-search').fill('via current');
  await page.getByRole('heading', { name: 'Search results', exact: true }).waitFor();
  assert.equal(await page.locator('.featured-section').count(), 0);
+ assert.equal(await page.locator('.home-task').count(), 0);
+ assert.equal(await page.locator('.home-news').count(), 0);
  await page.locator('#home-search').press('Escape');
  await visible(page, paths.slice(0, 3));
+ assert.equal(await page.locator('.home-task').count(), 4);
  checks.push('Search and carousel restoration');
 
  const touch = await context({ viewport: { width: 390, height: 900 }, hasTouch: true, isMobile: true });
@@ -200,11 +222,15 @@ try {
  checks.push('Free touch swipe with momentum and synchronized position indicator');
  const visiblePath = paths[(touchStart + 1) % paths.length];
  await touch.page.locator('.featured-link[href="' + visiblePath + '"]').tap();
- await touch.page.waitForURL(url => url.pathname === visiblePath);
+ await touch.page.waitForURL(url => url.pathname === visiblePath).catch(async error => {
+  await touch.page.screenshot({ path: resolve(out, 'touch-navigation-failure.png') });
+  console.error('Touch target:', visiblePath, 'actual:', touch.page.url());
+  throw error;
+ });
  await touch.page.locator('.document-page').waitFor();
  checks.push('Touch tap opens a featured calculator');
  assert.deepEqual(errors, []);
- const report = { result: 'PASS', base, release, tools: 10, visibleCards: 3, checks, browserErrors: errors };
+ const report = { result: 'PASS', base, release, tools: paths.length, visibleCards: 3, checks, browserErrors: errors };
  writeFileSync(resolve(out, 'report.json'), JSON.stringify(report, null, 2));
  console.log(JSON.stringify(report, null, 2));
 } finally { await browser.close(); }

@@ -162,10 +162,10 @@ try {
   }
   await page.setViewportSize({ width: 1600, height: 1050 });
   await visit('/');
-  assert.equal(await page.locator('.featured-link').count(), 10);
+  assert.equal(await page.locator('.featured-link').count(), 12);
   assert.equal(await page.locator('.quick-task').count(), 0);
   assert.doesNotMatch(await page.locator('main').innerText(), /Quick access|A closer look at your design/);
-  assert.deepEqual(await page.locator('.featured-link').evaluateAll(links => links.slice(0, 3).map(link => new URL(link.href).pathname)), ['/impedance', '/stackup', '/s-parameter-viewer']);
+  assert.deepEqual(await page.locator('.featured-link').evaluateAll(links => links.slice(0, 3).map(link => new URL(link.href).pathname)), ['/kicad-project', '/gerber-viewer', '/impedance']);
   const signalColor = await page
     .locator('.category-link')
     .first()
@@ -201,14 +201,14 @@ try {
   assert.ok((await page.locator('.status-bar').innerText()).includes('mil'));
   await page.getByRole('button', { name: 'Switch to dark theme' }).click();
   checks.push('Accessible menus, theme and unit switching');
-  for (const route of ['/impedance', '/stackup', '/s-parameter-viewer']) {
+  for (const route of ['/kicad-project', '/gerber-viewer', '/impedance']) {
     await visit('/');
     await page.locator('.featured-link[href="' + route + '"]').click();
     await page.waitForURL(url => url.pathname === route);
     await page.locator('.document-page').waitFor();
     assert.ok((await page.locator('main').innerText()).length > 60);
   }
-  checks.push('Featured card navigation to impedance, stackup and S-parameters');
+  checks.push('Featured card navigation to KiCad, Gerbers and impedance');
   await visit('/ohms-law');
   const fields = page.locator('.properties-panel input:not([type="checkbox"])');
   const before = await page.locator('main').innerText();

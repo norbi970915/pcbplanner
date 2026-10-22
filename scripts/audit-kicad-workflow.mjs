@@ -31,7 +31,7 @@ const rejectBlankNumber = async label => {
 try {
   await page.goto(base + '/');
   await page.getByRole('heading', { name: 'Check a KiCad board', exact: true }).waitFor();
-  check(await page.getByRole('link', { name: /Power and voltage drop/ }).getAttribute('href') === '/kicad-project?view=power&pmode=dc', 'Home opens the board DC-drop workflow directly');
+  check(await page.getByRole('navigation', { name: 'Start a PCB task' }).getByRole('link', { name: /Check a KiCad board/ }).getAttribute('href') === '/kicad-project', 'Home provides a direct board-review task');
   await page.goto(base + '/kicad-project');
   await page.getByRole('button', { name: 'Try an example', exact: true }).click();
   await page.getByTestId('example-scenario').waitFor();
