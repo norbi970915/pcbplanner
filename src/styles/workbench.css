@@ -1339,6 +1339,8 @@ kbd {
   .featured-action svg { width: 12px; height: 12px; }
 }
 @media (max-width:360px) {
+  .menu-bar .brand { margin-right: 0; flex-shrink: 0; }
+  .menu-bar .brand > span { display: none; }
   .featured-track { margin-left: -6px; }
   .featured-slide { padding-left: 6px; }
   .featured-art { height: 78px; }
@@ -1654,4 +1656,7 @@ kbd {
   .about-features { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .about-copy a.about-feature { padding: 15px; }
   .about-copy .about-lead { font-size: 14px; }
+}
+@media(min-width:1024px){
+  .workspace-focus [data-testid="example-scenario"]>p,.workspace-focus [data-testid="example-scenario"]>details{display:none}
 }

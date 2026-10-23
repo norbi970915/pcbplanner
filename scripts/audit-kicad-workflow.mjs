@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
+import { loadLegacyKicadExample } from './lib/legacy-kicad-example.mjs';
 
 const base = (process.argv[2] ?? 'http://127.0.0.1:5186').replace(/\/$/, '');
 const out = 'dist-check/kicad-workflow'; mkdirSync(out, { recursive: true });
@@ -32,9 +33,7 @@ try {
   await page.goto(base + '/');
   await page.getByRole('heading', { name: 'Check a KiCad board', exact: true }).waitFor();
   check(await page.getByRole('navigation', { name: 'Start a PCB task' }).getByRole('link', { name: /Check a KiCad board/ }).getAttribute('href') === '/kicad-project', 'Home provides a direct board-review task');
-  await page.goto(base + '/kicad-project');
-  await page.getByRole('button', { name: 'Try an example', exact: true }).click();
-  await page.getByTestId('example-scenario').waitFor();
+  await loadLegacyKicadExample(page, base);
   await page.waitForFunction(() => document.body.textContent.includes('routing check done'));
   check((await page.getByRole('region', { name: 'Routing check', exact: true }).innerText()).includes('1 routing failure'), 'Example presents a routing summary');
   const advanced = page.getByRole('button', { name: '▼ Stackup and impedance settings', exact: true });

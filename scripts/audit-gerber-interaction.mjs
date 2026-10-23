@@ -20,7 +20,7 @@ async function load(page){
       await page.waitForFunction(({side,count})=>[...document.querySelectorAll('.properties-section')].find(s=>s.textContent.includes('Layout '+side+' layers'))?.querySelectorAll('.gerber-layer-row').length===count,{side,count:files.length});
       await section(page,side).getByRole('button',{name:'Show all'}).click();
     }
-  }else{await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===6);}
+  }else{await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===12);}
   await ready(page);
 }
 try{
@@ -49,6 +49,7 @@ try{
   await page.getByRole('button',{name:'Exit focus view',exact:true}).click();await page.setViewportSize({width:1600,height:1100});await ready(page);
   assert(await page.getByRole('complementary',{name:'Tools',exact:true}).isVisible(),'Exiting focus restores navigation');
   console.log('Inspection/comparison round trips preserve files and alignment; focus fits the board at 1280 × 720 and restores navigation.');
+  await page.locator('.gerber-canvas-wrap canvas').scrollIntoViewIfNeeded();await ready(page);
   const before=await matrix(page),bounds=await page.locator('.gerber-canvas-wrap').boundingBox();
   await page.evaluate(()=>{
     const canvas=document.querySelector('.gerber-canvas-wrap canvas'),original=CanvasRenderingContext2D.prototype.drawImage;
@@ -84,7 +85,7 @@ try{
   await context.close();
   for(const width of [390,320]){
     const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});await context.addInitScript(consent);await context.addInitScript(()=>{Element.prototype.requestFullscreen=undefined;});
-    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Compare revisions',exact:true}).click();await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===6);await ready(page);
+    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Compare revisions',exact:true}).click();await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===12);await ready(page);
     await page.getByRole('button',{name:'Enter fullscreen',exact:true}).click();await page.locator('.gerber-fullscreen-workspace').waitFor();await ready(page);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     const view=await page.locator('.gerber-canvas-wrap').boundingBox(),controls=await page.getByRole('complementary',{name:'Gerber layers'}).boundingBox();assert(view.height>=100);assert(controls.y>=view.y+view.height-1);

@@ -89,6 +89,7 @@ export function useKicadFileLoader(onExampleLoaded?: () => void) {
         </button>
       </div>
       <p className="text-muted">The files stay in your browser — nothing is uploaded.</p>
+      <p className="text-faint">The example is LinkBench-4: four differential pairs and a 5 V power / thermal demonstration.</p>
       <p className="text-faint">
         {busy
           ? `Reading ${kp.boardName ?? 'the board'}…`

@@ -16,7 +16,7 @@ try{
   await page.goto(base+route,{waitUntil:'networkidle'});await idle();
   const source=section();await source.waitFor();const expand=source.locator('button.properties-toggle');if(await expand.getAttribute('aria-expanded')==='false')await expand.click();
   if(route==='/crosstalk'){
-   await source.getByRole('combobox',{name:'Aggressor net',exact:true}).selectOption('/PCIE_TX0_P');await source.getByRole('combobox',{name:'Victim net',exact:true}).selectOption('/PCIE_TX0_N');
+   await source.getByRole('combobox',{name:'Aggressor net',exact:true}).selectOption('/LANE0_P');await source.getByRole('combobox',{name:'Victim net',exact:true}).selectOption('/LANE0_N');
   }
   const fields=await source.locator('select').evaluateAll(nodes=>nodes.map((select,index)=>({index,label:select.labels?.[0]?.textContent??select.getAttribute('aria-label')??'selection',options:[...select.options].filter(option=>!option.disabled).map(option=>option.value)})));
   for(const field of fields){

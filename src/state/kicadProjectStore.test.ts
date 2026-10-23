@@ -220,6 +220,6 @@ describe('KiCad project store', () => {
     const s = createKicadProjectStore({ storage: persistent(), parseBoard, channel: false, fetcher });
     await s.restore();
     expect(await s.loadExample()).toBe(true);
-    expect(s.get().data).toMatchObject({ boardName: EXAMPLE_FILE, projectName: EXAMPLE_PROJECT_FILE });
+    expect(s.get().data).toMatchObject({ boardName: 'LinkBench-4.kicad_pcb', projectName: 'LinkBench-4.kicad_pro' });
   });
 });

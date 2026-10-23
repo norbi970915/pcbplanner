@@ -241,13 +241,15 @@ export default function KicadProject() {
       )}
       <Notes kind="error" items={[...loadErrors, ...(data && ['overview', 'board'].includes(p.view) ? a.errors : [])]} />
       {data?.boardName === KICAD_EXAMPLE.board.name && <div className="border border-line bg-sheet px-3 py-2" data-testid="example-scenario">
-        <div className="flex flex-wrap items-center justify-between gap-2"><b>Demonstration board</b><button type="button" className="btn" onClick={() => set(EXAMPLE_SCENARIO)}>Restore demonstration inputs</button></div>
-        {!data.board.routing?.nets.some(n => n.name === '+48V') && <p className="mt-1 text-muted">An older example is saved in this browser. <button type="button" className="underline" disabled={busy} onClick={() => { void kp.loadExample().then(loaded => { if (loaded) set(EXAMPLE_SCENARIO); }); }}>Load the updated demonstration</button> to get the new power and clearance sections.</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2"><b>LinkBench-4 demonstration board</b><button type="button" className="btn" onClick={() => set(EXAMPLE_SCENARIO)}>Restore demonstration inputs</button></div>
+        <p className="mt-1 text-muted">Four 100 Ω differential pairs and a 5 V load bank. Open Board to inspect the routing, Power for voltage drop, or Thermal and press Solve for the temperature map.</p>
         <details className="mt-1"><summary className="cursor-pointer text-muted">Demonstration assumptions and expected findings</summary>
-        <p className="mt-1 text-muted">Follow 5 V input J1 → 3.3 V regulator U1 → load U2. Assumed load: 0.2 A; heat: U1 0.34 W and U2 0.66 W at 25 °C in still air. Power shows the drop immediately; Thermal needs Solve. The separate 48 V test section demonstrates a clearance finding. These are teaching inputs, not device ratings or a fabrication-ready design.</p>
-        <p className="mt-1 text-faint">USB deliberately keeps the wrong width after a layer change; HDMI has uncompensated bend skew; PCIe shows a passing pair. No junction metric is assumed. <a href={KICAD_EXAMPLE.board.url} download>Download board</a> · <a href={KICAD_EXAMPLE.project.url} download>Download project</a></p>
+        <p className="mt-1 text-muted">This passive interconnect has three pairs on F.Cu and one with a B.Cu transition, referenced to two ground planes. A 100 Ω target is assigned by its net class; the board is not qualified for a particular interface or data rate.</p>
+        <p className="mt-1 text-muted">J3 supplies four 68 Ω resistors. At nominal 5 V, each load is modelled as 73.53 mA and 0.368 W: 294.12 mA and 1.47 W total. The DC model uses those constant currents. Thermal uses 25 °C still air, board convection/radiation and copper losses. Results are model estimates, not measurements or resistor surface temperatures.</p>
+        <p className="mt-1 text-faint">The illustrative stackup and operating assumptions are included in the download. <a href="/examples/linkbench-4/LinkBench-4-example.zip" download>Download complete project</a> · <a href={KICAD_EXAMPLE.board.url} download>Board</a> · <a href={KICAD_EXAMPLE.project.url} download>Project settings</a></p>
         </details>
       </div>}
+      {data?.boardName === 'pcbplanner-example-6layer.kicad_pcb' && <p className="border border-line bg-sheet px-3 py-2 text-muted">You have the earlier teaching example open. <button type="button" className="underline" disabled={busy} onClick={() => { void kp.loadExample().then(loaded => { if (loaded) set(EXAMPLE_SCENARIO); }); }}>Try LinkBench-4</button> for the new routing, power and thermal demonstration.</p>}
       {data && (
         <nav aria-label="Project views" className="flex gap-1 border-b border-line">
           {(

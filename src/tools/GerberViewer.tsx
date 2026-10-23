@@ -8,12 +8,12 @@ import { GerberCopperAnalysis } from '../components/GerberCopperAnalysis';
 import { GerberCanvas, type GerberCanvasApi, type GerberView } from '../components/GerberCanvas';
 import { gerberLayerLabel, readGerberInputs, type GerberLayer } from '../lib/gerber';
 import { parseGerberInputs } from '../lib/gerberWorker';
-import { GERBER_EXAMPLE_A, GERBER_EXAMPLE_B } from '../lib/gerberExample';
+import { loadGerberExample } from '../lib/gerberExample';
 import { downloadBlob } from '../lib/resultImage';
 
 type Side='A'|'B';
 type Workflow='inspect'|'compare';
-interface Layout { name:string;layers:GerberLayer[];warnings:string[] }
+interface Layout { name:string;layers:GerberLayer[];warnings:string[];example?:boolean }
 const empty=():Layout=>({name:'',layers:[],warnings:[]});
 const NO_LAYERS:GerberLayer[]=[];
 // Volatile tab memory only: no filenames, SVGs or board files enter URL, analytics or browser storage.
@@ -69,11 +69,13 @@ export default function GerberViewer(){
     document.addEventListener('keydown',key);
     return()=>{document.removeEventListener('keydown',key);previous?.focus();};
   },[fullscreen,exitFullscreen]);
-  const load=useCallback(async(side:Side,files:File[])=>{
-    if(!files.length)return;
+  const load=useCallback(async(side:Side,source:File[]|((signal:AbortSignal)=>Promise<File[]>),example=false)=>{
+    if(Array.isArray(source)&&!source.length)return;
     controllers.current[side]?.abort();const controller=new AbortController();controllers.current[side]=controller;
     setLoading(state=>({...state,[side]:'Reading files...'}));setError('');
     try{
+      const files=typeof source==='function'?await source(controller.signal):source;
+      if(controller.signal.aborted)return;
       const {inputs,warnings}=await readGerberInputs(files,controller.signal);
       const labels=new Map(inputs.map(file=>[file.name,gerberLayerLabel(file.name,new TextDecoder().decode(file.data.subarray(0,16000)))]));
       const parsed=await parseGerberInputs(inputs,controller.signal,(done,total)=>setLoading(state=>({...state,[side]:'Reading layer '+done+' of '+total+'...'})));
@@ -84,7 +86,7 @@ export default function GerberViewer(){
         const matching=side==='B'?new Set(current.A.layers.filter(l=>l.visible).map(l=>l.label)):new Set<string>();
         const labelled=parsed.layers.map((layer,index)=>({...layer,id:side+'-'+stamp+'-'+index,label:labels.get(layer.name)??gerberLayerLabel(layer.name),visible:false,color:COLORS[(index+(side==='B'?1:0))%COLORS.length]}));
         const preferred=labelled.find(l=>matching.has(l.label))??labelled.find(l=>/Top copper|Copper.*Top/i.test(l.label))??labelled[0];
-        return {...current,[side]:{name:files.length===1?files[0].name:files.length+' files',layers:labelled.map(l=>({...l,visible:l===preferred})),warnings:[...warnings,...parsed.errors,...parsed.layers.flatMap(l=>l.warnings.map(w=>l.name+': '+w))]}};
+        return {...current,[side]:{name:example?'LinkBench-4 · revision '+side:files.length===1?files[0].name:files.length+' files',example,layers:labelled.map(l=>({...l,visible:l===preferred})),warnings:[...warnings,...parsed.errors,...parsed.layers.flatMap(l=>l.warnings.map(w=>l.name+': '+w))]}};
       });
       if(side==='B'){setDx(0);setDy(0);}setFitKey(key=>key+1);
     }catch(error){if(!controller.signal.aborted)setError(error instanceof Error?error.message:'Could not open layout.');}
@@ -121,7 +123,7 @@ export default function GerberViewer(){
     <Button size="sm" variant="outline" disabled={!dx&&!dy} onClick={()=>{setDx(0);setDy(0);}}>Reset alignment</Button>
     <p className="text-faint">Use the same export origin for both revisions. Fit changes only the view; it does not align or move either board.</p>
   </Section>}<Section title="Files and privacy" defaultOpen={false}><p className="text-faint">Files are read on this device and kept in this tab's memory. Reloading clears them. Files are not uploaded or included in shared URLs. Up to 64 layers / 40 MiB expanded per layout, 8 MiB per layer and 25 MiB per ZIP.</p></Section></>;
-  const sample=async()=>{await load('A',GERBER_EXAMPLE_A.map(f=>new File([f.text],f.name)));if(compareWorkflow)await load('B',GERBER_EXAMPLE_B.map(f=>new File([f.text],f.name)));};
+  const sample=async()=>{await Promise.all([load('A',signal=>loadGerberExample('a',signal),true),...(compareWorkflow?[load('B',signal=>loadGerberExample('b',signal),true)]:[])]);};
   const exportImage=()=>{
     const source=canvas.current?.image();if(!source)return;
     const output=document.createElement('canvas');output.width=source.width;output.height=source.height+180;
@@ -141,6 +143,11 @@ export default function GerberViewer(){
       <p className="text-muted">{compareWorkflow?'Open revisions A and B, then select matching layers to compare.': 'Open a board and choose the layers you want to inspect.'}{!compareWorkflow&&layouts.B.layers.length>0&&' Revision B is kept for when you return to Compare revisions.'}</p>
     </div>
     <div className={`gerber-upload-grid ${compareWorkflow?'':'gerber-upload-single'}`}>{upload('A')}{compareWorkflow&&upload('B')}</div>
+    {layouts.A.example&&(!compareWorkflow||layouts.B.example)&&<div className="border border-line bg-sheet px-3 py-2" data-testid="gerber-example">
+      <b>LinkBench-4 {compareWorkflow?'revision comparison':'demonstration board'}</b>
+      <p className="mt-1 text-muted">{compareWorkflow?'Revision B reroutes the LANE0 pair, widens the 5 V feed from 0.4 to 0.8 mm, adds two ground vias and extends the supply pour. Compare top copper, then the other matching layers.':'Inspect the four copper layers, top silkscreen and board outline of this four-layer differential interconnect.'}</p>
+      <p className="mt-1 text-faint">{compareWorkflow?'Orange is A only; blue is B only; grey is shared geometry. Differences only hides the shared copper. ':''}<a href="/examples/linkbench-4/LinkBench-4-example.zip" download>Download the boards and Gerbers</a></p>
+    </div>}
     <Notes kind="error" items={error?[error]:[]}/>
     <div ref={workspace} className={fullscreen?'gerber-fullscreen-workspace':undefined} role={fullscreen?'dialog':undefined} aria-modal={fullscreen?true:undefined} aria-label={fullscreen?'Fullscreen Gerber workspace':undefined}>
     <Panel className="gerber-board-panel" title={analysisOpen?'Copper distribution':'Board view'} right={<div className="gerber-board-actions"><Button size="sm" variant={analysisOpen?'secondary':'ghost'} aria-pressed={analysisOpen} onClick={()=>setAnalysisOpen(value=>!value)}><BarChart3 size={14}/><span>{analysisOpen?'Back to viewer':'Copper analysis'}</span></Button><Button ref={fullscreenButton} size="sm" variant="ghost" aria-label={fullscreen?'Exit fullscreen':'Enter fullscreen'} onClick={()=>void toggleFullscreen()}>{fullscreen?<Minimize2 size={14}/>:<Expand size={14}/>}<span>{fullscreen?'Exit fullscreen':'Fullscreen'}</span></Button><Button size="sm" variant="ghost" disabled={analysisOpen||viewBusy||!selectedA.length&&!selectedB.length} onClick={exportImage}><Download size={14}/>PNG</Button></div>}>

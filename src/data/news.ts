@@ -10,6 +10,18 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   {
+    date: '2026-10-23',
+    title: 'Meet LinkBench-4: routing, power and thermal in one example',
+    text: 'Try a four-layer board with four differential pairs and a 5 V load bank. Inspect the routing, explore voltage drop and solve a board temperature map with explicit operating assumptions. Focus view gives the board more space while keeping its settings close.',
+    links: [{ to: '/kicad-project', label: 'Try the KiCad example' }],
+  },
+  {
+    date: '2026-10-23',
+    title: 'Compare real board revisions in the Gerber viewer',
+    text: 'The new LinkBench-4 comparison shows a rerouted differential pair, a wider power feed, extra ground vias and a changed copper pour. Inspect one board or compare revisions A and B, select matching layers and highlight what changed. Files are processed in your browser.',
+    links: [{ to: '/gerber-viewer', label: 'Try the Gerber comparison' }],
+  },
+  {
     date: '2026-10-18',
     title: 'Load your KiCad project and check its routing',
     text: 'Drop your KiCad project folder once to see its stackup, net classes and differential pairs, the trace widths for 50, 90 and 100 Ω on every layer, and a routing check of each pair’s impedance, skew, length and loss. Impedance, Interface rules, Trace loss, Delay & timing, Crosstalk and PDN can then import values from the project. The files stay in your browser.',

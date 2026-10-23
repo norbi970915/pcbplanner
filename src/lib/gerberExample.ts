@@ -1,6 +1,11 @@
-const header=(label:string)=>'G04 PCB Planner original example*\n%FSLAX24Y24*%\n%MOMM*%\n%TF.FileFunction,'+label+'*%\n%ADD10C,0.8*%\n%ADD11C,2.2*%\n%ADD12C,0.8*%\nG01*\n';
-const trace=(moved:boolean)=>header('Copper,L1,Top')+'D10*\nX030000Y030000D02*\nX100000Y030000D01*\nX'+(moved?'140000Y070000':'140000Y030000')+'D01*\nX210000Y070000D01*\nD11*\nX030000Y030000D03*\nX210000Y070000D03*\n'+(moved?'X160000Y100000D03*\n':'')+'%LPC*%\nD12*\nX030000Y030000D03*\n%LPD*%\nM02*\n';
-const silk=header('Legend,Top')+'D10*\nX020000Y110000D02*\nX220000Y110000D01*\nM02*\n';
-const outline=header('Profile')+'D10*\nX0Y0D02*\nX250000Y0D01*\nX250000Y140000D01*\nX0Y140000D01*\nX0Y0D01*\nM02*\n';
-export const GERBER_EXAMPLE_A=[{name:'rev-a-top.gtl',text:trace(false)},{name:'rev-a-silk.gto',text:silk},{name:'rev-a-profile.gko',text:outline}];
-export const GERBER_EXAMPLE_B=[{name:'rev-b-top.gtl',text:trace(true)},{name:'rev-b-silk.gto',text:silk},{name:'rev-b-profile.gko',text:outline}];
+/** Native KiCad exports of the site's original LinkBench-4 board, fetched only on request. */
+export const GERBER_EXAMPLE_FILES = ['F_Cu.gtl', 'In1_Cu.g1', 'In2_Cu.g2', 'B_Cu.gbl', 'F_Silkscreen.gto', 'Edge_Cuts.gm1'];
+
+export async function loadGerberExample(revision: 'a' | 'b', signal: AbortSignal, fetcher: typeof fetch = fetch): Promise<File[]> {
+  return Promise.all(GERBER_EXAMPLE_FILES.map(async suffix => {
+    const name = `LinkBench-4-${suffix}`;
+    const response = await fetcher(`/examples/linkbench-4/gerbers/rev-${revision}/${name}`, { signal });
+    if (!response.ok) throw new Error(`Could not load example revision ${revision.toUpperCase()}: ${name} (HTTP ${response.status}).`);
+    return new File([await response.blob()], name);
+  }));
+}

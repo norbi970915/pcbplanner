@@ -74,6 +74,8 @@ jobs:
           echo "preview server did not start" && exit 1
       - name: Review and example regressions
         run: node scripts/audit-review-examples.mjs http://localhost:4173
+      - name: LinkBench demonstration regressions
+        run: node scripts/audit-linkbench-example.mjs http://localhost:4173
       - name: Browser suite
         run: |
           if [ -z "$ONLY" ]; then unset ONLY; fi
@@ -110,6 +112,7 @@ jobs:
             dist-check/kicad-workflow
             dist-check/reliability
             dist-check/review-examples
+            dist-check/linkbench-example
             dist-check/control-modes
             dist-check/actions
             dist-check/conditional-actions

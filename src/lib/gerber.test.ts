@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { strToU8, zipSync } from 'fflate';
 import { fitGerber, normaliseGerberCoordinates, gerberDifference, gerberLayerLabel, readGerberInputs, unionGerberBounds, zoomGerber, type GerberLayer } from './gerber';
-import { GERBER_EXAMPLE_A } from './gerberExample';
 import { normaliseGerberHeaders } from './gerberFormat';
 
 const signal=()=>new AbortController().signal;
+// Small original fixture for parser limits and polarity; separate from the downloadable board demo.
+const GERBER_EXAMPLE_A=[{text:'G04 PCB Planner test fixture*\n%FSLAX24Y24*%\n%MOMM*%\n%TF.FileFunction,Copper,L1,Top*%\n%ADD10C,0.8*%\nG01*\nD10*\nX030000Y030000D02*\nX100000Y030000D01*\nM02*\n'}];
 const layer=(bounds:[number,number,number,number]):GerberLayer=>({id:'a',name:'top.gtl',label:'Top copper',svg:'',bounds,visible:true,color:'#fff',warnings:[]});
 
 describe('Gerber layer identification and local imports',()=>{

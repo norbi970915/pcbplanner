@@ -1,4 +1,5 @@
-// The example project behind “Try an example” on the KiCad impedance page
+// The legacy teaching project retained for regression tests and existing download links.
+// “Try an example” now uses the native LinkBench-4 project (kicadProjectStore.ts).
 // (public/examples/pcbplanner-example-6layer.kicad_pcb and .kicad_pro). The board is the site's own
 // KiCad export of a 6-layer library stackup, with every copper layer left as a signal layer in the
 // layer setup, plus an 80 × 60 mm outline, GND and +3V3 plane zones on In1, In3 and In4, a small GND

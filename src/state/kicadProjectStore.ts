@@ -29,8 +29,8 @@ const CHANNEL = 'pcbplanner-kicad-project';
 const OLD_SESSION_KEY = 'pcbplanner:kicad-impedance:board';
 
 export const KICAD_EXAMPLE = {
-  board: { url: '/examples/pcbplanner-example-6layer.kicad_pcb', name: 'pcbplanner-example-6layer.kicad_pcb' },
-  project: { url: '/examples/pcbplanner-example-6layer.kicad_pro', name: 'pcbplanner-example-6layer.kicad_pro' },
+  board: { url: '/examples/linkbench-4/LinkBench-4.kicad_pcb', name: 'LinkBench-4.kicad_pcb' },
+  project: { url: '/examples/linkbench-4/LinkBench-4.kicad_pro', name: 'LinkBench-4.kicad_pro' },
 };
 
 export type KicadProjectStatus = 'empty' | 'loading' | 'ready' | 'error';

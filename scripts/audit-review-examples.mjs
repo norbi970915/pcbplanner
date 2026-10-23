@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
+import { loadLegacyKicadExample } from './lib/legacy-kicad-example.mjs';
 const base = (process.argv[2] ?? 'http://127.0.0.1:4192').replace(/\/$/, '');
 const out = 'dist-check/review-examples'; mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.E2E_CHANNEL ?? 'msedge', headless: true });
@@ -18,8 +19,7 @@ const status = name => card(name).getByRole('status');
 const noOverflow = async label => check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), label + ' has no horizontal overflow');
 const resumeWorker = async route => { try { await route.continue(); } catch (error) { if (!String(error).includes('Route is already handled')) throw error; } };
 try {
-  await page.goto(base + '/kicad-project');
-  await page.getByRole('button', { name: 'Try an example', exact: true }).click();
+  await loadLegacyKicadExample(page, base);
   await page.waitForFunction(() => document.body.textContent.includes('routing check done'));
   await status('Routing').filter({ hasText: 'Needs review' }).waitFor({ timeout: 90000 });
   check(await status('Routing').innerText() === 'Needs review', 'Routing findings are visible in the overview');
