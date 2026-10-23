@@ -279,6 +279,17 @@ summary:focus-visible {
   max-width: 1560px;
   margin: 0 auto;
 }
+.tool-task-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--sheet); }
+.tool-task-picker > p { flex-basis: 100%; margin: 2px 0 0; line-height: 1.6; }
+.solve-variable { padding: 8px; border-left: 2px solid var(--accent-ink); background: var(--panel-head); }
+.solve-variable-label { margin-bottom: 6px; color: var(--accent-ink); font-weight: 600; font-size: 11px; }
+@media (min-width: 1024px) {
+  .workspace-focus .document-page { max-width: none; padding: 12px 16px 16px; }
+  .workspace-focus .tool-heading { margin-bottom: 10px; }
+  .workspace-focus .tool-heading p { display: none; }
+  .workspace-focus .tool-task-picker > p { display: none; }
+  .workspace-focus .board-canvas:not([data-fill]) { height: clamp(280px, calc(100dvh - 390px), 760px) !important; }
+}
 .document-page > .bg-sheet {
   overflow: hidden;
 }

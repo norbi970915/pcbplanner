@@ -16,7 +16,7 @@ try{
  const context=await browser.newContext({viewport:{width:1550,height:1100},serviceWorkers:'block'});
  await context.addInitScript(()=>{localStorage.setItem('pcbplanner:analytics-consent',JSON.stringify({choice:'declined',version:2,updatedAt:new Date().toISOString()}));sessionStorage.setItem('pcbtk-settings',JSON.stringify({unit:'mm',theme:'dark'}));});
  const page=await context.newPage(),errors=[],external=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url())&&new URL(r.url()).origin!==new URL(base).origin)external.push(r.url());});
- await page.goto(base+'/gerber-viewer');await page.locator('.schematic-gerber-link').waitFor();
+ await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Compare revisions',exact:true}).click();
  const upload=async(side,files)=>{await page.getByLabel('Open layout '+side+' files',{exact:true}).setInputFiles(files.map(f=>({name:f.name,mimeType:'text/plain',buffer:Buffer.from(f.text)})));await page.waitForFunction(side=>!([...document.querySelectorAll('.gerber-upload')][side==='A'?0:1]?.querySelector('.gerber-import-status').textContent??'Reading').includes('Reading'),side);};
  await upload('A',fixtures(5));await upload('B',fixtures(7));
  await page.getByRole('button',{name:'Copper analysis',exact:true}).click();

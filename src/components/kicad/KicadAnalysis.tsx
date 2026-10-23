@@ -54,13 +54,13 @@ export function NoStackupNote({ data }: { data: KicadProjectData }) {
 }
 
 /** Layer Roles section of the Properties panel: the detected role of each copper layer, changeable; shared by every page through the project store. */
-export function LayerRolesSection({ data }: { data: KicadProjectData }) {
+export function LayerRolesSection({ data, defaultOpen = true }: { data: KicadProjectData; defaultOpen?: boolean }) {
   const { roles, guesses } = layerRoles(data);
   const overrides = data.roleOverrides;
   const store = kicadProjectStore();
   if (!data.board.copper.length) return null;
   return (
-    <Section title="Layer Roles">
+    <Section title="Layer Roles" defaultOpen={defaultOpen}>
       {data.board.copper.map((c) => {
         const g = guesses[c.name];
         const changed = overrides[c.name] !== undefined && overrides[c.name] !== g?.role;
@@ -87,10 +87,11 @@ export function LayerRolesSection({ data }: { data: KicadProjectData }) {
 }
 
 /** Properties sections of the analysis: targets, pair gap, loss, solder mask, layer roles, routing targets. */
-export function AnalysisProperties({ a, p, set }: { a: KicadAnalysis; p: KicadAnalysisInputs; set: SetKicadInputs }) {
+export function AnalysisProperties({ a, p, set, scope = 'all' }: { a: KicadAnalysis; p: KicadAnalysisInputs; set: SetKicadInputs; scope?: 'all' | 'routing' | 'stackup' }) {
   return (
     <>
-      <Section title="Targets">
+      {scope !== 'stackup' && a.board?.routing && a.data && <RoutingTargets groups={a.routingCheck.groups} overrides={a.targetOverrides} onChange={a.setTarget} project={a.data.project} projectError={a.data.projectError} />}
+      {scope !== 'routing' && <><Section title="Targets">
         <Check label="50 Ω single-ended" checked={p.t50} onChange={(v) => set({ t50: v })} />
         <Check label="90 Ω differential (USB)" checked={p.t90} onChange={(v) => set({ t90: v })} />
         <Check label="100 Ω differential" checked={p.t100} onChange={(v) => set({ t100: v })} />
@@ -112,6 +113,7 @@ export function AnalysisProperties({ a, p, set }: { a: KicadAnalysis; p: KicadAn
         {p.grule !== 'width' && <LenField label="Gap" symbol="S" value={p.gap} onChange={(v) => set({ gap: v })} hint="Edge-to-edge spacing of the two traces of a pair. The Layer Stack Manager uses 0.127 mm (5 mil) by default." />}
         {p.grule === 'width' && <p className="text-faint">The gap equals the trace width (S = W), solved together.</p>}
       </Section>
+      </>}
       <Section title="Loss">
         <NumField label="Frequency" symbol="f" value={p.f} onChange={(v) => set({ f: v })} unit="GHz" max={100} hint="Usually the Nyquist frequency of the link: half the bit rate for NRZ (PCIe Gen3 8 GT/s → 4 GHz)." />
         <SelectField label="Copper foil" value={a.foil.id} onChange={(v) => set({ foil: v })} options={FOILS.map((f) => ({ value: f.id, label: f.name }))} width={176} />
@@ -119,8 +121,7 @@ export function AnalysisProperties({ a, p, set }: { a: KicadAnalysis; p: KicadAn
       <Section title="Solder Mask">
         <Check label="Solder mask over the outer layers" checked={p.mask} onChange={(v) => set({ mask: v })} hint="On: outer traces are coated microstrip with the mask thickness and Dk from the file. Off: bare microstrip, for example under a mask opening." />
       </Section>
-      {a.data && <LayerRolesSection data={a.data} />}
-      {a.board?.routing && a.data && <RoutingTargets groups={a.routingCheck.groups} overrides={a.targetOverrides} onChange={a.setTarget} project={a.data.project} projectError={a.data.projectError} />}
+      {a.data && <LayerRolesSection data={a.data} defaultOpen={scope !== 'routing'} />}
     </>
   );
 }

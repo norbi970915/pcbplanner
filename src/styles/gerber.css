@@ -1,5 +1,12 @@
 /* Local Gerber inspection and revision comparison, using the existing workbench palette. */
 .gerber-upload-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.gerber-upload-single{grid-template-columns:minmax(0,1fr)}
+@media(min-width:1024px){
+  .workspace-focus .gerber-upload{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:8px 12px}
+  .workspace-focus .gerber-upload-actions{margin-top:0}
+  .workspace-focus .gerber-import-status{grid-column:1/-1;margin-top:0}
+  .workspace-focus .gerber-canvas-wrap:not(.gerber-canvas-fill){height:clamp(280px,calc(100dvh - 440px),800px)}
+}
 .gerber-upload{min-width:0;padding:14px;border:1px dashed var(--line-strong);border-radius:7px;background:var(--sheet)}
 .gerber-upload-heading{display:flex;gap:10px;align-items:center}.gerber-upload-heading>div{min-width:0}.gerber-upload-heading strong{display:block;font-size:13px}.gerber-upload-heading p{margin:3px 0 0;color:var(--muted);overflow-wrap:anywhere;font-size:12px}
 .gerber-side-badge{display:grid;place-items:center;width:32px;height:32px;flex-shrink:0;border-radius:6px;font-weight:700;background:color-mix(in srgb,var(--copper) 15%,transparent);color:var(--copper)}.gerber-side-B{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent-ink)}

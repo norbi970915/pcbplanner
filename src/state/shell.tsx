@@ -13,7 +13,9 @@ export interface Shell {
   setActions: (a: ToolActions | null) => void;
   showInputs: () => void;
   openGuidance: () => void;
+  focusMode: boolean;
+  toggleFocus: () => void;
 }
 
-export const ShellContext = createContext<Shell>({ propsEl: null, statusEl: null, headEl: null, setActions: () => {}, showInputs: () => {}, openGuidance: () => {} });
+export const ShellContext = createContext<Shell>({ propsEl: null, statusEl: null, headEl: null, setActions: () => {}, showInputs: () => {}, openGuidance: () => {}, focusMode: false, toggleFocus: () => {} });
 export const useShell = () => useContext(ShellContext);

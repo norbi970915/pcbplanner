@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { HistoryControls } from './HistoryControls';
 import { useHistoryShortcuts } from '../state/useHistoryShortcuts';
 import { CalculationReport } from './CalculationReport';
@@ -32,6 +32,7 @@ export function ToolPage({
   method,
   reportCapture,
   reportBusy = false,
+  focusView = false,
 }: {
   title: string;
   description: string;
@@ -42,6 +43,7 @@ export function ToolPage({
   method?: ReactNode;
   reportCapture?: (snapshot: ReportSnapshot) => Promise<ReportSnapshot>;
   reportBusy?: boolean;
+  focusView?: boolean;
 }) {
   const { pathname } = useLocation();
   const interaction = useFieldInteractionState();
@@ -79,7 +81,7 @@ export function ToolPage({
     requestAnimationFrame(() => { input?.focus(); input?.scrollIntoView({ block: 'center' }); });
   };
   useDocumentMeta(toolByPath(pathname)?.seoTitle ?? title, toolByPath(pathname)?.metaDescription ?? description);
-  const { propsEl, statusEl, headEl, setActions, showInputs } = useShell();
+  const { propsEl, statusEl, headEl, setActions, showInputs, focusMode, toggleFocus } = useShell();
   const related = guidesForTool(pathname);
   const relatedT = relatedTools(pathname);
   const tool = toolByPath(pathname);
@@ -166,6 +168,9 @@ export function ToolPage({
         </div>
         <div className="tool-actions">
         <HistoryControls />
+          {focusView && <Button type="button" variant={focusMode ? 'secondary' : 'outline'} size="sm" aria-pressed={focusMode} onClick={toggleFocus} title="Hide tool navigation and keep this tool’s settings visible">
+            {focusMode ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}{focusMode ? 'Exit focus view' : 'Focus view'}
+          </Button>}
           {tool && <Button type="button" variant="ghost" size="sm" className="report-trigger" onClick={createReport} aria-label="Create calculation report"><FileText size={15} />Report</Button>}
           {tool && <FavoriteButton path={tool.path} title={tool.title} />}
           {onReset && (

@@ -20,9 +20,8 @@ const big = page.locator('.headline-result').first();
 const z = async () => Number(await big.locator('[data-copy-value]').textContent());
 async function ready() {
   await page.waitForFunction(() => {
-    const button=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Solve Width');
     const value=Number(document.querySelector('.headline-result [data-copy-value]')?.textContent);
-    return button && !button.disabled && Number.isFinite(value) && value>0;
+    return !document.querySelector('[data-result-busy="true"]') && Number.isFinite(value) && value>0;
   }, undefined, {timeout:30000});
 }
 async function goto(query) {
@@ -58,6 +57,7 @@ try {
   checks.push('Coupling control, two-layer diagram, URL sharing and reload');
 
   await page.getByLabel('Target Zdiff',{exact:true}).and(page.locator('input')).fill('100');
+  await page.getByLabel('Working mode',{exact:true}).selectOption('width');
   await page.getByRole('button',{name:'Solve Width',exact:true}).click();
   await ready();
   await page.waitForFunction(()=>Math.abs(Number(document.querySelector('.headline-result [data-copy-value]')?.textContent)-100)<0.06,undefined,{timeout:30000});
@@ -66,6 +66,7 @@ try {
   const solvedWidth=Number(await page.getByLabel(/Width /).and(page.locator('input')).inputValue());
   assert.ok(solvedWidth>0 && Math.abs(solvedWidth-0.145)>0.005);
   await page.getByLabel('Target Zdiff',{exact:true}).and(page.locator('input')).fill('110');
+  await page.getByLabel('Working mode',{exact:true}).selectOption('spacing');
   await page.getByRole('button',{name:'Solve Spacing',exact:true}).click();
   await ready();
   await page.waitForFunction(()=>Math.abs(Number(document.querySelector('.headline-result [data-copy-value]')?.textContent)-110)<0.06,undefined,{timeout:30000});
@@ -133,7 +134,7 @@ try {
   assert.equal(await page.getByLabel('Pair coupling',{exact:true}).and(page.locator('select')).inputValue(),'edge');
   checks.push('Single-ended and stackup apply correctly return to supported geometry');
 
-  await page.goto(base+'/impedance?mode=diff&coupling=broadside&s=0');
+  await page.goto(base+'/impedance?mode=diff&coupling=broadside&s=0&task=width');
   await page.getByText('Spacing S must be greater than 0.',{exact:true}).waitFor();
   assert.ok(await page.getByRole('button',{name:'Solve Width',exact:true}).isDisabled());
   checks.push('Invalid gap produces a clear error and disables target solving');

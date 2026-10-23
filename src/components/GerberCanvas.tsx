@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { fitGerber, gerberDifference, unionGerberBounds, zoomGerber, type Camera, type GerberLayer } from '../lib/gerber';
+import { useShell } from '../state/shell';
 
 export type GerberView = 'layers'|'overlay'|'differences';
 interface DecodedLayer { image:HTMLImageElement; preview:HTMLCanvasElement }
@@ -7,6 +8,7 @@ export interface GerberCanvasApi { fit:()=>void; zoom:(factor:number)=>void; ima
 interface Props { a:GerberLayer[]; b:GerberLayer[]; dx:number;dy:number;mode:GerberView;fitKey:number;fill?:boolean;onResolution:(microns:number)=>void;onError:(message:string)=>void;onBusy?:(busy:boolean)=>void }
 
 export const GerberCanvas=forwardRef<GerberCanvasApi,Props>(function GerberCanvas({a,b,dx,dy,mode,fitKey,fill=false,onResolution,onError,onBusy},ref){
+  const {focusMode}=useShell();
   const canvas=useRef<HTMLCanvasElement>(null),wrap=useRef<HTMLDivElement>(null);
   const images=useRef(new Map<string,Promise<DecodedLayer>>());
   const scratch=useRef<HTMLCanvasElement[]>([]);
@@ -51,11 +53,11 @@ export const GerberCanvas=forwardRef<GerberCanvasApi,Props>(function GerberCanva
   useEffect(()=>{
     const el=wrap.current;if(!el)return;
     const observer=new ResizeObserver(entries=>{
-      const w=Math.floor(entries[0].contentRect.width),h=fill?Math.floor(entries[0].contentRect.height):Math.min(640,Math.max(380,Math.round(w*.6)));
+      const w=Math.floor(entries[0].contentRect.width),h=fill||focusMode&&window.innerWidth>=1024?Math.floor(entries[0].contentRect.height):Math.min(640,Math.max(380,Math.round(w*.6)));
       if(w>0&&h>0)setSize(old=>old.w===w&&old.h===h?old:{w,h});
     });
     observer.observe(el);return()=>observer.disconnect();
-  },[fill]);
+  },[fill,focusMode]);
   useEffect(()=>{
     const el=canvas.current;if(!el)return;
     const wheel=(event:WheelEvent)=>{event.preventDefault();const r=wrap.current!.getBoundingClientRect();changeCamera(c=>zoomGerber(c,Math.exp(-event.deltaY*.0015),event.clientX-r.left,event.clientY-r.top),true);};

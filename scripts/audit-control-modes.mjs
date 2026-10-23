@@ -84,6 +84,7 @@ async function replay(route, actions) {
     await page.waitForFunction(() => document.body.textContent.includes('routing check done'), null, { timeout: 90000 }); await idle(); await expand();
   }
   if (route === '/gerber-viewer') {
+    await page.getByRole('button', { name: 'Compare revisions', exact: true }).click();
     await page.getByRole('button', { name: 'Try sample comparison', exact: true }).click(); await idle(); await expand();
   }
   if (route === '/s-parameter-viewer') {
@@ -280,7 +281,7 @@ if (process.env.ACTION_REPORTS) {
           await page.getByRole('button', { name: 'Redo last design change', exact: true }).filter({ visible: true }).click(); await idle(); await inventory(); check(await control(first.key).inputValue() === value, 'Redo restores edited field'); entry.navigation.push('Undo and Redo round trip');
         }
         await page.reload({ waitUntil: 'networkidle' }); await idle(); await expand(); await inventory();
-        if (route === '/gerber-viewer') { check(await page.getByRole('button',{name:'Try sample comparison',exact:true}).count()===1,'Reload clears volatile Gerber files as documented'); entry.navigation.push('Reload clears volatile files as documented'); }
+        if (route === '/gerber-viewer') { check(await page.getByRole('button',{name:'Try sample board',exact:true}).count()===1,'Reload clears volatile Gerber files as documented'); entry.navigation.push('Reload clears volatile files as documented'); }
         else { check(await control(first.key).inputValue() === value, 'Reload preserves edited field'); entry.navigation.push('Reload preserves inputs'); }
       }
       await clean(errors, 'navigation');

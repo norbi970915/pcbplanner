@@ -12,6 +12,7 @@ try {
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   assert.equal((await page.goto(base+'/gerber-viewer')).status(),200);
+  await page.getByRole('button',{name:'Compare revisions',exact:true}).click();
   await page.locator('.schematic-gerber-link').waitFor();
   const upload=async(side,files)=>{
     await page.getByLabel('Open layout '+side+' files',{exact:true}).setInputFiles(files.map(file=>({name:file.name,mimeType:'text/plain',buffer:Buffer.from(file.text)})));

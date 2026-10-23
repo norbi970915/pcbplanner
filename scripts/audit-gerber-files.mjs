@@ -17,7 +17,7 @@ try {
   const page=await context.newPage(),errors=[],external=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>{if(/^https?:/.test(request.url())&&!request.url().startsWith(base))external.push(request.url());});
-  await page.goto(base+'/gerber-viewer');await page.locator('.schematic-gerber-link').waitFor();
+  await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Compare revisions',exact:true}).click();
   const upload=async(side,files)=>{
     await page.getByLabel('Open layout '+side+' files',{exact:true}).setInputFiles(files.map(file=>({...file,mimeType:'application/octet-stream'})));
     await page.waitForFunction(side=>!Array.from(document.querySelectorAll('.gerber-upload'))[side==='A'?0:1].querySelector('.gerber-import-status').textContent.includes('Reading'),side);

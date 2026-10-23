@@ -28,9 +28,11 @@ import { useSettings } from '../state/settings';
 import { useUrlState } from '../state/useUrlState';
 
 const MAT_OPTIONS = [{ value: 'custom', label: 'Custom εr', group: 'Custom' }, ...LAMINATES.map((l) => ({ value: l.id, label: `${l.vendor} ${l.name}`, group: l.cls }))];
+const PAGE_DEFAULTS = { ...DEFAULTS, task: 'impedance' };
+const TASKS = [{ value: 'impedance', label: 'Calculate impedance' }, { value: 'width', label: 'Find trace width' }, { value: 'spacing', label: 'Find pair spacing' }];
 
 export default function Impedance() {
-  const [raw, set, reset] = useUrlState(DEFAULTS);
+  const [raw, set, reset] = useUrlState(PAGE_DEFAULTS);
   // library materials replace the εr fields at the design frequency
   const p = useMemo(() => ({ ...raw, er: erOf(raw.mat, raw.er, raw.fq), er2: erOf(raw.mat2, raw.er2, raw.fq) }), [raw]);
   const usesLib =
@@ -49,6 +51,11 @@ export default function Impedance() {
   const type = (broadside ? 'stripline' : p.type) as 'microstrip' | 'embedded' | 'stripline';
   const resinActive = raw.resin && !broadside && type !== 'microstrip';
   const diff = p.mode === 'diff';
+  const task = raw.task === 'width' ? 'width' : raw.task === 'spacing' && diff ? 'spacing' : 'impedance';
+  const chooseTask = (task: string) => {
+    setSolveErr(null);
+    set({ task, ...(task === 'spacing' ? { mode: 'diff', target: raw.mode === 'se' && raw.target === 50 ? 100 : raw.target } : {}) });
+  };
   const acc = p.acc as Accuracy;
   // stacked plies: the drawing and the closed-form check use the weighted average Dk
   const plyBelow = parsePlies(raw.dl) ?? [];
@@ -58,6 +65,10 @@ export default function Impedance() {
   const hShown = plyBelow.length ? pliesThickness(plyBelow) : p.h;
   const h2Shown = plyAbove.length ? pliesThickness(plyAbove) : p.h2;
   const { geom, errors } = useMemo(() => buildGeometry(p), [p]);
+  const targetRequest = useRef(0);
+  const targetInputs = useRef('');
+  targetInputs.current = JSON.stringify([geom, acc, p.target, task]);
+  useEffect(() => () => { targetRequest.current++; }, []);
   const solveState = useFieldSolve(geom, { accuracy: acc, field: true, even: true });
   const r = geom ? solveState.result : null;
   const tolerance = useMemo(() => {
@@ -154,13 +165,21 @@ export default function Impedance() {
   };
 
   const solveFor = async (param: 'w' | 's') => {
-    if (!geom) return;
+    if (!geom || !(p.target > 0) || !Number.isFinite(p.target)) return;
+    const request = ++targetRequest.current;
+    const signature = targetInputs.current;
     setSolving(param);
     setSolveErr(null);
-    const res = await runSolver({ type: 'target', geom, opts: { accuracy: acc, field: false, even: false }, param, target: p.target });
-    setSolving(null);
-    if (res.ok && res.value) set(param === 'w' ? { w: res.value } : { s: res.value });
-    else if (!res.ok) setSolveErr(res.error);
+    try {
+      const res = await runSolver({ type: 'target', geom, opts: { accuracy: acc, field: false, even: false }, param, target: p.target });
+      if (request !== targetRequest.current || signature !== targetInputs.current) return;
+      if (res.ok && res.value && Number.isFinite(res.value)) set(param === 'w' ? { w: res.value } : { s: res.value });
+      else setSolveErr(res.ok ? 'No solution was found for this target and geometry.' : res.error);
+    } catch {
+      if (request === targetRequest.current && signature === targetInputs.current) setSolveErr('The target could not be solved. Try again.');
+    } finally {
+      if (request === targetRequest.current) setSolving(null);
+    }
   };
 
   const toUnit = (mm: number) => fromMm(mm, unit);
@@ -235,6 +254,9 @@ export default function Impedance() {
 
   const properties = (
     <>
+      <Section title="Task">
+        <SelectField label="Working mode" value={task} onChange={chooseTask} options={TASKS} width={184} />
+      </Section>
       <Section title="Structure">
         {!broadside && <SelectField
           label="Line type"
@@ -251,7 +273,7 @@ export default function Impedance() {
           <Segmented
             label="Signal type"
             value={p.mode as 'se' | 'diff'}
-            onChange={(v) => set({ mode: v, ...(v === 'se' ? { coupling: 'edge' } : {}), target: v === 'diff' ? (p.target === 50 ? 100 : p.target) : [85, 90, 100].includes(p.target) ? 50 : p.target })}
+            onChange={(v) => set({ mode: v, ...(v === 'se' ? { coupling: 'edge', ...(task === 'spacing' ? { task: 'impedance' } : {}) } : {}), target: v === 'diff' ? (p.target === 50 ? 100 : p.target) : [85, 90, 100].includes(p.target) ? 50 : p.target })}
             options={[
               { value: 'se', label: 'Single-ended' },
               { value: 'diff', label: 'Differential' },
@@ -265,24 +287,26 @@ export default function Impedance() {
           : <Check label="Coplanar ground on trace layer" checked={p.cpw} onChange={(v) => set({ cpw: v })} />}
         {type === 'microstrip' && <Check label="Solder mask coating" checked={p.mask} onChange={(v) => set({ mask: v })} />}
       </Section>
-      <Section title="Target">
+      <Section title={task === 'impedance' ? 'Target comparison' : 'Solve to target'}>
         <NumField label={diff ? 'Target Zdiff' : 'Target Z0'} value={p.target} onChange={(v) => set({ target: v })} unit="Ω" />
-        <div className="flex justify-end gap-1 pt-0.5">
-          <button className="btn btn-primary" disabled={!geom || busy} onClick={() => solveFor('w')}>
-            {solving === 'w' ? 'Solving…' : 'Solve Width'}
-          </button>
-          {diff && (
-            <button className="btn" disabled={!geom || busy} onClick={() => solveFor('s')}>
-              {solving === 's' ? 'Solving…' : 'Solve Spacing'}
-            </button>
-          )}
-        </div>
+        {task !== 'impedance' && <div className="flex justify-end pt-1"><button type="button" className="btn btn-primary" disabled={!geom || busy || !(p.target > 0)} onClick={() => void solveFor(task === 'width' ? 'w' : 's')}>
+          {solving ? 'Solving…' : task === 'width' ? 'Solve Width' : 'Solve Spacing'}
+        </button></div>}
+        {task === 'impedance' && <p className="text-faint">Used to show deviation. Choose Find trace width or Find pair spacing to solve a dimension.</p>}
       </Section>
       <Section title="Conductor">
-        <LenField label={broadside ? "Width (outer face)" : "Width (bottom)"} hint="Copper trace width. The cross-section is schematic; use the numerical dimensions for fabrication." symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
+        <div className={task === 'width' ? 'solve-variable' : undefined}>
+          {task === 'width' && <p className="solve-variable-label">Solved variable · W</p>}
+          <LenField label={broadside ? "Width (outer face)" : "Width (bottom)"} hint="Copper trace width. The cross-section is schematic; use the numerical dimensions for fabrication." symbol="W" value={p.w} onChange={(v) => set({ w: v })} />
+          {task === 'width' && <p className="text-faint">Solve Width replaces this starting value.</p>}
+        </div>
         <LenField label={broadside ? "Etch (W - facing)" : "Etch (W − top)"} diagramKey="etch" value={p.etch} onChange={(v) => set({ etch: v })} allowZero hint={broadside ? "Mirrored etch: each face toward the inter-layer gap is narrower by this amount. Set zero for rectangular copper." : "Trapezoidal etch: the top of the trace is narrower by this amount. 0.5 mil is typical for 1 oz."} />
         <LenField label="Thickness" hint="Copper thickness after processing. Selecting oz converts copper weight to an approximate thickness." symbol="T" value={p.t} onChange={(v) => set({ t: v })} units={['mm', 'mil', 'um', 'oz']} />
-        {diff && <LenField label={broadside ? "Inter-layer gap" : "Spacing"} hint="For edge-coupled pairs, the copper edge-to-edge gap. For broadside pairs, the copper-to-copper inter-layer gap." symbol="S" value={p.s} onChange={(v) => set({ s: v })} />}
+        {diff && <div className={task === 'spacing' ? 'solve-variable' : undefined}>
+          {task === 'spacing' && <p className="solve-variable-label">Solved variable · S</p>}
+          <LenField label={broadside ? "Inter-layer gap" : "Spacing"} hint="For edge-coupled pairs, the copper edge-to-edge gap. For broadside pairs, the copper-to-copper inter-layer gap." symbol="S" value={p.s} onChange={(v) => set({ s: v })} />
+          {task === 'spacing' && <p className="text-faint">Solve Spacing replaces this starting value.</p>}
+        </div>}
         {!broadside && p.cpw && <LenField label="Coplanar gap" symbol="G" value={p.gap} onChange={(v) => set({ gap: v })} />}
       </Section>
       <Section title={broadside ? 'Outer Dielectric (both sides)' : type === 'stripline' ? 'Dielectric Below' : 'Dielectric'}>
@@ -404,13 +428,17 @@ export default function Impedance() {
   return (
     <ToolPage
       title="Impedance Calculator"
-      description="Characteristic and differential impedance of PCB traces from a 2D field solver: microstrip, solder-mask coated and embedded microstrip, stripline, edge-coupled and broadside differential pairs, coplanar waveguide. Solve for width or spacing from a target impedance."
+      description="Calculate PCB trace impedance, or find the width or pair spacing needed to meet a target, using a 2D field solver."
       onReset={reset}
       properties={properties}
       status={status}
       reportBusy={busy}
       method={<Method />}
     >
+      <div className="tool-task-picker" role="group" aria-label="Impedance task">
+        {TASKS.map(option => <button key={option.value} type="button" className={`btn ${task === option.value ? 'btn-primary' : ''}`} aria-pressed={task === option.value} onClick={() => chooseTask(option.value)}>{option.label}</button>)}
+        <p className="text-muted">{task === 'impedance' ? 'Dimensions → impedance. Results update as you edit.' : task === 'width' ? 'Target impedance + stackup → trace width W. Set the inputs, then press Solve Width.' : 'Target impedance + width + stackup → pair spacing S. Set the inputs, then press Solve Spacing.'}</p>
+      </div>
       <Notes kind="error" items={[...errors, ...(solveState.error && geom ? [solveState.error] : []), ...(solveErr ? [solveErr] : [])]} />
       <div className="grid gap-3 2xl:grid-cols-2">
         <Panel
@@ -424,6 +452,7 @@ export default function Impedance() {
         >
           <div className="flex flex-wrap items-end gap-x-8 gap-y-2 px-2.5 pb-1 pt-2">
             <Big label={diff ? 'Differential impedance Zdiff' : 'Characteristic impedance Z0'} value={z ? fmt(z, 4) : '—'} unit="Ω" busy={busy} />
+            {task !== 'impedance' && <Big label={task === 'width' ? 'Trace width W' : broadside ? 'Inter-layer gap S' : 'Pair spacing S'} value={fmt(toUnit(task === 'width' ? p.w : p.s), 5)} unit={unit} busy={busy} />}
             <Big label="Effective εr" value={eeff ? fmt(eeff, 4) : '—'} unit="" busy={busy} />
           </div>
           <div className="px-2.5 pb-2">

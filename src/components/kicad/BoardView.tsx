@@ -513,7 +513,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setSize({ w: Math.max(200, el.clientWidth), h: boxH === 'fill' ? Math.max(200, el.clientHeight) : boxH }));
+    const ro = new ResizeObserver(() => setSize({ w: Math.max(200, el.clientWidth), h: Math.max(200, el.clientHeight) }));
     ro.observe(el);
     return () => ro.disconnect();
   }, [boxH]);
@@ -597,7 +597,7 @@ export const BoardView = forwardRef<BoardViewApi, Props>(function BoardView({ dr
   };
 
   return (
-    <div ref={wrap} className="relative w-full select-none" style={{ height: boxH === 'fill' ? '100%' : boxH }}>
+    <div ref={wrap} className="board-canvas relative w-full select-none" data-fill={boxH === 'fill' || undefined} style={{ height: boxH === 'fill' ? '100%' : boxH }}>
       <canvas
         ref={canvas}
         style={{ width: size.w, height: size.h, touchAction: 'none', cursor: 'grab' }}

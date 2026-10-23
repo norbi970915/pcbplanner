@@ -12,7 +12,7 @@ const section=(page,side)=>page.locator('.properties-section').filter({has:page.
 const ready=page=>page.getByRole('button',{name:'PNG',exact:true}).waitFor({state:'visible'}).then(()=>page.waitForFunction(()=>![...document.querySelectorAll('button')].find(button=>button.textContent==='PNG')?.disabled));
 const matrix=page=>page.locator('.gerber-canvas-wrap canvas').evaluate(canvas=>({transform:canvas.style.transform,width:canvas.width,height:canvas.height,image:canvas.toDataURL()}));
 async function load(page){
-  await page.goto(base+'/gerber-viewer');await page.locator('.schematic-gerber-link').waitFor();
+  await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Compare revisions',exact:true}).click();
   if(folder){
     const files=readdirSync(resolve(folder)).filter(name=>name.endsWith('.gbr')).map(name=>({name,mimeType:'text/plain',buffer:readFileSync(join(resolve(folder),name))}));
     for(const side of ['A','B']){
@@ -26,6 +26,29 @@ async function load(page){
 try{
   const context=await browser.newContext({viewport:{width:1600,height:1100},deviceScaleFactor:2,serviceWorkers:'block',acceptDownloads:true});await context.addInitScript(consent);
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await load(page);console.log('Loaded comparison layers.');
+  const loadedLayers=await page.locator('.gerber-layer-row').allTextContents();
+  const aCount=await section(page,'A').locator('.gerber-layer-row').count();
+  await page.getByLabel('Shift B in X',{exact:true}).fill('0.25');
+  await page.getByRole('button',{name:'Inspect one board',exact:true}).click();await ready(page);
+  assert.equal(await page.locator('.gerber-layer-row').count(),aCount,'Inspection must exclude revision B');
+  assert.equal(await page.getByLabel('Open layout B files',{exact:true}).count(),0,'Inspection has one upload area');
+  await page.getByRole('button',{name:'Compare revisions',exact:true}).click();await ready(page);
+  assert.deepEqual(await page.locator('.gerber-layer-row').allTextContents(),loadedLayers,'Both revisions survive task switching');
+  assert.equal(await page.getByLabel('Shift B in X',{exact:true}).inputValue(),'0.25','Alignment survives task switching');
+  await page.getByRole('button',{name:'Impedance',exact:true}).click();await page.getByRole('heading',{name:'Impedance Calculator',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Gerber viewer & compare',exact:true}).click();await ready(page);
+  assert.deepEqual(await page.locator('.gerber-layer-row').allTextContents(),loadedLayers,'Gerber revisions survive switching tools');
+  assert.equal(await page.getByLabel('Shift B in X',{exact:true}).inputValue(),'0.25','Alignment survives switching tools');
+  await page.getByRole('button',{name:'Reset alignment',exact:true}).click();await ready(page);
+  await page.getByRole('button',{name:'Focus view',exact:true}).click();await page.setViewportSize({width:1280,height:720});await ready(page);
+  assert.equal(await page.getByRole('complementary',{name:'Tools',exact:true}).count(),0,'Focus hides navigation');
+  assert(await page.getByRole('complementary',{name:'Inputs',exact:true}).isVisible(),'Focus retains layer controls');
+  const focusedCanvas=await page.locator('.gerber-canvas-wrap canvas').boundingBox(),focusedMain=await page.locator('main').boundingBox();
+  assert(focusedCanvas.y+focusedCanvas.height<=focusedMain.y+focusedMain.height+1,'Focused Gerber canvas fits above the status bar');
+  await page.screenshot({path:'dist-check/gerber/focus-view.png'});
+  await page.getByRole('button',{name:'Exit focus view',exact:true}).click();await page.setViewportSize({width:1600,height:1100});await ready(page);
+  assert(await page.getByRole('complementary',{name:'Tools',exact:true}).isVisible(),'Exiting focus restores navigation');
+  console.log('Inspection/comparison round trips preserve files and alignment; focus fits the board at 1280 × 720 and restores navigation.');
   const before=await matrix(page),bounds=await page.locator('.gerber-canvas-wrap').boundingBox();
   await page.evaluate(()=>{
     const canvas=document.querySelector('.gerber-canvas-wrap canvas'),original=CanvasRenderingContext2D.prototype.drawImage;
@@ -61,7 +84,7 @@ try{
   await context.close();
   for(const width of [390,320]){
     const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});await context.addInitScript(consent);await context.addInitScript(()=>{Element.prototype.requestFullscreen=undefined;});
-    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===6);await ready(page);
+    const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(base+'/gerber-viewer');await page.getByRole('button',{name:'Compare revisions',exact:true}).click();await page.getByRole('button',{name:'Try sample comparison'}).click();await page.waitForFunction(()=>document.querySelectorAll('.gerber-layer-row').length===6);await ready(page);
     await page.getByRole('button',{name:'Enter fullscreen',exact:true}).click();await page.locator('.gerber-fullscreen-workspace').waitFor();await ready(page);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     const view=await page.locator('.gerber-canvas-wrap').boundingBox(),controls=await page.getByRole('complementary',{name:'Gerber layers'}).boundingBox();assert(view.height>=100);assert(controls.y>=view.y+view.height-1);

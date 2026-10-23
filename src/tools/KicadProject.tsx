@@ -196,13 +196,17 @@ export default function KicadProject() {
       {!data && <div className="lg:hidden">
         <Section title="Board File">{dropZone(true)}</Section>
       </div>}
-      {data && ['overview', 'board'].includes(p.view) ? (
-        <AnalysisProperties a={a} p={p} set={set} />
+      {data && p.view === 'board' ? (
+        <AnalysisProperties a={a} p={p} set={set} scope="routing" />
       ) : data ? (
         <>
           <Section title="Project"><p className="break-words font-semibold">{data.boardName}</p><p className="text-faint">{data.board.copper.length} copper layers. Files stay in this browser.</p>
-            <button className="btn" type="button" onClick={() => set({ view: 'overview' })}>Stackup and routing settings</button>
+            {p.view === 'overview' ? <p className="mt-2 text-muted">Choose a check in the summary. Its settings appear here when you open it.</p> : <button className="btn" type="button" onClick={() => set({ view: 'overview' })}>Project overview</button>}
           </Section>
+          {p.view === 'overview' && <>
+            <Section title="Routing review"><p className="text-muted">Review pair and net findings on the board and assign routing targets.</p><button type="button" className="btn mt-2" onClick={() => set({ view: 'board' })}>Open routing settings</button></Section>
+            <Section title="Stackup and impedance settings" defaultOpen={false}><AnalysisProperties a={a} p={p} set={set} scope="stackup" /></Section>
+          </>}
         </>
       ) : (
         <Section title="Project">
@@ -215,6 +219,7 @@ export default function KicadProject() {
   return (
     <ToolPage
       title="KiCad Project"
+      focusView
       description="Inspect a KiCad board’s stackup, routing, voltage drop, temperature and same-layer clearance. Open a .kicad_pcb or project folder; files stay in your browser."
       properties={properties}
       status={analysisStatus(a, busy, kp.boardName)}

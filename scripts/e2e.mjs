@@ -526,6 +526,7 @@ async function flowImpedance(page) {
   page.drain();
   const props = page.locator(PROPS);
   const solve = async (name, target, what) => {
+    await props.getByLabel('Working mode', { exact: true }).selectOption(name === 'Solve Width' ? 'width' : 'spacing');
     const tgt = props.locator('input[aria-invalid]').first(); // Target field is the first NumField
     await tgt.fill(String(target));
     await settle(page, route, `impedance ${what} target`);

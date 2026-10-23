@@ -161,6 +161,7 @@ export function Layout() {
   const [menu, setMenu] = useState<string | null>(null);
   const [mobileTools, setMobileTools] = useState(false);
   const [guidanceOpen, setGuidanceOpen] = useState(false);
+  const [focusPath, setFocusPath] = useState<string | null>(null);
   const openGuidance = useCallback(() => setGuidanceOpen(true), []);
   const [panels, setPanels] = useState(() =>
     readJson(PANELS_KEY, { tools: true, props: true }),
@@ -188,6 +189,8 @@ export function Layout() {
 
   // keep a tab for every visited tool
   const path = loc.pathname;
+  const focusMode = focusPath === path && ['/kicad-project', '/gerber-viewer'].includes(path);
+  const toggleFocus = useCallback(() => setFocusPath(previous => previous === path ? null : path), [path]);
   useEffect(() => {
     if (analyticsChoice === 'accepted') return;
     disableAnalytics(analyticsChoice === 'declined');
@@ -322,8 +325,8 @@ export function Layout() {
   };
   const showInputs = useCallback(() => setPanels(previous => ({ ...previous, props: true })), []);
   const shell = useMemo(
-    () => ({ propsEl, statusEl, headEl, setActions, showInputs, openGuidance }),
-    [propsEl, statusEl, headEl, setActions, showInputs, openGuidance],
+    () => ({ propsEl, statusEl, headEl, setActions, showInputs, openGuidance, focusMode, toggleFocus }),
+    [propsEl, statusEl, headEl, setActions, showInputs, openGuidance, focusMode, toggleFocus],
   );
   const tabTitle = (p: string) =>
     p === '/'
@@ -436,18 +439,20 @@ export function Layout() {
             </Item>
             <div className="menu-sep" />
             <Item
-              checked={panels.tools}
-              onClick={run(() =>
-                setPanels((p: typeof panels) => ({ ...p, tools: !p.tools })),
-              )}
+              checked={panels.tools && !focusMode}
+              onClick={run(() => {
+                if (focusMode) { setFocusPath(null); setPanels(p => ({ ...p, tools: true })); }
+                else setPanels(p => ({ ...p, tools: !p.tools }));
+              })}
             >
               Tools Panel
             </Item>
             <Item
-              checked={panels.props}
-              onClick={run(() =>
-                setPanels((p: typeof panels) => ({ ...p, props: !p.props })),
-              )}
+              checked={panels.props || focusMode}
+              onClick={run(() => {
+                if (focusMode) { setFocusPath(null); setPanels(p => ({ ...p, props: false })); }
+                else setPanels(p => ({ ...p, props: !p.props }));
+              })}
             >
               Properties Panel
             </Item>
@@ -596,8 +601,8 @@ export function Layout() {
         </nav>
 
         {/* workspace: on narrow screens one scrolling column (title, inputs, results); from lg up, docked panels */}
-        <div className="workspace flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-x-none lg:flex-row lg:overflow-hidden">
-          {panels.tools && (
+        <div className={`workspace ${focusMode ? 'workspace-focus' : ''} flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-x-none lg:flex-row lg:overflow-hidden`}>
+          {panels.tools && !focusMode && (
             <aside aria-label="Tools" className="tools-panel hidden shrink-0 flex-col border-r border-line bg-panel lg:flex">
               <div className="panel-heading">
                 <span>Tools</span>
@@ -626,7 +631,7 @@ export function Layout() {
             path !== '/tools' &&
             path !== '/schematic' && (
               <ResizablePropertiesPanel
-                className={`properties-panel ${panels.props ? "" : "properties-panel-is-hidden"} order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
+                className={`properties-panel ${panels.props || focusMode ? "" : "properties-panel-is-hidden"} order-first shrink-0 flex-col border-b border-line bg-panel lg:order-last lg:border-b-0 lg:border-l ${isDoc ? 'hidden' : 'flex lg:flex'}`}
               >
                 <div className="properties-heading flex h-[42px] shrink-0 items-center justify-between border-b border-line bg-panel-head px-2 font-semibold lg:h-[24px]">
                   <span>
