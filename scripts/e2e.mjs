@@ -623,7 +623,7 @@ async function flowAdvisor(page) {
     if (q.get('mask') === '1') for (const k of ['c1', 'c2', 'erm']) if (!(num(k) > 0)) problems.push(`${k}=${q.get(k)}`);
   } else if (!(num('h2') > 0) || !(num('er2') >= 1)) problems.push(`h2=${q.get('h2')} er2=${q.get('er2')}`);
   await check(page, problems.length === 0, route, `advisor "${bname}" query params`, `${page.url()} :: ${problems.join(', ')}`);
-  const lineType = await page.locator(`${PROPS} select`).first().inputValue();
+  const lineType = await page.getByRole('combobox', { name: 'Line type', exact: true }).inputValue();
   await check(page, lineType === q.get('type'), route, `advisor "${bname}" impedance line type`, `select=${lineType} url type=${q.get('type')}`);
   // the "Height to plane" LenField shows h
   const hShown = await page.evaluate(() => {
