@@ -3,7 +3,7 @@ import { ToolPage } from '../components/ToolPage';
 import { Big, Notes, NumField, Panel, Result, Section, SelectField } from '../components/ui';
 import type { ESeries } from '../lib/electronics';
 import { feedbackPairs } from '../lib/power';
-import { fmt, si } from '../lib/units';
+import { fmt, si, siParts } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
 const DEFAULTS = { vfb: 0.8, vout: 3.3, idiv: 100, ifb: 0, tol: 1, series: 'E96' };
@@ -78,8 +78,8 @@ export default function FeedbackDivider() {
         <div className="grid gap-3 xl:grid-cols-2">
           <Panel title="Best Pair">
             <div className="flex flex-wrap gap-8 px-2.5 py-2">
-              <Big label="R1 (Vout to FB)" value={si(best.r1, 'Ω', 3).replace(/Ω$/, '')} unit="Ω" />
-              <Big label="R2 (FB to GND)" value={si(best.r2, 'Ω', 3).replace(/Ω$/, '')} unit="Ω" />
+              <Big label="R1 (Vout to FB)" {...siParts(best.r1, 'Ω', 3)} />
+              <Big label="R2 (FB to GND)" {...siParts(best.r2, 'Ω', 3)} />
               <Big label="Output voltage" value={fmt(best.vout, 5)} unit="V" />
             </div>
             <table className="tbl">

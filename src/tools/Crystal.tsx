@@ -98,7 +98,7 @@ export default function Crystal() {
         />
       </Section>
       <Section title="Crystal model (optional)">
-        <NumField label="Motional capacitance" symbol="Cm" value={p.cm} onChange={(v) => set({ cm: v })} unit="fF" allowZero hint="C1 in the datasheet. 0 = no pulling estimate." />
+        <NumField label="Motional capacitance" symbol="Cm" value={p.cm} onChange={(v) => set({ cm: v })} unit="fF" emptyAs="optional" hint="C1 in the datasheet. Leave empty for no pulling estimate." />
         <NumField label="Shunt capacitance" symbol="C0" value={p.c0} onChange={(v) => set({ c0: v })} unit="pF" allowZero />
       </Section>
       <Section title="Frequency error">

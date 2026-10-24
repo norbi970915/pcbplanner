@@ -5,7 +5,7 @@ import { ToolPage } from '../components/ToolPage';
 import { Big, Check, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { calculateAdcInput, type AdcInputResult } from '../lib/adcInput';
 import { adcAccuracy } from '../lib/adcAccuracy';
-import { fmt, si } from '../lib/units';
+import { fmt, si, siParts } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
 const DEFAULTS = {
@@ -97,8 +97,8 @@ export default function AdcInput() {
     {result.ok && <>
       <Panel title="Settling Result">
         <div className="flex flex-wrap gap-8 px-3 py-3">
-          <Big label="Required acquisition" value={si(result.requiredSeconds, 's', 5)} unit="" />
-          <Big label="Available acquisition" value={si(p.acquisitionSeconds, 's', 5)} unit="" />
+          <Big label="Required acquisition" {...siParts(result.requiredSeconds, 's', 5)} />
+          <Big label="Available acquisition" {...siParts(p.acquisitionSeconds, 's', 5)} />
           <Big label="Remaining error" value={fmt(result.errorLsb, 5)} unit="LSB" />
         </div>
         <table className="tbl"><tbody>
@@ -127,7 +127,7 @@ export default function AdcInput() {
     </>}
     {accuracy && <Panel title="DC Accuracy Budget">
       <div className="flex flex-wrap gap-8 px-3 py-3">
-        <Big label="Worst-case bound" value={si(accuracy.worstVolts, 'V', 5)} unit="" />
+        <Big label="Worst-case bound" {...siParts(accuracy.worstVolts, 'V', 5)} />
         <Big label="In code steps" value={fmt(accuracy.worstLsb, 5)} unit="LSB" />
         <Big label="Of full-scale span" value={fmt(accuracy.fullScalePct, 5)} unit="%" />
       </div>

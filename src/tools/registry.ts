@@ -40,11 +40,12 @@ export const TOOLS: ToolDef[] = [
   },
   {
     path: '/timing',
-    metaDescription: 'Propagation delay and effective Dk of PCB traces, length matching from a skew budget, rise time to bandwidth, critical length and wavelength on the board.',
-    title: 'Propagation Delay, εeff & Timing',
+    seoTitle: 'Rise Time, Critical Length & Length Matching',
+    metaDescription: 'PCB propagation delay, whether a trace is a transmission line for its rise time, length matching from a skew budget and the serpentine that makes it up.',
+    title: 'Propagation Delay, Rise Time & Length Matching',
     nav: 'Delay & timing',
     group: 'Signal integrity',
-    summary: 'Propagation delay, length matching from skew, rise time to bandwidth, critical length and wavelength.',
+    summary: 'Propagation delay, transmission line or lumped for a rise time, length matching from skew with serpentine tuning, bandwidth and wavelength.',
     component: lazyPage(() => import('./Timing')),
   },
   {

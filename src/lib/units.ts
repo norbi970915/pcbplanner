@@ -54,6 +54,13 @@ export function si(v: number, unit: string, sig = 4): string {
   return `${fmt(v / m, sig)} ${p}${unit}`;
 }
 
+/** si() split for a result display: the number, and the unit with its prefix ("2.37", "µH"). */
+export function siParts(v: number, unit: string, sig = 4): { value: string; unit: string } {
+  const s = si(v, unit, sig);
+  const i = s.indexOf(' ');
+  return i < 0 ? { value: s, unit } : { value: s.slice(0, i), unit: s.slice(i + 1) };
+}
+
 /** Plain number string suitable for an <input> value (no grouping, trimmed). */
 export function plain(v: number, digits = 6): string {
   if (!Number.isFinite(v)) return '';

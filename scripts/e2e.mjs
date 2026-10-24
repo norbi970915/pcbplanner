@@ -235,6 +235,8 @@ async function stepFields(page, route, container) {
     const orig = await inp.inputValue();
     const numeric = (await inp.getAttribute('inputmode')) === 'decimal';
     const validatable = numeric || (await inp.getAttribute('aria-invalid')) !== null;
+    // an optional number (NumField/SiField emptyAs): empty means "not set", shown by its placeholder
+    const optional = numeric && (await inp.getAttribute('placeholder')) !== null;
     const base = await snapshot(page);
 
     // free text: a list field (aria-invalid present) gets another list item, plain names get a suffix
@@ -256,7 +258,8 @@ async function stepFields(page, route, container) {
         const inv = (await inp.getAttribute('aria-invalid')) === 'true';
         const notes = await noteText(page);
         const noted = notes !== validNotes && notes.length > 0;
-        if (['', '-', 'abc'].includes(bad)) await check(page, inv || noted, route, `${tag} invalid '${bad}' not flagged`, `no aria-invalid and no note for "${bad}"`);
+        if (bad === '' && optional) await check(page, !inv, route, `${tag} optional field: empty flagged`, 'an empty optional field means "not set" and must not be invalid');
+        else if (['', '-', 'abc'].includes(bad)) await check(page, inv || noted, route, `${tag} invalid '${bad}' not flagged`, `no aria-invalid and no note for "${bad}"`);
         else if (bad !== '1e9' && !inv && !noted) warn(route, tag, `'${bad}' accepted silently (no aria-invalid, no note)`);
       }
     }

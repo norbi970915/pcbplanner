@@ -158,7 +158,7 @@ export default function ClockJitter() {
       <Section title="ADC sampling clock">
         <SiField label="Input frequency" symbol="fin" value={p.fin} onChange={(v) => set({ fin: v })} unit="Hz" prefixes={['k', 'M', 'G']} digits={7} />
         <NumField label="ADC aperture jitter" symbol="ta" value={p.tap} onChange={(v) => set({ tap: v })} unit="fs rms" allowZero hint="From the ADC data sheet; added to the clock jitter as root-sum-square. 0 = clock only." />
-        <NumField label="ADC SNR without jitter" value={p.snra} onChange={(v) => set({ snra: v })} unit="dBFS" allowZero hint="The converter's own SNR at low input frequency. 0 = not given." />
+        <NumField label="ADC SNR without jitter" value={p.snra} onChange={(v) => set({ snra: v })} unit="dBFS" emptyAs="not given" hint="The converter's own SNR at low input frequency. Leave empty if not given." />
         <NumField label="Target SNR" value={p.snrt} onChange={(v) => set({ snrt: v })} unit="dB" allowNegative hint="For the jitter needed to reach this SNR at the input frequency." />
       </Section>
       <Section title="Jitter budget">
@@ -179,7 +179,7 @@ export default function ClockJitter() {
           />
         </div>
         <NumField label="Total jitter limit" symbol="TJ" value={p.lim} onChange={(v) => set({ lim: v })} unit={p.limu === 'ps' ? 'ps p-p' : 'UI p-p'} allowZero />
-        <NumField label="Data rate" value={p.rate} onChange={(v) => set({ rate: v })} unit="Gb/s" allowZero hint="Sets the unit interval, 1 / rate. 0 = not given (limit in ps only)." />
+        <NumField label="Data rate" value={p.rate} onChange={(v) => set({ rate: v })} unit="Gb/s" emptyAs="not given" hint="Sets the unit interval, 1 / rate. Leave empty if not given (limit in ps only)." />
       </Section>
     </>
   );

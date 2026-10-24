@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { C0, cToF, ETA0, fmt, fromMm, fToC, MM_PER_MIL, MM_PER_OZ, plain, si, toMm } from './units';
+import { C0, cToF, ETA0, fmt, fromMm, fToC, MM_PER_MIL, MM_PER_OZ, plain, si, siParts, toMm } from './units';
 
 describe('audit: units', () => {
   it('physical constants', () => {
@@ -35,6 +35,11 @@ describe('audit: units', () => {
     expect(fmt(1.5e-5)).toBe('1.50e-5');
     expect(plain(0.1 + 0.2)).toBe('0.3');
     expect(plain(NaN)).toBe('');
+    // a result display keeps the prefix with the unit: 2.37 µH, not 2.37 µ H
+    expect(siParts(2.37e-6, 'H', 3)).toEqual({ value: '2.37', unit: 'µH' });
+    expect(siParts(4700, 'Ω')).toEqual({ value: '4.7', unit: 'kΩ' });
+    expect(siParts(0, 'F')).toEqual({ value: '0', unit: 'F' });
+    expect(siParts(NaN, 'F')).toEqual({ value: '—', unit: 'F' });
   });
 
   // BUG (cosmetic): a value that rounds up to the next decade at the requested

@@ -70,7 +70,7 @@ export default function Resistors() {
         <SiField label="Input voltage" symbol="Vin" value={p.vin} onChange={(v) => set({ vin: v })} unit="V" prefixes={['m', '', 'k']} allowNegative />
         <SiField label="Top resistor" hint="R1 connects Vin to Vout. The diagram highlights the upper resistor." symbol="R1" value={p.r1} onChange={(v) => set({ r1: v })} unit="Ω" prefixes={['', 'k', 'M']} />
         <SiField label="Bottom resistor" hint="R2 connects Vout to ground. Any connected load is in parallel with R2." symbol="R2" value={p.r2} onChange={(v) => set({ r2: v })} unit="Ω" prefixes={['', 'k', 'M']} />
-        <SiField label="Load" symbol="RL" value={p.rl} onChange={(v) => set({ rl: v })} unit="Ω" prefixes={['', 'k', 'M']} allowZero hint="Load across R2. 0 = no load." />
+        <SiField label="Load" symbol="RL" value={p.rl} onChange={(v) => set({ rl: v })} unit="Ω" prefixes={['', 'k', 'M']} emptyAs="no load" hint="Load across R2. Leave empty for no load." />
       </Section>
       <Section title="Divider from standard values">
         <SiField label="Target output" symbol="Vout" value={p.vt} onChange={(v) => set({ vt: v })} unit="V" prefixes={['m', '', 'k']} />

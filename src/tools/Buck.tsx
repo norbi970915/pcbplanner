@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ToolPage } from '../components/ToolPage';
 import { Big, Check, Notes, NumField, Panel, Result, Section } from '../components/ui';
 import { analyseBuck, buckPoint, validateBuck, type BuckAnalysis, type BuckDesign, type BuckPoint } from '../lib/buckDesign';
-import { fmt, si } from '../lib/units';
+import { fmt, si, siParts } from '../lib/units';
 import { useUrlState } from '../state/useUrlState';
 
 // The first line keeps the parameter names and defaults of the earlier page, so existing links still open.
@@ -48,9 +48,12 @@ export default function Buck() {
   if (r && r.ccm && b.dvTotal > 0 && r.totalRequired === null) notes.push('ESR ripple alone meets or exceeds the total output-ripple budget. More capacitance cannot meet this budget with the entered ESR.');
   if (r && r.ccm && r.partialLoss > r.loss + 1e-9) notes.push('The entered winding, diode and capacitor losses exceed the loss budget implied by your efficiency estimate. Check the efficiency and component values.');
   if (r && r.dutyHigh > 0.9 && !b.maxDuty) notes.push(`Duty cycle reaches ${fmt(100 * r.dutyHigh, 3)} % at the lowest input. Enter the IC's maximum duty cycle or minimum off-time under IC limits to check it.`);
+  // inputs whose 0 means "not set": shown empty, with what an empty field stands for
+  const EMPTY: Partial<Record<keyof typeof DEFAULTS, string>> = { vmax: '= nominal', fsmax: '= min.', vf: 'synchronous', l: 'calculated', dcr: 'optional', cout: 'sizing only', cin: 'sizing only', total: 'skip' };
+  const optional = 'Leave empty if not known; no pass is claimed.';
   const field = (label: string, k: keyof typeof DEFAULTS, unit: string, hint?: string, allowZero = false) =>
-    <NumField diagramKey={k} key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero} />;
-  const optional = '0 = not supplied; no pass is claimed.';
+    <NumField diagramKey={k} key={k} label={label} value={p[k] as number} onChange={v => set({ [k]: v })} unit={unit} hint={hint} allowZero={allowZero}
+      emptyAs={EMPTY[k] ?? (hint?.includes(optional) ? 'optional' : undefined)} />;
   const toggle = (label: string, k: 'xcin' | 'xrat' | 'xic' | 'xsweep' | 'xwave', hint: string) =>
     <Check key={k} label={label} checked={p[k]} onChange={v => set({ [k]: v })} hint={hint} />;
   const properties = <>
@@ -71,30 +74,30 @@ export default function Buck() {
     </Section>
     <Section title="Converter">
       {field('Switching frequency min.', 'fs', 'kHz')}
-      {field('Switching frequency max.', 'fsmax', 'kHz', '0 = minimum frequency. Use the datasheet maximum for timing checks.', true)}
+      {field('Switching frequency max.', 'fsmax', 'kHz', 'Leave empty for the minimum frequency. Use the datasheet maximum for timing checks.', true)}
       {field('Estimated efficiency', 'eff', '%')}
       {field('Switch current limit (min.)', 'ilim', 'A', 'Guaranteed minimum peak-current limit, not a valley or average-current limit. ' + optional, true)}
-      {field('Diode forward voltage', 'vf', 'V', '0 = synchronous converter (no diode loss). This is not a synchronous MOSFET loss model.', true)}
+      {field('Diode forward voltage', 'vf', 'V', 'Leave empty for a synchronous converter (no diode loss). This is not a synchronous MOSFET loss model.', true)}
     </Section>
     <Section title="Inductor">
       {field('Ripple target', 'rr', '%', 'Of Iout, for the initial TI inductance estimate. TI suggests 20–40 %.')}
-      {field('Inductor used', 'l', 'µH', '0 = use the calculated inductance.', true)}
+      {field('Inductor used', 'l', 'µH', 'Leave empty to use the calculated inductance.', true)}
       {field('Inductance tolerance', 'ltol', '%', 'Low inductance and minimum switching frequency are used for current and CCM checks.', true)}
       {field('Saturation current', 'isat', 'A', 'Use the hot rating at an acceptable inductance drop. ' + optional, true)}
       {field('Inductor RMS rating', 'irms', 'A', optional, true)}
-      {field('Winding DCR', 'dcr', 'mΩ', 'At operating temperature. 0 = winding loss not supplied.', true)}
+      {field('Winding DCR', 'dcr', 'mΩ', 'At operating temperature. Leave empty if not known (no winding loss).', true)}
     </Section>
     <Section title="Output Capacitor">
       {field('Capacitive ripple budget', 'dv', 'mV', 'Excludes ESR and switching spikes.')}
-      {field('Capacitance used', 'cout', 'µF', 'Total nominal bank capacitance; 0 = sizing only.', true)}
+      {field('Capacitance used', 'cout', 'µF', 'Total nominal bank capacitance; leave empty for sizing only.', true)}
       {field('Capacitance tolerance', 'ctol', '%', 'Worst-case negative tolerance.', true)}
       {field('Capacitance retained', 'cbias', '%', 'Percentage remaining at operating DC voltage and temperature, before the tolerance above. Use your capacitor data.')}
       {field('Bank ESR', 'esr', 'mΩ', 'Effective ESR of the complete parallel bank at the switching frequency.', true)}
-      {field('Total ripple budget', 'total', 'mV', '0 = skip. Checks conservative capacitive + ESR ripple; excludes ESL spikes.', true)}
+      {field('Total ripple budget', 'total', 'mV', 'Leave empty to skip. Checks conservative capacitive + ESR ripple; excludes ESL spikes.', true)}
     </Section>
     {p.xcin && <Section title="Input Capacitor" defaultOpen={false}>
       {field('Input capacitive ripple', 'dvin', 'mV')}
-      {field('Input capacitance used', 'cin', 'µF', 'Total nominal bank capacitance; 0 = sizing only.', true)}
+      {field('Input capacitance used', 'cin', 'µF', 'Total nominal bank capacitance; leave empty for sizing only.', true)}
       {field('Input capacitance tolerance', 'cintol', '%', undefined, true)}
       {field('Input capacitance retained', 'cinbias', '%', 'Retention at maximum input voltage and operating temperature, before tolerance.')}
       {field('Input bank ESR', 'cinesr', 'mΩ', undefined, true)}
@@ -129,12 +132,12 @@ export default function Buck() {
     {r && point && <>
       <Panel title="Design Overview" right={<Link className="btn no-underline" to={`/feedback-divider?vout=${p.vout}`}>Feedback divider</Link>}>
         <div className="flex flex-wrap gap-8 px-2.5 py-2">
-          <Big label={p.l ? 'Inductor used' : 'Calculated inductor'} value={si(r.l, 'H', 3).replace(/H$/, '')} unit="H" />
+          <Big label={p.l ? 'Inductor used' : 'Calculated inductor'} {...siParts(r.l, 'H', 3)} />
           <Big label="Peak inductor current" value={current(r.peak.iSwMax)} unit="A" />
-          <Big label="Effective Cout needed" value={r.ccm ? si(r.requiredOut, 'F', 3).replace(/F$/, '') : '—'} unit="F" />
+          <Big label="Effective Cout needed" {...(r.ccm ? siParts(r.requiredOut, 'F', 3) : { value: '—', unit: 'F' })} />
         </div>
         <p className="px-2.5 pb-2 text-muted">Current and capacitor checks use {si(r.lMin, 'H', 4)} at minimum frequency, across {fmt(b.vinMin)}–{fmt(b.vinMax)} V.
-          {' '}The input sweep samples 201 points plus the nominal voltage and the 50 % duty point, where the input-capacitor current peaks. Ratings of 0 remain unchecked.</p>
+          {' '}The input sweep samples 201 points plus the nominal voltage and the 50 % duty point, where the input-capacitor current peaks. Ratings left empty are not checked.</p>
       </Panel>
       <Panel title="Power Stage"><PowerStageDiagram kind="buck" vin={b.vinNom} vout={b.vout} iout={b.iout} inductance={r.l} vf={b.vf ?? 0} ccm={r.ccm} inputCap={p.xcin} cout={b.cout} coutRequired={r.requiredOut}/></Panel>
       <div className="grid gap-3 xl:grid-cols-2">

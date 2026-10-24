@@ -47,7 +47,7 @@ export default function Reactance() {
       <Section title="Analysis">
         <SiField label="Frequency" symbol="f" value={p.f} onChange={(v) => set({ f: v })} unit="Hz" prefixes={['', 'k', 'M', 'G']} />
         <SiField label="Series loss R" symbol="Rs" value={p.rs} onChange={(v) => set({ rs: v })} unit="Ω" prefixes={['m', '', 'k']} allowZero hint="Resistance in series with L and C for the series circuit. 0 = ideal." />
-        <SiField label="Parallel loss R" symbol="Rp" value={p.rp} onChange={(v) => set({ rp: v })} unit="Ω" prefixes={['', 'k', 'M']} allowZero hint="Resistance across the parallel tank. 0 = none (ideal tank)." />
+        <SiField label="Parallel loss R" symbol="Rp" value={p.rp} onChange={(v) => set({ rp: v })} unit="Ω" prefixes={['', 'k', 'M']} emptyAs="none" hint="Resistance across the parallel tank. Leave empty for none (ideal tank)." />
       </Section>
     </>
   );

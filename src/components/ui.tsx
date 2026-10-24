@@ -238,6 +238,7 @@ export function NumField({
   diagramKey,
   max,
   integer = false,
+  emptyAs,
 }: {
   label: ReactNode;
   symbol?: ReactNode;
@@ -252,11 +253,14 @@ export function NumField({
   diagramKey?: string;
   max?: number;
   integer?: boolean;
+  /** An optional input: 0 means "not set", shown as an empty field with this placeholder; clearing the field sets 0. */
+  emptyAs?: string;
 }) {
-  const { text, setText, emit } = useSyncedText(value, (v) => plain(v, 6));
+  const optional = emptyAs !== undefined;
+  const { text, setText, emit } = useSyncedText(value, (v) => (optional && v === 0 ? '' : plain(v, 6)));
   const id = useId();
-  const options = { min, max, allowZero, allowNegative, integer };
-  const error = numericInputIssue(text, options);
+  const options = { min, max, allowZero: allowZero || optional, allowNegative, integer };
+  const error = optional && text.trim() === '' ? undefined : numericInputIssue(text, options);
   const help = hint;
   return (
     <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey} uncommitted>
@@ -266,10 +270,16 @@ export function NumField({
         style={{ width }}
         inputMode="decimal"
         value={text}
+        placeholder={emptyAs}
         aria-invalid={!!error}
         aria-describedby={[help && id + '-help', error && id + '-error'].filter(Boolean).join(' ')}
         onChange={(e) => {
           setText(e.target.value);
+          if (optional && e.target.value.trim() === '') {
+            emit(0);
+            onChange(0);
+            return;
+          }
           const v = parseNumericInput(e.target.value);
           if (v !== null && !numericInputIssue(e.target.value, options)) {
             emit(v);

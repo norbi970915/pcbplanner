@@ -168,8 +168,8 @@ export default function OpAmpGain() {
         <>
           <SiField label="Feedback resistor" symbol="Rf" value={p.r2} onChange={(v) => set({ r2: v })} unit="Ω" prefixes={['', 'k', 'M']} />
           <SiField label="Input 1 resistor" symbol="R1" value={p.r1} onChange={(v) => set({ r1: v })} unit="Ω" prefixes={['', 'k', 'M']} />
-          <SiField label="Input 2 resistor" symbol="R2" value={p.r3} onChange={(v) => set({ r3: v })} unit="Ω" prefixes={['', 'k', 'M']} allowZero hint="0 = input not used." />
-          <SiField label="Input 3 resistor" symbol="R3" value={p.r4} onChange={(v) => set({ r4: v })} unit="Ω" prefixes={['', 'k', 'M']} allowZero hint="0 = input not used." />
+          <SiField label="Input 2 resistor" symbol="R2" value={p.r3} onChange={(v) => set({ r3: v })} unit="Ω" prefixes={['', 'k', 'M']} emptyAs="not used" hint="Leave empty if the input is not used." />
+          <SiField label="Input 3 resistor" symbol="R3" value={p.r4} onChange={(v) => set({ r4: v })} unit="Ω" prefixes={['', 'k', 'M']} emptyAs="not used" hint="Leave empty if the input is not used." />
         </>
       ) : topo === 'difference' ? (
         <>

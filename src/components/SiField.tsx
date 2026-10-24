@@ -33,6 +33,7 @@ export function SiField({
   digits = 6,
   hint,
   diagramKey,
+  emptyAs,
 }: {
   label: ReactNode;
   symbol?: ReactNode;
@@ -45,36 +46,40 @@ export function SiField({
   digits?: number;
   hint?: string;
   diagramKey?: string;
+  /** An optional input: 0 means "not set", shown as an empty field with this placeholder; clearing the field sets 0. */
+  emptyAs?: string;
 }) {
+  const optional = emptyAs !== undefined;
+  const show = (v: number, p: SiPrefix, d: number) => (optional && v === 0 ? '' : plain(v / MULT[p], d));
   const [prefix, setPrefix] = useState<SiPrefix>(() => pickPrefix(value, prefixes));
-  const [text, setText] = useState(() => plain(value / MULT[prefix], digits));
+  const [text, setText] = useState(() => show(value, prefix, digits));
   const emitted = useRef(value);
   useEffect(() => {
     if (value !== emitted.current) {
       emitted.current = value;
       const p = pickPrefix(value, prefixes);
       setPrefix(p);
-      setText(plain(value / MULT[p], digits));
+      setText(show(value, p, digits));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   // Reset must also clear text the user typed that never parsed (the value did not change).
-  const latest = useRef({ value, prefixes, digits });
-  latest.current = { value, prefixes, digits };
+  const latest = useRef({ value, prefixes, digits, show });
+  latest.current = { value, prefixes, digits, show };
   useEffect(() => {
     const onReset = () => {
-      const { value: v, prefixes: ps, digits: d } = latest.current;
+      const { value: v, prefixes: ps, digits: d, show: toText } = latest.current;
       emitted.current = v;
       const p = pickPrefix(v, ps);
       setPrefix(p);
-      setText(plain(v / MULT[p], d));
+      setText(toText(v, p, d));
     };
     window.addEventListener(RESET_EVENT, onReset);
     return () => window.removeEventListener(RESET_EVENT, onReset);
   }, []);
   const id = useId();
-  const options = { allowZero, allowNegative, scale: MULT[prefix] };
-  const error = numericInputIssue(text, options);
+  const options = { allowZero: allowZero || optional, allowNegative, scale: MULT[prefix] };
+  const error = optional && text.trim() === '' ? undefined : numericInputIssue(text, options);
   const help = hint;
   return (
     <Row label={label} symbol={symbol} hint={help} htmlFor={id} error={error} diagramKey={diagramKey} uncommitted>
@@ -83,10 +88,16 @@ export function SiField({
           className="fld w-[84px] text-right"
           inputMode="decimal"
           value={text}
+          placeholder={emptyAs}
           aria-invalid={!!error}
           aria-describedby={[help && id + '-help', error && id + '-error'].filter(Boolean).join(' ')}
           onChange={(e) => {
             setText(e.target.value);
+            if (optional && e.target.value.trim() === '') {
+              emitted.current = 0;
+              onChange(0);
+              return;
+            }
             const v = parseNumericInput(e.target.value);
             if (v !== null && !numericInputIssue(e.target.value, options)) {
               const base = v * MULT[prefix];

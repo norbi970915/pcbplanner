@@ -642,7 +642,7 @@ export default function SParameterViewer() {
         <Section title="Time Domain (TDR)">
           <SelectField label="Reflection" value={tdrParam?.key ?? ''} onChange={(v) => set({ tdr: v })} width={110} options={tdrOptions.map((q) => ({ value: q.key, label: q.label }))} />
           <SelectField label="Window" value={String(beta)} onChange={(v) => set({ beta: Number(v) })} width={130} options={WINDOWS.map((w) => ({ value: String(w.beta), label: w.label }))} />
-          <NumField label="Show up to" value={p.tmax} onChange={(v) => set({ tmax: v })} unit="ns" allowZero hint="0 = until the response has settled" />
+          <NumField label="Show up to" value={p.tmax} onChange={(v) => set({ tmax: v })} unit="ns" emptyAs="auto" hint="Leave empty to show until the response has settled." />
         </Section>
       )}
       <Section title="Interface Loss Budget">
